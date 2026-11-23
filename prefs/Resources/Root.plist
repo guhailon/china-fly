@@ -9,22 +9,10 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>啟用或關閉需要註銷後才能生效</string>
 			<key>label</key>
-			<string>激活</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>GHCFActivationListController</string>
-			<key>label</key>
-			<string>激活授权</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>常用开关</string>
+			<string>啟用</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
@@ -38,21 +26,37 @@
 			<key>key</key>
 			<string>enabled</string>
 			<key>label</key>
-			<string>启用分屏</string>
+			<string>啟用</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>启动器设置</string>
+			<string>設定</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>ARC</string>
+			<string>Dial</string>
 			<key>label</key>
-			<string>启动器设置</string>
+			<string>導航台</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>detail</key>
+			<string>GHCFAppPickerListController</string>
+			<key>label</key>
+			<string>選擇應用</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>detail</key>
+			<string>GHCFMenuEditListController</string>
+			<key>label</key>
+			<string>編輯菜單</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -60,41 +64,191 @@
 			<key>detail</key>
 			<string>Trigger</string>
 			<key>label</key>
-			<string>触发设置</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>浮窗设置</string>
+			<string>觸發設置</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>Floating</string>
+			<string>SplitSettings</string>
 			<key>label</key>
-			<string>浮窗设置</string>
+			<string>分屏設置</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>hideScreenshotRecording</string>
+			<key>label</key>
+			<string>截圖錄屏隱藏</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>delayedScreenshot</string>
+			<key>label</key>
+			<string>延遲截圖</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>doubleTapLock</string>
+			<key>label</key>
+			<string>雙擊鎖屏</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>hideDockBackground</string>
+			<key>label</key>
+			<string>隱藏 Dock 欄背景</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>ipadAppSwitcherAnim</string>
+			<key>label</key>
+			<string>iPadOS 應用切換動畫</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>其他功能</string>
+			<string>操作按鈕</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>Other</string>
+			<string>ActionButtonTap</string>
 			<key>label</key>
-			<string>其他功能</string>
+			<string>操作按鈕點擊</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>detail</key>
+			<string>ActionButtonLongPress</string>
+			<key>label</key>
+			<string>操作按鈕長按</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>备份和导出先写到设置目录里的固定文件（备份：China Fly备份.plist；导出：ChinaFly-export.plist），成功后直接分享给你，不用自己去文件找；导入和恢复会让你挑配置文件，想换成别的配置也能用。旧文件名的备份（ChinaFly-backup.plist）恢复时也找得到。改完 2 秒内／下次开窗生效，不用重启用户空间。</string>
+			<string>使用百度翻譯 API，請填寫您的應用憑證</string>
+			<key>label</key>
+			<string>翻譯設置</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSTextFieldCell</string>
+			<key>default</key>
+			<string></string>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>translateAppID</string>
+			<key>label</key>
+			<string>App ID</string>
+			<key>placeholder</key>
+			<string>App ID</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSTextFieldCell</string>
+			<key>default</key>
+			<string></string>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>translateSecretKey</string>
+			<key>label</key>
+			<string>Secret Key</string>
+			<key>placeholder</key>
+			<string>Secret Key</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>default</key>
+			<string>auto-zh</string>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>translateDirection</string>
+			<key>label</key>
+			<string>翻譯方向</string>
+			<key>validTitles</key>
+			<array>
+				<string>自動 → 中</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<string>auto-zh</string>
+			</array>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>splitTranslation</string>
+			<key>label</key>
+			<string>分屏翻譯</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
 			<key>label</key>
 			<string>配置管理</string>
 		</dict>
@@ -104,23 +258,7 @@
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>label</key>
-			<string>备份配置</string>
-		</dict>
-		<dict>
-			<key>action</key>
-			<string>ghcfExportConfig</string>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>导出当前配置</string>
-		</dict>
-		<dict>
-			<key>action</key>
-			<string>ghcfImportConfig</string>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>导入配置文件</string>
+			<string>備份配置</string>
 		</dict>
 		<dict>
 			<key>action</key>
@@ -128,31 +266,27 @@
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>label</key>
-			<string>从备份恢复</string>
+			<string>從備份恢復</string>
 		</dict>
 		<dict>
-			<key>action</key>
-			<string>ghcfCheckForUpdate</string>
 			<key>cell</key>
-			<string>PSButtonCell</string>
+			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>检查更新</string>
+			<string>關於</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>GHCFStatusListController</string>
+			<string>GHCFLogViewerListController</string>
 			<key>label</key>
-			<string>状态</string>
+			<string>查看日誌</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string></string>
-			<key>label</key>
-			<string></string>
+			<string>China Fly 1.0.0 | Copyright © 2026 顧海龍</string>
 		</dict>
 	</array>
 	<key>title</key>

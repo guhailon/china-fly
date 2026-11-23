@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>defaults</key>
+	<string>com.guhailong.fly</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>此設備沒有操作按鈕，無法測試</string>
+			<key>label</key>
+			<string>說明</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>觸發動作</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>default</key>
+			<string>none</string>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>actionButtonLongPressAction</string>
+			<key>label</key>
+			<string>觸發動作</string>
+			<key>validTitles</key>
+			<array>
+				<string>無動作</string>
+				<string>打開表盤</string>
+				<string>打開分屏</string>
+				<string>鎖定屏幕</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<string>none</string>
+				<string>dial</string>
+				<string>split</string>
+				<string>lock</string>
+			</array>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>操作按鈕長按</string>
+</dict>
+</plist>

@@ -1,3 +1,10 @@
+// ChinaFly 1.0.0（2026-11-23）：dylib 側。
+// 底子是 SeaDragon Split 1.0.115（v43.42，頭 653fcaa），包名／prefs 域／
+// 符號前綴全改（com.guhailong.fly、GHCF、ChinaFly）；歌詞播放器、激活、
+// 鍵盤助手、kb-probe 已刪。表盤是唯一的啟動器（預設走表盤，舊樣式代碼留著
+// 休眠）；看得見的 UI 照 TrollOpen 影片＋照片重做，看不見的引擎（場景托管、
+// 懸浮窗、觸發器）沿用自己的代碼。TrollOpen 閉源付費：只照影片模仿佈局和
+// 設置項，不抄代碼、不拿素材。日誌前綴 GHCF，新行標 ChinaFly。
 // v43.6 (1.0.81)：恢复黑窗修复——restoreHostedWindow 改尺寸之前先预抓快照（小卡最后一帧活内容），恢复动画优先播这张；改完尺寸再抓是黑的（皇上 2026-11-18 20:37 影片定案）。L4377 任务栏快照／L6410 碎裂退出快照查过：都在改尺寸之前抓，没有同样问题，原样不动。
 // v43.6 (1.0.81)：自選 App 上限 7 個→10 個（皇上 2026-11-18 20:32 點的：7 個不夠，加到 10 個）。
 // v43.5 (1.0.80)：鍵盤設置（皇上 2026-11-17 21:28–21:32 打√：6 鍵盤設置，最後一項）。
@@ -834,8 +841,8 @@
 #import <signal.h>
 #import <notify.h>
 #import <dlfcn.h>
-#import "GHCFUpdateCheck.h"
 #import <AudioToolbox/AudioServices.h>
+#import <CommonCrypto/CommonDigest.h>
 
 #define GHCF_LOG_PATH "/var/mobile/Library/Logs/ChinaFly.log"
 
@@ -1366,6 +1373,60 @@ static BOOL GHCFDialHidFlyTriggerButton = NO;
 // 轉盤手勢裝在哪個 contentView 上（弱引用——窗每次打開都重建，
 // 視圖釋放後自動歸 nil，不留懸空指標）。
 static __weak UIView *GHCFDialPanView = nil;
+// ChinaFly（1.0.0）：表盤指針角（居中全圓指正上方，扇形指扇區中角；
+// 選中圈就看哪顆離這個角最近）與表盤建造旗標（arcIconButtonForBundleID
+// 靠它認是不是在排表盤圖標——裁圓／缺圖底色只在表盤裡生效）。
+static double GHCFDialPointerAngle = -M_PI_2;
+static BOOL GHCFBuildingDialIcons = NO;
+// ChinaFly（1.0.0）：表盤圖標狀態圈——指針指著的那顆（離指針角最近）
+// 描 dialIconSelectedColor；已開浮窗的描 dialIconEnabledColor；
+// 其餘描 dialIconNoneColor（淡）。撥動轉盤時跟著轉
+//（GHCFDialApplyRotation 尾巴調一次）。
+static UIColor *GHCFReadDialIconSelectedColor(void);
+static UIColor *GHCFReadDialIconNoneColor(void);
+static UIColor *GHCFReadDialIconEnabledColor(void);
+static void GHCFDialRefreshIconRings(void) {
+if (!GHCFDialButtons || !GHCFDialRadii || !GHCFDialAngles) return;
+NSUInteger n = [GHCFDialButtons count];
+if (n == 0) return;
+NSUInteger best = 0;
+double bestDiff = 0;
+for (NSUInteger i = 0; i < n; i++) {
+NSNumber *aNum = (NSNumber *)[GHCFDialAngles objectAtIndex:i];
+if (!aNum) continue;
+double d = [aNum doubleValue] + GHCFDialRotation - GHCFDialPointerAngle;
+while (d > M_PI) d -= 2.0 * M_PI;
+while (d < -M_PI) d += 2.0 * M_PI;
+d = fabs(d);
+if (i == 0 || d < bestDiff) { bestDiff = d; best = i; }
+}
+for (NSUInteger i = 0; i < n; i++) {
+UIButton *btn = (UIButton *)[GHCFDialButtons objectAtIndex:i];
+if (!btn || [btn.subviews count] == 0) continue;
+UIView *iconView = (UIView *)[btn.subviews objectAtIndex:0];
+if (!iconView) continue;
+UIColor *ring = nil;
+CGFloat width = 1.0;
+CGFloat alpha = 0.35;
+if (i == best) {
+ring = GHCFReadDialIconSelectedColor();
+width = 2.5;
+alpha = 1.0;
+} else {
+NSInteger tag = btn.tag;
+BOOL isOpen = (tag >= 0 && tag < GHCFAppCount && GHCFCacheWindows[tag] && !GHCFCacheWindows[tag].hidden);
+if (isOpen) {
+ring = GHCFReadDialIconEnabledColor();
+width = 2.0;
+alpha = 1.0;
+} else {
+ring = GHCFReadDialIconNoneColor();
+}
+}
+iconView.layer.borderColor = [ring colorWithAlphaComponent:alpha].CGColor;
+iconView.layer.borderWidth = width;
+}
+}
 // 轉盤按當前轉角重排圖標（基準角＋轉角，繞中心轉）。
 static void GHCFDialApplyRotation(void) {
 if (!GHCFDialButtons || !GHCFDialRadii || !GHCFDialAngles) return;
@@ -1379,6 +1440,7 @@ double r = [rNum doubleValue];
 double a = [aNum doubleValue] + GHCFDialRotation;
 btn.center = CGPointMake(GHCFDialCenter.x + r * cos(a), GHCFDialCenter.y + r * sin(a));
 }
+GHCFDialRefreshIconRings();
 }
 // 上一次边缘滑动的时间（CFAbsoluteTime），用来做"滑两次才开"。
 static double GHCFLastSwipeTime = 0;
@@ -1527,6 +1589,8 @@ static int GHCFActiveAppIndex = -1;
 static CGFloat GHCFDefaultScaleRatioForBundleID(const char *bundleID);
 // v41：先声明（下面定义；GHCFIsWindowPositionLeft 等讀值 helper 要用，先声明）。
 static BOOL GHCFIsWindowPositionLeft(void);
+// ChinaFly（1.0.0）：先声明（下面定义；新讀值器的 fallback 與表盤狀態圈要用）。
+static BOOL GHCFPrefsHasKey(const char *key);
 // v42：先声明（下面定义；%ctor 与各处要用，先声明）。
 static void GHCFUpdateTaskbar(void);
 static void GHCFPushForegroundCachedSceneAtIndex(int idx, const char *logLine);
@@ -2151,10 +2215,15 @@ return (CGFloat)v;
 static BOOL GHCFReadShadowEnabled(void) {
 return GHCFReadPrefsBool("shadowEnabled", YES);
 }
+// ChinaFly（1.0.0）：浮窗圓角走 cornerRadius4（分屏設置，影片值 60.00）；
+// 沒設過 cornerRadius4 時回落舊鍵 cornerRadius（30.0）；都沒設過回 60。
 static CGFloat GHCFReadCornerRadius(void) {
-double v = GHCFReadPrefsDouble("cornerRadius", 30.0);
+double v;
+if (GHCFPrefsHasKey("cornerRadius4")) v = GHCFReadPrefsDouble("cornerRadius4", 60.0);
+else if (GHCFPrefsHasKey("cornerRadius")) v = GHCFReadPrefsDouble("cornerRadius", 30.0);
+else v = 60.0;
 if (v < 0) v = 0;
-if (v > 50) v = 50;
+if (v > 80) v = 80;
 return (CGFloat)v;
 }
 static BOOL GHCFReadCenterOnOpen(void) {
@@ -2163,11 +2232,13 @@ return GHCFReadPrefsBool("centerOnOpen", NO);
 static BOOL GHCFReadNotificationBanner(void) {
 return GHCFReadPrefsBool("notificationBanner", YES);
 }
-// v54：通知橫幅打開浮窗（bannerOpensFloatingWindow，Banner.plist）：
-// (a) 點插件自己的橫幅叫回浮窗；(b) 系統橫幅出現時為那個 App 開浮窗（探針）。
-// 預設關——(b) 沒有可靠 hook 點（這套代碼不用 Logos hook，SpringBoard
-// 橫幅呈現也沒有通知可聽），等真機探針結果再定預設。
+// v54：通知橫幅打開浮窗：(a) 點插件自己的橫幅叫回浮窗；
+// (b) 系統橫幅出現時為那個 App 開浮窗（沒有可靠 hook 點——這套代碼不用
+// Logos hook，SpringBoard 橫幅呈現也沒有通知可聽）。
+// ChinaFly（1.0.0）：bannerTap（分屏設置，預設關）接這個機制；
+// 沒設過 bannerTap 時回落舊鍵 bannerOpensFloatingWindow。
 static BOOL GHCFReadBannerOpensFloatingWindow(void) {
+if (GHCFPrefsHasKey("bannerTap")) return GHCFReadPrefsBool("bannerTap", NO);
 return GHCFReadPrefsBool("bannerOpensFloatingWindow", NO);
 }
 // 調度窗口設置：邊緣滑幾次開 ARC（1 或 2，預設 2）、滑哪邊（沒設就跟
@@ -2309,7 +2380,10 @@ if (!bundleID || bundleID[0] == '\0') return NO;
 return GHCFListContainsBid(GHCFReadIDList("pinnedWindowIDs"), bundleID);
 }
 // C4 重啟後自動恢復浮窗（預設開；scene 撐不過重啟，恢復是重建 scene 重新開 App）。
+// ChinaFly（1.0.0）：persistentMemory（分屏設置，預設開）接這個機制；
+// 沒設過 persistentMemory 時回落舊鍵 restoreWindowsAfterRespring。
 static BOOL GHCFReadRestoreWindowsAfterRespring(void) {
+if (GHCFPrefsHasKey("persistentMemory")) return GHCFReadPrefsBool("persistentMemory", YES);
 return GHCFReadPrefsBool("restoreWindowsAfterRespring", YES);
 }
 // v53：啟用分屏開關（預設關，跟設定頁預設一致；關了要真的停用——
@@ -2318,16 +2392,29 @@ return GHCFReadPrefsBool("restoreWindowsAfterRespring", YES);
 static BOOL GHCFReadEnabled(void) {
 return GHCFReadPrefsBool("enabled", NO);
 }
+// ChinaFly（1.0.0，防撞）：讀舊域 com.guhailong.splitscreen 的 enabled 鍵。
+// 舊插件開著時 China Fly 休眠（見 GHCFDeferredSetupRun 開頭）。
+static BOOL GHCFReadOldSplitscreenEnabled(void) {
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.splitscreen", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, "enabled", kCFStringEncodingUTF8);
+BOOL result = NO;
+if (domain && keyRef) {
+CFPreferencesAppSynchronize(domain);
+CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+if (v) {
+if (CFGetTypeID(v) == CFBooleanGetTypeID()) result = CFBooleanGetValue((CFBooleanRef)v);
+CFRelease(v);
+}
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+return result;
+}
 // v53：C5 全屏時觸發鈕自動藏已取消（功能＋設定行都拿掉；鈕永遠顯示）。
 // C6 鍵盤彈出時浮窗自動上移（Keyboard.plist 的 keyboardAvoidEnabled，預設開；
 // 探針：通知可能到不了 SpringBoard，見 §115）。
 static BOOL GHCFReadKeyboardAvoidEnabled(void) {
 return GHCFReadPrefsBool("keyboardAvoidEnabled", YES);
-}
-// v43.33（1.0.108，路線 A 探針）：鍵盤圖層樹探針開關（Keyboard.plist 的
-// kbProbeEnabled，預設開；關了鍵盤彈出時不打圖層樹。只記日誌，不改行為）。
-static BOOL GHCFReadKbProbeEnabled(void) {
-return GHCFReadPrefsBool("kbProbeEnabled", YES);
 }
 // v43.18：鍵盤模式合一——先讀單鍵 keyboardMode；沒有讀分向舊鍵
 // keyboardPopupModePortrait／keyboardPopupModeLandscape；再讀舊單鍵
@@ -2501,16 +2588,18 @@ free(v);
 }
 return a;
 }
-// v43.19：啟動器樣式七檔（launcherStyle 字串）：radial 圓環（預設）、
+// v43.19：啟動器樣式七檔（launcherStyle 字串）：radial 圓環、
 // sidebar 側邊欄、drawer 抽屜、carousel 橫向輪盤、tile 磁貼、trollfan 扇形轉盤
 //（1.0.110，v43.37：撥動轉盤切頁，見 handleDialPan:）、dial 表盘启动器
 //（1.0.115，v43.42：照 TrollOpen 参考图／影片的排布，见 addDialLauncherIconsForBids）。
-// grid 已刪——存過的 "grid" 和未知值都當 radial（舊格狀用戶遷回圓環）。
+// ChinaFly（1.0.0）：預設走表盤（沒設過／未知值都當 dial）；舊樣式代碼留著
+// 休眠不刪，明確存過舊值才走。grid 已刪，存過的 "grid" 也當表盤。
 static int GHCFReadLauncherStyle(void) {
 char *v = GHCFReadPrefsCString("launcherStyle");
-int s = 0;
+int s = 6;
 if (v) {
-if (strcmp(v, "sidebar") == 0) s = 1;
+if (strcmp(v, "radial") == 0) s = 0;
+else if (strcmp(v, "sidebar") == 0) s = 1;
 else if (strcmp(v, "drawer") == 0) s = 2;
 else if (strcmp(v, "carousel") == 0) s = 3;
 else if (strcmp(v, "tile") == 0) s = 4;
@@ -2617,6 +2706,72 @@ if (v < 0.0) v = 0.0;
 if (v > 24.0) v = 24.0;
 return v;
 }
+
+// ChinaFly（1.0.0，表盤顏色鍵）：7 個顏色鍵真的驅動表盤渲染——
+// 漸變起止色／圓形背景色走 addDialLauncherIconsForBids 的漸變層與圓盤底色；
+// 圖標選中／無狀態／啟用／關閉色走圖標狀態圈與缺圖底色
+//（見 GHCFDialRefreshIconRings、arcIconButtonForBundleID）。
+// 值是 #RRGGBB 字串；寫壞／沒設就回影片預設值。
+static UIColor *GHCFDialColorFromHex(const char *hex, unsigned int fallbackRGB) {
+unsigned int rgb = fallbackRGB;
+if (hex && hex[0] == '#') {
+char *end = NULL;
+unsigned long parsed = strtoul(hex + 1, &end, 16);
+if (end && end != hex + 1 && parsed <= 0xFFFFFF) rgb = (unsigned int)parsed;
+}
+CGFloat r = (CGFloat)((rgb >> 16) & 0xFF) / 255.0;
+CGFloat g = (CGFloat)((rgb >> 8) & 0xFF) / 255.0;
+CGFloat b = (CGFloat)(rgb & 0xFF) / 255.0;
+return [UIColor colorWithRed:r green:g blue:b alpha:1.0];
+}
+static UIColor *GHCFReadDialGradientStartColor(void) {
+char *s = GHCFReadPrefsCString("dialGradientStartColor");
+UIColor *c = GHCFDialColorFromHex(s, 0x000000);
+if (s) free(s);
+return c;
+}
+static UIColor *GHCFReadDialGradientEndColor(void) {
+char *s = GHCFReadPrefsCString("dialGradientEndColor");
+UIColor *c = GHCFDialColorFromHex(s, 0x000000);
+if (s) free(s);
+return c;
+}
+static UIColor *GHCFReadDialCircleBgColor(void) {
+char *s = GHCFReadPrefsCString("dialCircleBgColor");
+UIColor *c = GHCFDialColorFromHex(s, 0xFFFFFF);
+if (s) free(s);
+return c;
+}
+static UIColor *GHCFReadDialIconSelectedColor(void) {
+char *s = GHCFReadPrefsCString("dialIconSelectedColor");
+UIColor *c = GHCFDialColorFromHex(s, 0x3D8DFF);
+if (s) free(s);
+return c;
+}
+static UIColor *GHCFReadDialIconNoneColor(void) {
+char *s = GHCFReadPrefsCString("dialIconNoneColor");
+UIColor *c = GHCFDialColorFromHex(s, 0xFFFFFF);
+if (s) free(s);
+return c;
+}
+static UIColor *GHCFReadDialIconEnabledColor(void) {
+char *s = GHCFReadPrefsCString("dialIconEnabledColor");
+UIColor *c = GHCFDialColorFromHex(s, 0x007AFF);
+if (s) free(s);
+return c;
+}
+static UIColor *GHCFReadDialIconDisabledColor(void) {
+char *s = GHCFReadPrefsCString("dialIconDisabledColor");
+UIColor *c = GHCFDialColorFromHex(s, 0x8E8E93);
+if (s) free(s);
+return c;
+}
+// ChinaFly（1.0.0，dialCropCircle）：開關早就有（Dial.plist），
+// 1.0.115 裡讀值器沒有、完全沒接線；這裡補讀值器，接線見
+// arcIconButtonForBundleID（表盤裡的圖標裁成圓形）。
+static BOOL GHCFReadDialCropCircle(void) {
+return GHCFReadPrefsBool("dialCropCircle", NO);
+}
 // v43.37（1.0.110，扇形轉盤）：轉盤專用 tick 反饋——震動強度走
 // dialHapticStrength（重／中／輕），音效走 dialSoundChoice 12 選一
 //（GHCFReadDialSoundID，預設水滴 1057 Tink）。
@@ -2659,10 +2814,15 @@ if (v < 0) v = 0;
 if (v > 100) v = 100;
 return (CGFloat)(v * 25.0);
 }
-// v43.3：浮窗数量上限（windowCap，1–12，预设 8）：同时活著的浮窗
-// 最多几个；超了最久没动的自动收成小卡（GHLSEnforceWindowCap）。
+// v43.3：浮窗数量上限（1–12）：同时活著的浮窗最多几个；超了最久没动的
+// 自动收成小卡（GHLSEnforceWindowCap）。
+// ChinaFly（1.0.0）：onlineWindows（分屏設置，影片值 5）是上限；
+// 沒設過 onlineWindows 時回落舊鍵 windowCap（8）；都沒設過回 5。
 static int GHCFReadWindowCap(void) {
-double v = GHCFReadPrefsDouble("windowCap", 8.0);
+double v;
+if (GHCFPrefsHasKey("onlineWindows")) v = GHCFReadPrefsDouble("onlineWindows", 5.0);
+else if (GHCFPrefsHasKey("windowCap")) v = GHCFReadPrefsDouble("windowCap", 8.0);
+else v = 5.0;
 if (v < 1) v = 1;
 if (v > 12) v = 12;
 return (int)lround(v);
@@ -2734,7 +2894,8 @@ if (side) {
 isLeft = (strcmp(side, "left") == 0);
 free(side);
 } else {
-isLeft = GHCFIsWindowPositionLeft();
+// ChinaFly（1.0.0）：沒設過就默認左側中部（跟舊哆啦A夢鈕的默認右側分開）。
+isLeft = YES;
 }
 return isLeft;
 }
@@ -2956,12 +3117,35 @@ buf[bufSize - 1] = '\0';
 snprintf(buf, bufSize, "sel-%s", GHCFAppBundleIDs[idx]);
 }
 }
-// v40：这个 App 在设定页里开着没有（默认开；键不存在就回 YES）。
+// ChinaFly（1.0.0）：首次默認開的 8 個 App（照 TrollOpen 影片裡機主的
+// 選擇，跟設定頁同一份：抖音、汽水音樂 Plus、設置、DynamicCow、
+// Facebook、Messenger、QQ、Telegram）。
+static BOOL GHCFIsDefaultOnAppBid(const char *bid) {
+if (!bid || bid[0] == '\0') return NO;
+static const char *defaults8[8] = {
+"com.ss.iphone.ugc.Aweme",
+"com.soda.music",
+"com.apple.Preferences",
+"com.matteozappa.DynamicCowTS",
+"com.facebook.Facebook",
+"com.facebook.Messenger",
+"com.tencent.mqq",
+"ph.telegra.Telegram"
+};
+for (int i = 0; i < 8; i++) {
+if (strcmp(bid, defaults8[i]) == 0) return YES;
+}
+return NO;
+}
+// v40：这个 App 在设定页里开着没有（固定 App：键不存在就回 YES；
+// 自選 App：sel-<bid> 寫過就照它，沒寫過看是不是默認開的 8 個——
+// 跟設定頁同一套判定規則）。
 static BOOL GHCFIsAppEnabled(int idx) {
 if (idx < 0 || idx >= GHCFAppCount) return NO;
 char key[160];
 GHCFAppEnabledKeyForIndex(idx, key, sizeof(key));
 if (key[0] == '\0') return NO;
+if (idx >= 5 && !GHCFPrefsHasKey(key)) return GHCFIsDefaultOnAppBid(GHCFAppBundleIDs[idx]);
 return GHCFReadPrefsBool(key, YES);
 }
 
@@ -3013,49 +3197,6 @@ if (v) { has = YES; CFRelease(v); }
 if (domain) CFRelease(domain);
 if (keyRef) CFRelease(keyRef);
 return has;
-}
-
-// v43.18：鍵盤模式合一，一次性遷移——keyboardMode 沒設過時按舊值寫：
-// 豎屏或橫屏任一是 outer 就寫 outer，否則寫 inner。皇上現在兩檔都
-// 是 outer，遷移後還是 outer，不許悄悄翻回內置（外彈鍵盤出不來的
-// 毛病還在查，蓋住不算修好）。設過就不再動（用戶之後自己改的優先）。
-static void GHCFMigrateKeyboardModeOnce(void) {
-static BOOL migrated = NO;
-if (migrated) return;
-migrated = YES;
-char *existing = GHCFReadPrefsCString("keyboardMode");
-if (existing) {
-free(existing);
-return;
-}
-BOOL outer = NO;
-char *portrait = GHCFReadPrefsCString("keyboardPopupModePortrait");
-if (portrait) {
-if (strcmp(portrait, "outer") == 0) outer = YES;
-free(portrait);
-}
-char *landscape = GHCFReadPrefsCString("keyboardPopupModeLandscape");
-if (landscape) {
-if (strcmp(landscape, "outer") == 0) outer = YES;
-free(landscape);
-}
-if (!outer) {
-char *legacy = GHCFReadPrefsCString("keyboardPopupMode");
-if (legacy) {
-if (strcmp(legacy, "outer") == 0) outer = YES;
-free(legacy);
-}
-}
-GHCFWritePrefsCString("keyboardMode", outer ? "outer" : "inner");
-// v43.18（父代理補）：遷到外置時，外置放大開關跟舊橫屏放大走——
-// 皇上現在橫屏放大是開的，遷移後外置放大也開著（新開關預設關，只管
-// 全新安裝；已經設過新開關的不動）。
-if (outer && !GHCFPrefsHasKey("enlargeOnExternalKeyboard")) {
-GHCFWritePrefsBool("enlargeOnExternalKeyboard", GHCFReadLandscapeEnlargeOnKeyboard());
-}
-char buf[128];
-snprintf(buf, sizeof(buf), "v43.18 keyboard mode migrated to %s", outer ? "outer" : "inner");
-GHCFLogLine(buf);
 }
 
 // ── v41：已安裝 App 清單（ARC 的「＋」與設定頁選擇器共用） ──
@@ -3131,6 +3272,33 @@ GHCFWritePrefsCString(key, NULL);
 if (bid) free(bid);
 }
 if (migrated) GHCFWriteIDList("customAppBundleIDs", list);
+// ChinaFly（1.0.0）：首次默認開的 8 個——設置是固定 App（開關預設開）；
+// 其餘 7 個播進 customAppBundleIDs＋sel-<bid> 開（跟設定頁第一次打開
+// 挑選器時播的同一份，只播一次，寫 appPickerDefaultsSeeded 標記；
+// 親手關掉的（sel 寫過 NO）不會被蓋回來——沒寫過 sel 才播）。
+if (!GHCFPrefsHasKey("appPickerDefaultsSeeded")) {
+static const char *seedBids[7] = {
+"com.ss.iphone.ugc.Aweme",
+"com.soda.music",
+"com.matteozappa.DynamicCowTS",
+"com.facebook.Facebook",
+"com.facebook.Messenger",
+"com.tencent.mqq",
+"ph.telegra.Telegram"
+};
+for (int si = 0; si < 7; si++) {
+char selKey[160];
+snprintf(selKey, sizeof(selKey), "sel-%s", seedBids[si]);
+if (GHCFPrefsHasKey(selKey)) continue;
+NSString *bidStr = [NSString stringWithCString:seedBids[si] encoding:NSUTF8StringEncoding];
+if (bidStr && ![list containsObject:bidStr]) [list addObject:bidStr];
+GHCFWritePrefsBool(selKey, YES);
+}
+if (!GHCFPrefsHasKey("appSettingsEnabled")) GHCFWritePrefsBool("appSettingsEnabled", YES);
+GHCFWritePrefsBool("appPickerDefaultsSeeded", YES);
+GHCFWriteIDList("customAppBundleIDs", list);
+GHCFLogLine("ChinaFly seeded default 8 apps");
+}
 for (id item in list) {
 if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
@@ -3231,6 +3399,95 @@ const char *lastDot = strrchr(bundleID, '.');
 const char *shortName = lastDot ? lastDot + 1 : bundleID;
 strncpy(out, shortName, outSize - 1);
 out[outSize - 1] = '\0';
+}
+
+// ── ChinaFly（1.0.0）菜單順序默認值 ──
+// menuAppOrder 默認順序——跟設定頁同一份（照 TrollOpen 影片露出的前
+// 17 個，原樣保留；微信留三個；知道 bundleID 的存 bundleID，不知道的
+// 存顯示名，運行時按名找）。設定頁第一次打開菜單編輯頁才寫進 prefs；
+// 沒開過之前 dylib 讀不到 key，就用這份兜底（見 GHCFReadMenuAppOrder）。
+static NSArray *GHCFDefaultMenuAppOrder(void) {
+return [NSArray arrayWithObjects:
+[NSString stringWithCString:"com.apple.Preferences" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.tencent.xin" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.apple.calculator" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"AppsDump3" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.ss.iphone.ugc.Aweme" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"巨魔注入器" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"愛思全能版" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.tencent.mqq" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.tencent.xin" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"酷我音樂" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"虛擬定位" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.matteozappa.DynamicCowTS" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.facebook.Messenger" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"ph.telegra.Telegram" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"TrollStore" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.facebook.Facebook" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"com.tencent.xin" encoding:NSUTF8StringEncoding],
+nil];
+}
+// 讀 menuAppOrder（存過就照存的；沒存過／存壞了就回上面那份默認）。
+// 注意：menuAppOrder 存的是 NSArray，不是逗號字串，GHCFReadIDList 讀
+// 不到它（那個只拆字串），這裡直接讀 CFPreferences 的陣列值。
+// dylib 只讀不寫（dylib 不改菜單順序，寫是設定頁的事）。
+static NSArray *GHCFReadMenuAppOrder(void) {
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, "menuAppOrder", kCFStringEncodingUTF8);
+NSArray *stored = nil;
+if (domain && keyRef) {
+CFPreferencesAppSynchronize(domain);
+CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+if (v) {
+if (CFGetTypeID(v) == CFArrayGetTypeID()) {
+NSMutableArray *filtered = [NSMutableArray array];
+for (id item in (__bridge NSArray *)v) {
+if ([item isKindOfClass:[NSString class]] && [(NSString *)item length] > 0) [filtered addObject:item];
+}
+if ([filtered count] > 0) stored = filtered;
+}
+CFRelease(v);
+}
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+if (stored) return stored;
+return GHCFDefaultMenuAppOrder();
+}
+// 按 menuAppOrder 重排一個 App 串列（原地改；穩定：菜單裡有的按菜單順序
+// 在前，菜單裡沒有的保持原來相對順序沉底；重複的菜單項只認第一次）。
+// 條目可能是 bundleID，也可能是顯示名（沒有 bundleID 的那幾項，
+// 運行時按 GHCFAppNameForBundleID 記的顯示名找）。
+static void GHCFOrderAppsByMenuOrder(NSMutableArray *apps) {
+if (!apps || [apps count] < 2) return;
+NSArray *menu = GHCFReadMenuAppOrder();
+NSMutableArray *ordered = [NSMutableArray array];
+NSMutableArray *rest = [NSMutableArray arrayWithArray:apps];
+for (id entry in menu) {
+if (![entry isKindOfClass:[NSString class]]) continue;
+const char *entryStr = [(NSString *)entry UTF8String];
+if (!entryStr || entryStr[0] == '\0') continue;
+BOOL entryIsName = (strchr(entryStr, '.') == NULL);
+for (NSInteger i = (NSInteger)[rest count] - 1; i >= 0; i--) {
+NSString *bidStr = (NSString *)[rest objectAtIndex:i];
+if (![bidStr isKindOfClass:[NSString class]]) continue;
+const char *bid = [bidStr UTF8String];
+BOOL match = (bid && strcmp(entryStr, bid) == 0);
+if (!match && entryIsName && bid) {
+char name[128];
+GHCFAppNameForBundleID(bid, name, sizeof(name));
+if (name[0] != '\0' && strcmp(entryStr, name) == 0) match = YES;
+}
+if (match) {
+[ordered addObject:bidStr];
+[rest removeObjectAtIndex:i];
+break;
+}
+}
+}
+[ordered addObjectsFromArray:rest];
+[apps removeAllObjects];
+[apps addObjectsFromArray:ordered];
 }
 
 // 固定 5 個在 GHCFAppBundleIDs[0..4] 的槽位號（-1 = 不是固定 App）。
@@ -4396,11 +4653,8 @@ if (image) [GHCFFlyTriggerButton setImage:image forState:UIControlStateNormal];
 // 感應帶。開關狀態變了才動手，沒變直接回（tick 便宜）。
 static BOOL GHCFAppliedEnabledState = NO;
 static BOOL GHCFAppliedEnabledValue = NO;
-// v43.28：激活码锁（定义在这里，GHCFApplyEnabledState 和下面
-// %ctor 后的激活模块共用）——锁住时分屏开关就当关着。
-static BOOL GHCFActivationLocked = NO;
 // v43.43（1.0.115，觸發鈕開關）：顯示開關跟進（tick 每 2 秒跑一次＋
-// prefschanged 立刻跑一次）。關→藏鈕；開→只在分屏開著、沒鎖、表盤沒藏
+// prefschanged 立刻跑一次）。關→藏鈕；開→只在分屏開著、表盤沒藏
 // 著鈕時顯示回來。開關狀態變了才動手，沒變直接回（tick 便宜）。
 static BOOL GHCFAppliedFlyTriggerButtonEnabled = NO;
 static BOOL GHCFAppliedFlyTriggerButtonEnabledValue = YES;
@@ -4415,15 +4669,15 @@ GHCFFlyTriggerButtonWindow.hidden = YES;
 GHCFLogLine("v43.43 flyTrigger button disabled");
 return;
 }
-// 開：表盤正藏著鈕時不搶回來（dismissLauncher 會放回）；分屏關著／
-// 激活鎖住時也不顯示（GHCFApplyEnabledState 管那邊）。
+// 開：表盤正藏著鈕時不搶回來（dismissLauncher 會放回）；分屏關著時
+// 也不顯示（GHCFApplyEnabledState 管那邊）。
 if (GHCFDialHidFlyTriggerButton) return;
-if (!GHCFReadEnabled() || GHCFActivationLocked) return;
+if (!GHCFReadEnabled()) return;
 GHCFFlyTriggerButtonWindow.hidden = NO;
 GHCFLogLine("v43.43 flyTrigger button enabled");
 }
 static void GHCFApplyEnabledState(void) {
-BOOL enabled = GHCFReadEnabled() && !GHCFActivationLocked;
+BOOL enabled = GHCFReadEnabled();
 if (GHCFAppliedEnabledState && enabled == GHCFAppliedEnabledValue) return;
 GHCFAppliedEnabledState = YES;
 GHCFAppliedEnabledValue = enabled;
@@ -4496,9 +4750,61 @@ return [NSString stringWithCString:"/var/mobile/Library/Preferences/ChinaFly-fly
 static BOOL GHCFReadFlyTriggerIconCustom(void) {
 return GHCFReadPrefsBool("flyTriggerIconCustom", NO);
 }
-// v42：讀觸發鈕圖（%ctor 裡鈕的同一套路徑：先 /var/jb 再 /Library；
-// v53：先試自訂圖（設定頁換圖存的固定檔），沒有才走 bundle 預設圖；
-// 讀不到回 nil → 呼叫處退回金色「分」）。
+// ChinaFly（1.0.0）：觸發鈕預設圖由代碼畫——紙飛機形，藍底白圖，
+// 跟新 icon 一套（底是 icon.png 同一套豎漸變：上 #125AB4 → 下 #3A96EB；
+// 飛機兩片折面照設定頁同一套畫法，機頭朝右上）；不用任何圖片素材。
+// 自訂圖（設定頁換圖，flyTriggerIconCustom）仍優先。
+static UIImage *GHCFDrawFlyTriggerImage(CGFloat size) {
+if (size <= 0) size = 56.0;
+CGFloat scale = [UIScreen mainScreen].scale;
+if (scale <= 0) scale = 2.0;
+CGSize px = CGSizeMake(size * scale, size * scale);
+UIGraphicsBeginImageContextWithOptions(px, NO, 1.0);
+UIImage *image = nil;
+@try {
+CGContextRef ctx = UIGraphicsGetCurrentContext();
+if (ctx) {
+CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+if (cs) {
+CGFloat comps[8] = {0x12 / 255.0, 0x5A / 255.0, 0xB4 / 255.0, 1.0, 0x3A / 255.0, 0x96 / 255.0, 0xEB / 255.0, 1.0};
+CGGradientRef grad = CGGradientCreateWithColorComponents(cs, comps, NULL, 2);
+if (grad) {
+CGContextDrawLinearGradient(ctx, grad, CGPointMake(0, 0), CGPointMake(0, px.height), 0);
+CGGradientRelease(grad);
+}
+CGColorSpaceRelease(cs);
+}
+CGFloat w = px.width;
+CGFloat h = px.height;
+UIBezierPath *top = [UIBezierPath bezierPath];
+[top moveToPoint:CGPointMake(w * 0.08, h * 0.50)];
+[top addLineToPoint:CGPointMake(w * 0.90, h * 0.10)];
+[top addLineToPoint:CGPointMake(w * 0.44, h * 0.64)];
+[top closePath];
+[[UIColor whiteColor] setFill];
+[top fill];
+UIBezierPath *bottom = [UIBezierPath bezierPath];
+[bottom moveToPoint:CGPointMake(w * 0.44, h * 0.64)];
+[bottom addLineToPoint:CGPointMake(w * 0.90, h * 0.10)];
+[bottom addLineToPoint:CGPointMake(w * 0.60, h * 0.90)];
+[bottom closePath];
+[[UIColor colorWithRed:0.85 green:0.92 blue:1.0 alpha:1.0] setFill];
+[bottom fill];
+image = UIGraphicsGetImageFromCurrentImageContext();
+}
+} @catch (NSException *e) {
+(void)e;
+image = nil;
+}
+UIGraphicsEndImageContext();
+if (image && image.CGImage) {
+image = [UIImage imageWithCGImage:image.CGImage scale:scale orientation:UIImageOrientationUp];
+}
+return image;
+}
+// ChinaFly（1.0.0）：讀觸發鈕圖——先試自訂圖（設定頁換圖存的固定檔），
+// 沒有就用上面代碼畫的紙飛機；畫不出來才回 nil
+//（呼叫處退回金色圓鈕＋「分」字，不空白、不崩）。
 static UIImage *GHCFLoadFlyTriggerImage(void) {
 UIImage *image = nil;
 @try {
@@ -4506,20 +4812,7 @@ if (GHCFReadFlyTriggerIconCustom()) {
 NSString *customPath = GHCFCustomFlyTriggerImagePath();
 if (customPath) image = [UIImage imageWithContentsOfFile:customPath];
 }
-if (!image) {
-NSString *resName = [NSString stringWithCString:"flyTrigger-button" encoding:NSUTF8StringEncoding];
-NSString *resType = [NSString stringWithCString:"png" encoding:NSUTF8StringEncoding];
-NSString *imagePath = nil;
-NSString *bundlePath = [NSString stringWithCString:"/var/jb/Library/PreferenceBundles/ChinaFlyPrefs.bundle" encoding:NSUTF8StringEncoding];
-NSBundle *prefsBundle = bundlePath ? [NSBundle bundleWithPath:bundlePath] : nil;
-if (prefsBundle && resName && resType) imagePath = [prefsBundle pathForResource:resName ofType:resType];
-if (!imagePath) {
-NSString *bundlePath2 = [NSString stringWithCString:"/Library/PreferenceBundles/ChinaFlyPrefs.bundle" encoding:NSUTF8StringEncoding];
-NSBundle *prefsBundle2 = bundlePath2 ? [NSBundle bundleWithPath:bundlePath2] : nil;
-if (prefsBundle2 && resName && resType) imagePath = [prefsBundle2 pathForResource:resName ofType:resType];
-}
-if (imagePath) image = [UIImage imageWithContentsOfFile:imagePath];
-}
+if (!image) image = GHCFDrawFlyTriggerImage(GHCFReadFlyTriggerIconSize());
 if (image && image.CGImage) {
 CGFloat screenScale = [UIScreen mainScreen].scale;
 if (screenScale > 0) image = [UIImage imageWithCGImage:image.CGImage scale:screenScale orientation:image.imageOrientation];
@@ -7821,105 +8114,14 @@ GHCFLogLine(buf);
 
 
 
-// ── v43.33（1.0.108，路線 A 探針）：鍵盤彈出時打當前 presentation 的圖層樹 ──
-// 背景：皇上的決定性測試已證明 presenter 路本身分不開鍵盤（scene 346×749、
-// 100% 縮放，系統鍵盤按整屏 430×359 排、超出 scene 被窗口裁掉）。FV 最可能
-// 的做法（路線 A）是 SpringBoard 側把鍵盤窗的 context 另外託管成一個獨立
-// 全寬窗口——鍵盤窗（UIRemoteKeyboardWindow／_UITextEffectsWindowHosted）
-// 有自己的 CAContext（自己的 context ID），機械上能另外託管，但前提是
-// SpringBoard 側拿得到這個 context ID。這個探針就是驗這個前提。
-// 只記日誌，不改任何行為：不藏、不動、不託管任何東西；不改任何 frame；
-// 不改鍵盤行為。開關 kbProbeEnabled（Keyboard.plist，預設開）。
-// 節流：一次彈出 WillShow 會連發幾次，2 秒內只打一次樹（鍵盤 hide 不清
-// 旗標——hide 可能漏，時間節流自己會恢復）。
-// 讀 contextId：CALayer 的私有方法，用 objc_msgSend＋sel_registerName 叫
-// （跟 GHCFAppIcon 一樣的寫法，不連結私有框架）；拿不到就回 0。
-// CALayerHost 認法：NSClassFromString 拿類、isKindOfClass 比。
-// 屏幕坐標：window.layer convertRect:fromLayer:（管 transform）；算不出就留空。
-static double GHCFKbProbeLastDump = 0;
-static int GHCFKbProbeNodeCount = 0;
-static int GHCFKbProbeHostCount = 0;
-static int GHCFKbProbeKbCount = 0;
-static unsigned int GHCFKbProbeContextIdForLayer(CALayer *layer) {
-if (!layer) return 0;
-unsigned int ctxId = 0;
-@try {
-SEL sel = sel_registerName("contextId");
-if ([layer respondsToSelector:sel]) {
-unsigned int (*msgSendCtx)(id, SEL) = (unsigned int (*)(id, SEL))objc_msgSend;
-ctxId = msgSendCtx(layer, sel);
-}
-} @catch (NSException *e) {
-(void)e;
-ctxId = 0;
-}
-return ctxId;
-}
-static void GHCFKbProbeDumpLayer(CALayer *layer, int depth, CALayer *windowLayer, CGRect windowFrame) {
-if (!layer || depth > 5 || GHCFKbProbeNodeCount >= 60) return;
-GHCFKbProbeNodeCount++;
-const char *cls = class_getName([layer class]);
-CGRect f = layer.frame;
-unsigned int ctxId = GHCFKbProbeContextIdForLayer(layer);
-BOOL isHost = NO;
-Class hostClass = NSClassFromString([NSString stringWithCString:"CALayerHost" encoding:NSUTF8StringEncoding]);
-if (hostClass && [layer isKindOfClass:hostClass]) isHost = YES;
-if (isHost) GHCFKbProbeHostCount++;
-// KB?：寬約 430、高約 359、在 scene 下半——就是鍵盤窗的樣子。
-BOOL kbMaybe = (f.size.width >= 400.0 && f.size.width <= 460.0 && f.size.height >= 300.0 && f.size.height <= 400.0 && f.origin.y >= 500.0);
-if (kbMaybe) GHCFKbProbeKbCount++;
-char sbuf[640];
-if (windowLayer) {
-CGRect scr = CGRectZero;
-BOOL scrOK = NO;
-@try {
-scr = [windowLayer convertRect:layer.bounds fromLayer:layer];
-scrOK = YES;
-} @catch (NSException *e) {
-(void)e;
-scrOK = NO;
-}
-if (scrOK) {
-snprintf(sbuf, sizeof(sbuf), "v43.33 kb-probe d=%d %s frame=%d,%d %dx%d scr=%d,%d %dx%d ctx=%u%s%s%s", depth, cls, (int)f.origin.x, (int)f.origin.y, (int)f.size.width, (int)f.size.height, (int)(scr.origin.x + windowFrame.origin.x), (int)(scr.origin.y + windowFrame.origin.y), (int)scr.size.width, (int)scr.size.height, ctxId, isHost ? " HOST" : "", kbMaybe ? " KB?" : "", layer.hidden ? " hidden" : "");
-} else {
-snprintf(sbuf, sizeof(sbuf), "v43.33 kb-probe d=%d %s frame=%d,%d %dx%d scr=? ctx=%u%s%s%s", depth, cls, (int)f.origin.x, (int)f.origin.y, (int)f.size.width, (int)f.size.height, ctxId, isHost ? " HOST" : "", kbMaybe ? " KB?" : "", layer.hidden ? " hidden" : "");
-}
-} else {
-snprintf(sbuf, sizeof(sbuf), "v43.33 kb-probe d=%d %s frame=%d,%d %dx%d scr=? ctx=%u%s%s%s", depth, cls, (int)f.origin.x, (int)f.origin.y, (int)f.size.width, (int)f.size.height, ctxId, isHost ? " HOST" : "", kbMaybe ? " KB?" : "", layer.hidden ? " hidden" : "");
-}
-GHCFLogLine(sbuf);
-NSArray *subs = [layer.sublayers copy];
-for (CALayer *sub in subs) {
-GHCFKbProbeDumpLayer(sub, depth + 1, windowLayer, windowFrame);
-}
-}
-static void GHCFKbProbeDumpOnKeyboardShow(CGFloat kbHeight, const char *bid) {
-CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-if (now - GHCFKbProbeLastDump < 2.0) return;
-GHCFKbProbeLastDump = now;
-UIView *pv = (GHCFHostedPresenter && GHCFHostedPresenter.presentationView) ? GHCFHostedPresenter.presentationView : nil;
-UIView *lh = GHCFHostedLayerHostView;
-CGRect winFrame = GHCFHostedWindow ? GHCFHostedWindow.frame : CGRectZero;
-char hbuf[256];
-snprintf(hbuf, sizeof(hbuf), "v43.33 kb-probe show bid=%s kb=%d path=%s win=%d,%d %dx%d", (bid && bid[0] != '\0') ? bid : "-", (int)kbHeight, (pv && lh) ? "both" : (pv ? "presenter" : (lh ? "layerhost" : "none")), (int)winFrame.origin.x, (int)winFrame.origin.y, (int)winFrame.size.width, (int)winFrame.size.height);
-GHCFLogLine(hbuf);
-GHCFKbProbeNodeCount = 0;
-GHCFKbProbeHostCount = 0;
-GHCFKbProbeKbCount = 0;
-CALayer *windowLayer = GHCFHostedWindow ? GHCFHostedWindow.layer : nil;
-if (pv) GHCFKbProbeDumpLayer(pv.layer, 0, windowLayer, winFrame);
-if (lh) GHCFKbProbeDumpLayer(lh.layer, 0, windowLayer, winFrame);
-char fbuf[128];
-snprintf(fbuf, sizeof(fbuf), "v43.33 kb-probe done nodes=%d host=%d kb=%d", GHCFKbProbeNodeCount, GHCFKbProbeHostCount, GHCFKbProbeKbCount);
-GHCFLogLine(fbuf);
-}
 // v42：鍵盤彈出時浮窗自動上移（探針：鍵盤通知是 App 進程發的，
 // SpringBoard 這邊可能收不到——收到了才上移，收不到就不動，見 §115）。
 // 上移只動活動窗（鍵盤擋住它的底才移，移多少看鍵盤高度），收起回原位。
 // v54：彈出方式分內／外（keyboardPopupMode）：內彈出走老路上移；外彈出
 // 浮窗不動（鍵盤在浮窗外），橫屏時試著給鍵盤加拖動（見上）；
 // 收起時不再關窗（v43.22：關窗分支＋開關整個刪掉，Lee 點頭）。
-// v43.5：鍵盤彈出／收起共用邏輯（舊 NSNotification 路徑＋Darwin 橋接共用）。
+// v43.5：鍵盤彈出／收起共用邏輯（NSNotification 路徑；ChinaFly 1.0.0
+// 已刪 Darwin 橋接——助手 dylib 已刪，那條通知再也不會來）。
 // kbHeight：鍵盤高度（pt）；bid：發通知的 App 包名，NULL 表示不比對
 //（舊路徑沒有包名）。只對活動浮窗動作；橫屏放大不認「自動上移」開關，
 // 上移／關窗照舊認各自開關。
@@ -7927,9 +8129,6 @@ GHCFLogLine(fbuf);
 if (!GHCFHostedWindow || GHCFHostedMinimized) return;
 if (bid && bid[0] != '\0' && strcmp(bid, GHCFHostedBundleID) != 0) return;
 if (kbHeight <= 0) return;
-// v43.33（1.0.108，路線 A 探針）：鍵盤彈出時打一遍當前 presentation 的
-// 圖層樹（只記日誌，2 秒節流；開關 kbProbeEnabled 預設開）。
-if (GHCFReadKbProbeEnabled()) GHCFKbProbeDumpOnKeyboardShow(kbHeight, bid);
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 BOOL landscape = screenBounds.size.width > screenBounds.size.height;
 int mode = GHCFReadKeyboardPopupModeForOrientation(landscape);
@@ -8005,7 +8204,7 @@ GHCFLogLine("v43.5 window restored after keyboard hide (enlarge)");
 // 其餘全黑，半黑）。直接清旗標走人，不要動窗框。
 if (!GHCFHostedWindow || GHCFHostedMinimized) { GHCFKeyboardShifted = NO; return; }
 if (bid && bid[0] != '\0' && strcmp(bid, GHCFHostedBundleID) != 0) return;
-// v43.22：記一行來源（Darwin 橋接帶包名；NSNotification 舊路徑 bid 是 NULL），
+// v43.22：記一行來源（ChinaFly 1.0.0 只剩 NSNotification 路，bid 是 NULL），
 // 以後不用猜 hide 是哪個通道送的。
 {
 char hbuf[192];
@@ -8040,9 +8239,9 @@ GHCFHostedWindow.frame = GHCFKeyboardSavedFrame;
 GHCFKeyboardShifted = NO;
 GHCFLogLine("v43.5 window restored after keyboard hide");
 }
-// v42：鍵盤監聽舊路徑（NSNotificationCenter——鍵盤通知由 App 行程發，
-// SpringBoard 這邊可能收不到；收到了走上面共用邏輯。Darwin 橋接見下面
-// notify_register_dispatch，那條才是 1.0.80 的主路）。
+// v42：鍵盤監聽（NSNotificationCenter——鍵盤通知由 App 行程發，
+// SpringBoard 這邊可能收不到；收到了走上面共用邏輯。Darwin 橋接
+// ChinaFly 1.0.0 已刪，只剩這一條路）。
 - (void)handleKeyboardWillShow:(NSNotification *)note {
 NSDictionary *info = note.userInfo;
 NSValue *frameValue = info ? [info objectForKey:UIKeyboardFrameEndUserInfoKey] : nil;
@@ -8637,6 +8836,9 @@ if ([pinnedInLauncher containsObject:bidStr]) continue;
 if ([recentInLauncher containsObject:bidStr]) continue;
 [allRest addObject:bidStr];
 }
+// ChinaFly（1.0.0）：allRest 按 menuAppOrder 排（沒開過菜單編輯頁時用
+// 影片 17 個默認；置頂／最近仍在前面，不動）。
+GHCFOrderAppsByMenuOrder(allRest);
 // 弧區：三段合併成一個順序（置頂→最近→全部），按層數分同心弧。
 NSMutableArray *ordered = [NSMutableArray array];
 [ordered addObjectsFromArray:pinnedInLauncher];
@@ -8649,11 +8851,12 @@ return;
 // v43.4：啟動器裡的工具鈕已拿掉（皇上 2026-11-18 說沒必要留），
 // 只排 App 圖標。
 GHCFLogLine("v43.4 launcher no tool buttons");
-// v43.19：啟動器樣式七檔——0 圓環（預設，見 addRadialARCIconsForBids）、
-// 1 側邊欄、2 抽屜、3 橫向輪盤、4 磁貼（見下面四個新函數）、5 扇形轉盤
-//（1.0.110：同一套圓環排布＋轉盤手勢，見 handleDialPan:）、6 表盘启动器
-//（1.0.115，見 addDialLauncherIconsForBids）。grid 已刪，
-// 讀值處已把 "grid"／未知值當 radial（見 GHCFReadLauncherStyle）。
+// v43.19：啟動器樣式七檔——0 圓環、1 側邊欄、2 抽屜、3 橫向輪盤、
+// 4 磁貼（見下面四個新函數）、5 扇形轉盤（1.0.110：同一套圓環排布＋
+// 轉盤手勢，見 handleDialPan:）、6 表盘启动器（1.0.115，見
+// addDialLauncherIconsForBids）。
+// ChinaFly（1.0.0）：預設走表盤（見 GHCFReadLauncherStyle）；舊樣式
+// 代碼留著休眠，明確存過舊值才走。
 // v72：樣式分支記一行，下次日誌證明讀值有沒有到。
 int launcherStyle = GHCFReadLauncherStyle();
 {
@@ -9112,7 +9315,8 @@ if (icon > 64.0) icon = 64.0;
 CGFloat spacing = GHCFReadDialElementSpacing();
 CGFloat pitch = icon + spacing;
 if (pitch < icon + 2.0) pitch = icon + 2.0;
-// v43.42 fix（皇上 16:08）：默认居中圆盘（圆心屏幕正中，不锚觸發鈕钮位）；
+// v43.42 fix（皇上 16:08）：默认居中圆盘（圆心屏幕正中，不锚觸發鈕钮位；
+// 430x932 的機上就是 215,466；前三圈 72/122/172，見下面半徑算法）；
 // 居中显示关时弧顶才是按钮位置往上 60pt。
 CGPoint center;
 BOOL centered = GHCFReadDialCentered();
@@ -9282,21 +9486,23 @@ CGFloat discR = radii[rings - 1] + icon / 2.0 + 12.0;
 UIView *disc = [[UIView alloc] initWithFrame:CGRectMake(center.x - discR, center.y - discR, discR * 2.0, discR * 2.0)];
 disc.tag = 9106;
 disc.userInteractionEnabled = NO;
-disc.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:(CGFloat)GHCFReadDialCircleBgOpacity()];
+disc.backgroundColor = [GHCFReadDialCircleBgColor() colorWithAlphaComponent:(CGFloat)GHCFReadDialCircleBgOpacity()];
 disc.layer.cornerRadius = discR;
 disc.layer.masksToBounds = YES;
 if (GHCFReadDialGradientBg()) {
 CAGradientLayer *grad = [CAGradientLayer layer];
 grad.frame = disc.bounds;
-grad.colors = [NSArray arrayWithObjects:(id)[[UIColor whiteColor] colorWithAlphaComponent:0.28].CGColor, (id)[[UIColor whiteColor] colorWithAlphaComponent:0.04].CGColor, nil];
+grad.colors = [NSArray arrayWithObjects:(id)[GHCFReadDialGradientStartColor() colorWithAlphaComponent:0.28].CGColor, (id)[GHCFReadDialGradientEndColor() colorWithAlphaComponent:0.04].CGColor, nil];
 grad.startPoint = CGPointMake(0.5, 0.0);
 grad.endPoint = CGPointMake(0.5, 1.0);
 [disc.layer addSublayer:grad];
 }
 [GHCFLauncherContentView addSubview:disc];
-// 指针（示意短针：圆心到第一圈，中角方向；隐藏指针开时不画）。
-if (!GHCFReadDialHidePointer()) {
+// 指针（示意短针：圆心到第一圈，中角方向；隐藏指针开时不画；
+// 针色走 dialIconSelectedColor，针角就是選中圈的基準角）。
 double midA = centered ? -M_PI_2 : (angLo + angHi) / 2.0;
+GHCFDialPointerAngle = midA;
+if (!GHCFReadDialHidePointer()) {
 CGFloat px0 = center.x + 30.0 * cos(midA);
 CGFloat py0 = center.y + 30.0 * sin(midA);
 CGFloat px1 = center.x + radii[0] * cos(midA);
@@ -9306,7 +9512,7 @@ UIBezierPath *path = [UIBezierPath bezierPath];
 [path addLineToPoint:CGPointMake(px1 - center.x + discR, py1 - center.y + discR)];
 CAShapeLayer *needle = [CAShapeLayer layer];
 needle.path = path.CGPath;
-needle.strokeColor = [[UIColor whiteColor] colorWithAlphaComponent:0.85].CGColor;
+needle.strokeColor = [GHCFReadDialIconSelectedColor() colorWithAlphaComponent:0.85].CGColor;
 needle.lineWidth = 2.0;
 needle.lineCap = kCALineCapRound;
 [disc.layer addSublayer:needle];
@@ -9314,6 +9520,7 @@ needle.lineCap = kCALineCapRound;
 }
 CGFloat maxBottom = 0;
 NSInteger idx = 0;
+GHCFBuildingDialIcons = YES;
 for (int ring = 0; ring < rings; ring++) {
 int count = counts[ring];
 if (count <= 0) continue;
@@ -9349,6 +9556,8 @@ CGFloat bottom = p.y + icon / 2.0;
 if (bottom > maxBottom) maxBottom = bottom;
 }
 }
+GHCFBuildingDialIcons = NO;
+GHCFDialRefreshIconRings();
 // 中心钮：觸發鈕本人（悬浮钮已藏起，这颗就是它）；点一下收起启动器。
 // 图拿不到就回落齿轮钮（设置入口不断）。
 UIButton *centerBtn = nil;
@@ -9943,9 +10152,14 @@ UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, size
 if (icon) {
 iconView.image = icon;
 } else {
-iconView.backgroundColor = [UIColor grayColor];
+// ChinaFly（1.0.0）：表盤裡圖拿不到時底色走 dialIconDisabledColor，
+// 不再是灰；其餘啟動器樣式不動。
+iconView.backgroundColor = GHCFBuildingDialIcons ? GHCFReadDialIconDisabledColor() : [UIColor grayColor];
 }
-iconView.layer.cornerRadius = size * 0.22;
+// ChinaFly（1.0.0，dialCropCircle）：表盤裡的圖標裁成圓形（開了才裁；
+// 其餘啟動器樣式不動）。
+if (GHCFBuildingDialIcons && GHCFReadDialCropCircle()) iconView.layer.cornerRadius = size / 2.0;
+else iconView.layer.cornerRadius = size * 0.22;
 iconView.layer.masksToBounds = YES;
 [btn addSubview:iconView];
 int slotIdx = (bid) ? GHCFAppIndexForBundleID(bid) : -1;
@@ -10156,17 +10370,7 @@ return;
 
 @end
 
-// v43.28：激活码（皇上 2026-11-22 定，设备授权整套取消后改走激活码，
-// 像黄白助手那样）——设置里输码，输对才能用插件；输错／没输锁住，
-// 只藏窗、不崩、不进安全模式。码的名单在源站 license/codes.json
-// （10 个码，第一个是主码；码只放名单文件，不要写死在代码里）。
-// 名单是异步抓的（NSURLSession，3 秒超时），抓不到不锁死；
-// 判断只在 setup 跑起来之后做，绝不在 %ctor 里同步跑
-// （1.0.102 就是 %ctor 同步跑 setup 进的安全模式）。
-// 锁法：复用 GHCFApplyEnabledState——锁住时分屏开关就当关着，
-// 感应带／觸發鈕／已开浮窗全藏、启动器关掉；解锁时恢复。
 static void GHCFDeferredSetupRun(void);
-static void GHCFActivationCheckStart(void);
 
 static BOOL GHCFSetupRan = NO; // 延后 setup 跑过一次（重复跑会建两套窗／重复登记通知）。
 
@@ -10183,173 +10387,456 @@ GHCFDeferredSetupRun();
 });
 }
 
-// v43.28：激活状态写 prefs（设置页状态行／诊断信息读这个键）：
-// authorized 已激活、locked 未激活（码不对或没输）、checkFailed 名单
-// 读不到（暂不锁）。只写状态字，不写码本身。
-static void GHCFActivationSetState(const char *state) {
-if (!state) return;
-GHCFWritePrefsCString("activationState", state);
+// ── ChinaFly（1.0.0）分屏設置／主設置「行為未接」記錄 ──
+// 分屏設置 28 項裡接上現有機制的是 5 項（persistentMemory／bannerTap／
+// onlineWindows／cornerRadius4／longPressDuration——各自的讀值器已接），
+// 其餘 23 項只有設置頁、沒有對應的 dylib 鉤子：先只讀值記一行日誌
+//（行為未接），不硬編假行為。主設置那幾個行為開關也一樣記在這裡。
+// longPressDuration 不在這裡——它本來就讀同名鍵、已接觸發鈕長按。
+static void GHCFLogChinaFlyUnwiredBool(const char *key, BOOL def) {
+char buf[192];
+snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%d behavior-not-wired", key, GHCFReadPrefsBool(key, def) ? 1 : 0);
+GHCFLogLine(buf);
+}
+static void GHCFLogChinaFlyUnwiredDouble(const char *key, double def) {
+char buf[192];
+snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%.2f behavior-not-wired", key, GHCFReadPrefsDouble(key, def));
+GHCFLogLine(buf);
+}
+static void GHCFLogChinaFlyUnwiredString(const char *key, const char *def) {
+char *v = GHCFReadPrefsCString(key);
+char buf[256];
+snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%s behavior-not-wired", key, v ? v : def);
+if (v) free(v);
+GHCFLogLine(buf);
+}
+static void GHCFLogChinaFlyUnwiredSettings(void) {
+// 基本設置：singleWindowMode 只存值（我們本來就嚴格單主窗，行為就是現況）。
+GHCFLogChinaFlyUnwiredBool("singleWindowMode", NO);
+GHCFLogChinaFlyUnwiredBool("reverseLongPress", NO);
+GHCFLogChinaFlyUnwiredBool("longPressReleaseTrigger", YES);
+GHCFLogChinaFlyUnwiredDouble("topMarginSmallWindow", 30.0);
+// 鍵盤：kbBackgroundTap（點窗外動作選項不同，沒法對上）；
+// floatingAvoidance（鍵盤為非分屏應用打開時藏分屏——SpringBoard 側
+// 收不到別家 App 的鍵盤通知，沒有鉤子）。
+GHCFLogChinaFlyUnwiredString("kbBackgroundTap", "unset");
+GHCFLogChinaFlyUnwiredBool("floatingAvoidance", NO);
+// 外觀：沒有對應的鉤子（我們只有浮窗陰影，不是光圈／光暈；
+// peek 是固定 112x242，沒有小窗縮放；手勢區是觸發區矩形那套）。
+GHCFLogChinaFlyUnwiredBool("showGestureArea", NO);
+GHCFLogChinaFlyUnwiredBool("haloFrame", YES);
+GHCFLogChinaFlyUnwiredBool("windowGlow", YES);
+GHCFLogChinaFlyUnwiredBool("edgeIcons", YES);
+GHCFLogChinaFlyUnwiredDouble("windowHalo", 30.0);
+GHCFLogChinaFlyUnwiredDouble("smallWindowScale", 0.20);
+GHCFLogChinaFlyUnwiredDouble("gestureAreaSize", 2.0);
+// 跳轉分屏：沒有鉤子（從別處跳轉過來時分屏——沒有攔截點）。
+GHCFLogChinaFlyUnwiredBool("jumpSplit", NO);
+GHCFLogChinaFlyUnwiredBool("jumpSpotlight", NO);
+GHCFLogChinaFlyUnwiredBool("jumpSpringBoard", NO);
+GHCFLogChinaFlyUnwiredBool("callbackClose", NO);
+// 通知分屏：bannerTap 已接（見 GHCFReadBannerOpensFloatingWindow）；
+// 其餘沒有鉤子。
+GHCFLogChinaFlyUnwiredBool("bannerLongPressSwipe", NO);
+GHCFLogChinaFlyUnwiredBool("notificationCenterSplit", NO);
+// APP 切換器：沒有鉤子（我們不注入 App 切換器）。
+GHCFLogChinaFlyUnwiredBool("addToAppSwitcher", YES);
+GHCFLogChinaFlyUnwiredBool("swipeCardSplit", YES);
+// 桌面圖標：沒有鉤子（桌面圖標手勢是 SpringBoard 的，不攔截）。
+GHCFLogChinaFlyUnwiredString("desktopSwipeSplit", "unset");
+GHCFLogChinaFlyUnwiredBool("desktopLongPressSplitButton", YES);
+// 主設置行為開關：hideScreenshotRecording 跟舊的 arcHideOnScreenshot
+// 不是一回事（舊的預設開、只藏錄屏開始時；新的預設關、還要求截圖通知
+// 到時也藏——截圖通知在截圖完成後才發，藏了也來不及進那一張，見
+// handleScreenCaptureChanged），所以不借舊機制、只記未接；其餘沒有鉤子。
+GHCFLogChinaFlyUnwiredBool("hideScreenshotRecording", NO);
+GHCFLogChinaFlyUnwiredBool("delayedScreenshot", NO);
+GHCFLogChinaFlyUnwiredBool("doubleTapLock", NO);
+GHCFLogChinaFlyUnwiredBool("hideDockBackground", NO);
+GHCFLogChinaFlyUnwiredBool("ipadAppSwitcherAnim", YES);
+GHCFLogChinaFlyUnwiredString("actionButtonTapAction", "none");
+GHCFLogChinaFlyUnwiredString("actionButtonLongPressAction", "none");
+GHCFLogChinaFlyUnwiredBool("splitTranslation", YES);
 }
 
-static void GHCFActivationApplyLock(void) {
-if (!GHCFActivationLocked) {
-GHCFActivationLocked = YES;
-GHCFActivationSetState("locked");
-GHCFLogLine("v43.28 activation locked");
+// ── ChinaFly（1.0.0）菜單動作分發器 ──
+// 33 個 identifier（KEYS_SPEC 第五節）各一個處理函數；有安全做法的做，
+// 沒有的只存開關、點了記日誌不做事。全部防崩（respondsToSelector＋
+// @try/@catch，絕不能因為一個動作閃退）。不連結私有框架：
+// AVCaptureDevice／MPVolumeView 都走 NSClassFromString＋objc_msgSend
+// 運行時拿；鎖屏走 dlsym 找 GSEventLockDevice，找不到就只記日誌。
+// 目前沒有啟動器內的調用點（表盤只排 App，菜單 UI 在設定頁那邊）：
+// GHCFMenuActionPerform 先備著，等菜單 UI 接線再調。
+static BOOL GHCFMenuToggleEnabled(const char *identifier) {
+if (!identifier || identifier[0] == '\0') return NO;
+char key[96];
+snprintf(key, sizeof(key), "menuToggle_%s", identifier);
+return GHCFReadPrefsBool(key, YES);
 }
-GHCFApplyEnabledState();
+static void GHCFMenuActionLogOnly(const char *identifier) {
+char buf[192];
+snprintf(buf, sizeof(buf), "ChinaFly menu %s stored-only, no safe hook", identifier);
+GHCFLogLine(buf);
+}
+static void GHCFMenuAction_ToggleBluetooth(void) { GHCFMenuActionLogOnly("ToggleBluetooth"); }
+static void GHCFMenuAction_ToggleWiFi(void) { GHCFMenuActionLogOnly("ToggleWiFi"); }
+static void GHCFMenuAction_ToggleVPN(void) { GHCFMenuActionLogOnly("ToggleVPN"); }
+static void GHCFMenuAction_ToggleCellularData(void) { GHCFMenuActionLogOnly("ToggleCellularData"); }
+static void GHCFMenuAction_ToggleTrueTone(void) { GHCFMenuActionLogOnly("ToggleTrueTone"); }
+static void GHCFMenuAction_ToggleAirplaneMode(void) { GHCFMenuActionLogOnly("ToggleAirplaneMode"); }
+static void GHCFMenuAction_TogglePersonalHotspot(void) { GHCFMenuActionLogOnly("TogglePersonalHotspot"); }
+static void GHCFMenuAction_ToggleLowPowerMode(void) { GHCFMenuActionLogOnly("ToggleLowPowerMode"); }
+static void GHCFMenuAction_ToggleNightShift(void) { GHCFMenuActionLogOnly("ToggleNightShift"); }
+static void GHCFMenuAction_ToggleSmartInvert(void) { GHCFMenuActionLogOnly("_toggleSmartInvert"); }
+static void GHCFMenuAction_ActivateSiri(void) { GHCFMenuActionLogOnly("activateSiri"); }
+static void GHCFMenuAction_ToggleAppLibrary(void) { GHCFMenuActionLogOnly("toggleAppLibrary"); }
+static void GHCFMenuAction_ToggleAppSwitcher(void) { GHCFMenuActionLogOnly("toggleAppSwitcher"); }
+static void GHCFMenuAction_ToggleCommandAndControl(void) { GHCFMenuActionLogOnly("toggleCommandAndControl"); }
+static void GHCFMenuAction_ToggleControlCenter(void) { GHCFMenuActionLogOnly("toggleControlCenter"); }
+static void GHCFMenuAction_ToggleLiveSpeech(void) { GHCFMenuActionLogOnly("toggleLiveSpeech"); }
+static void GHCFMenuAction_ToggleMute(void) { GHCFMenuActionLogOnly("toggleMute"); }
+static void GHCFMenuAction_ToggleNearbyDeviceControlPicker(void) { GHCFMenuActionLogOnly("toggleNearbyDeviceControlPicker"); }
+static void GHCFMenuAction_ToggleNotificationCenter(void) { GHCFMenuActionLogOnly("toggleNotificationCenter"); }
+static void GHCFMenuAction_ToggleWatchRemoteScreen(void) { GHCFMenuActionLogOnly("toggleWatchRemoteScreen"); }
+static void GHCFMenuAction_ToggleQuickNote(void) { GHCFMenuActionLogOnly("toggleQuickNote"); }
+static void GHCFMenuAction_ToggleDock(void) { GHCFMenuActionLogOnly("toggleDock"); }
+static void GHCFMenuAction_ToggleLocation(void) { GHCFMenuActionLogOnly("ToggleLocation"); }
+static void GHCFMenuAction_ToggleAutoBrightness(void) { GHCFMenuActionLogOnly("ToggleAutoBrightness"); }
+static void GHCFMenuAction_ToggleDND(void) { GHCFMenuActionLogOnly("ToggleDND"); }
+static void GHCFMenuAction_ScreenshotRegion(void) { GHCFMenuActionLogOnly("screenshotRegion"); }
+// 手電筒：AVCaptureDevice torch（運行時拿類，不連結 AVFoundation）。
+static void GHCFMenuAction_ToggleFlashlight(void) {
+@try {
+Class capClass = NSClassFromString([NSString stringWithCString:"AVCaptureDevice" encoding:NSUTF8StringEncoding]);
+if (!capClass) { GHCFLogLine("ChinaFly menu ToggleFlashlight no AVCaptureDevice"); return; }
+SEL defaultSel = sel_registerName("defaultDeviceWithMediaType:");
+SEL hasTorchSel = sel_registerName("hasTorch");
+SEL torchModeSel = sel_registerName("torchMode");
+SEL lockSel = sel_registerName("lockForConfiguration:");
+SEL setTorchSel = sel_registerName("setTorchMode:");
+SEL unlockSel = sel_registerName("unlockForConfiguration");
+if (![capClass respondsToSelector:defaultSel]) { GHCFLogLine("ChinaFly menu ToggleFlashlight no default device"); return; }
+id (*msgSendDefault)(id, SEL, id) = (id (*)(id, SEL, id))objc_msgSend;
+NSString *mediaType = [NSString stringWithCString:"vide" encoding:NSUTF8StringEncoding];
+id device = msgSendDefault(capClass, defaultSel, mediaType);
+if (!device) { GHCFLogLine("ChinaFly menu ToggleFlashlight no video device"); return; }
+BOOL (*msgSendBool)(id, SEL) = (BOOL (*)(id, SEL))objc_msgSend;
+if (![device respondsToSelector:hasTorchSel] || !msgSendBool(device, hasTorchSel)) { GHCFLogLine("ChinaFly menu ToggleFlashlight no torch"); return; }
+long (*msgSendLong)(id, SEL) = (long (*)(id, SEL))objc_msgSend;
+long mode = [device respondsToSelector:torchModeSel] ? msgSendLong(device, torchModeSel) : 0;
+long want = (mode == 0) ? 1 : 0;
+BOOL (*msgSendLock)(id, SEL, id *) = (BOOL (*)(id, SEL, id *))objc_msgSend;
+NSError *lockErr = nil;
+BOOL locked = NO;
+if ([device respondsToSelector:lockSel]) locked = msgSendLock(device, lockSel, &lockErr);
+if (!locked) { GHCFLogLine("ChinaFly menu ToggleFlashlight lock failed"); return; }
+if ([device respondsToSelector:setTorchSel]) {
+void (*msgSendSetLong)(id, SEL, long) = (void (*)(id, SEL, long))objc_msgSend;
+msgSendSetLong(device, setTorchSel, want);
+}
+if ([device respondsToSelector:unlockSel]) {
+void (*msgSendVoid)(id, SEL) = (void (*)(id, SEL))objc_msgSend;
+msgSendVoid(device, unlockSel);
+}
+char buf[96];
+snprintf(buf, sizeof(buf), "ChinaFly menu ToggleFlashlight torch=%s", want == 1 ? "on" : "off");
+GHCFLogLine(buf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("ChinaFly menu ToggleFlashlight exception");
+}
+}
+// 音量：MPVolumeView 的滑桿（運行時拿類，不連結 MediaPlayer；
+// 滑桿要掛進一個窗才生效，借觸發鈕／感應帶的窗掛一下、用完就拆）。
+static void GHCFMenuActionAdjustVolume(BOOL up) {
+@try {
+Class volClass = NSClassFromString([NSString stringWithCString:"MPVolumeView" encoding:NSUTF8StringEncoding]);
+if (!volClass) { GHCFLogLine("ChinaFly menu volume no MPVolumeView"); return; }
+UIWindow *host = GHCFFlyTriggerButtonWindow ? GHCFFlyTriggerButtonWindow : GHCFStripWindow;
+if (!host) { GHCFLogLine("ChinaFly menu volume no host window"); return; }
+UIView *volView = [[volClass alloc] initWithFrame:CGRectMake(0, 0, 1, 1)];
+if (!volView) return;
+volView.hidden = YES;
+[host addSubview:volView];
+UISlider *slider = nil;
+for (UIView *sub in volView.subviews) {
+if ([sub isKindOfClass:[UISlider class]]) { slider = (UISlider *)sub; break; }
+}
+if (!slider) { [volView removeFromSuperview]; GHCFLogLine("ChinaFly menu volume no slider"); return; }
+float v = slider.value + (up ? 0.1f : -0.1f);
+if (v < 0.0f) v = 0.0f;
+if (v > 1.0f) v = 1.0f;
+[slider setValue:v animated:NO];
+[slider sendActionsForControlEvents:UIControlEventValueChanged];
+[volView removeFromSuperview];
+char buf[96];
+snprintf(buf, sizeof(buf), "ChinaFly menu volume %s to %.2f", up ? "up" : "down", (double)v);
+GHCFLogLine(buf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("ChinaFly menu volume exception");
+}
+}
+static void GHCFMenuAction_DecreaseVolume(void) { GHCFMenuActionAdjustVolume(NO); }
+static void GHCFMenuAction_IncreaseVolume(void) { GHCFMenuActionAdjustVolume(YES); }
+// 鎖屏：GSEventLockDevice（dlsym 找，找不到就只記日誌不做事）。
+static void GHCFMenuAction_ActivateLockButton(void) {
+@try {
+void (*lockDevice)(void) = (void (*)(void))dlsym(RTLD_DEFAULT, "GSEventLockDevice");
+if (lockDevice) {
+lockDevice();
+GHCFLogLine("ChinaFly menu activateLockButton locked");
+} else {
+GHCFLogLine("ChinaFly menu activateLockButton no safe hook, stored only");
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("ChinaFly menu activateLockButton exception");
+}
+}
+// 截圖：抓當前屏幕快照（snapshotView＋renderInContext，UIKit 自帶）。
+static UIImage *GHCFMenuSnapshotScreenImage(void) {
+UIImage *shot = nil;
+@try {
+CGRect sb = [UIScreen mainScreen].bounds;
+UIView *snap = [[UIScreen mainScreen] snapshotViewAfterScreenUpdates:YES];
+if (snap) {
+UIGraphicsBeginImageContextWithOptions(sb.size, NO, 0.0);
+CGContextRef ctx = UIGraphicsGetCurrentContext();
+if (ctx) {
+[snap.layer renderInContext:ctx];
+shot = UIGraphicsGetImageFromCurrentImageContext();
+}
+UIGraphicsEndImageContext();
+}
+} @catch (NSException *e) {
+(void)e;
+shot = nil;
+}
+return shot;
+}
+static void GHCFMenuAction_TakeScreenshot(void) {
+UIImage *shot = GHCFMenuSnapshotScreenImage();
+if (!shot) { GHCFLogLine("ChinaFly menu takeScreenshot snapshot failed"); return; }
+@try { UIImageWriteToSavedPhotosAlbum(shot, nil, NULL, NULL); } @catch (NSException *e) { (void)e; }
+GHCFLogLine("ChinaFly menu takeScreenshot saved to album");
+}
+static void GHCFMenuAction_TakeScreenshotAndEdit(void) {
+UIImage *shot = GHCFMenuSnapshotScreenImage();
+if (!shot) { GHCFLogLine("ChinaFly menu takeScreenshotAndEdit snapshot failed"); return; }
+@try { UIImageWriteToSavedPhotosAlbum(shot, nil, NULL, NULL); } @catch (NSException *e) { (void)e; }
+GHCFLogLine("ChinaFly menu takeScreenshotAndEdit saved to album, edit UI not available");
+}
+static void GHCFMenuAction_ScreenshotToPasteboard(void) {
+UIImage *shot = GHCFMenuSnapshotScreenImage();
+if (!shot) { GHCFLogLine("ChinaFly menu screenshotToPasteboard snapshot failed"); return; }
+@try {
+UIPasteboard *pb = [UIPasteboard generalPasteboard];
+pb.image = shot;
+} @catch (NSException *e) { (void)e; }
+GHCFLogLine("ChinaFly menu screenshotToPasteboard copied");
+}
+// 分發器：33 個 identifier 各走自己的處理函數；未知 identifier 只記日誌。
+// 整個分發包在 @try/@catch 裡，任何一個動作都不能閃退 SpringBoard。
+// 非 static（對外 API）：目前沒有啟動器內的調用點，等菜單 UI 接線再調。
+void GHCFMenuActionPerform(const char *identifier) {
+if (!identifier || identifier[0] == '\0') return;
+@try {
+char buf[160];
+snprintf(buf, sizeof(buf), "ChinaFly menu action %s toggle=%d", identifier, GHCFMenuToggleEnabled(identifier) ? 1 : 0);
+GHCFLogLine(buf);
+if (strcmp(identifier, "ToggleBluetooth") == 0) GHCFMenuAction_ToggleBluetooth();
+else if (strcmp(identifier, "ToggleWiFi") == 0) GHCFMenuAction_ToggleWiFi();
+else if (strcmp(identifier, "ToggleVPN") == 0) GHCFMenuAction_ToggleVPN();
+else if (strcmp(identifier, "ToggleCellularData") == 0) GHCFMenuAction_ToggleCellularData();
+else if (strcmp(identifier, "ToggleTrueTone") == 0) GHCFMenuAction_ToggleTrueTone();
+else if (strcmp(identifier, "ToggleAirplaneMode") == 0) GHCFMenuAction_ToggleAirplaneMode();
+else if (strcmp(identifier, "TogglePersonalHotspot") == 0) GHCFMenuAction_TogglePersonalHotspot();
+else if (strcmp(identifier, "ToggleLowPowerMode") == 0) GHCFMenuAction_ToggleLowPowerMode();
+else if (strcmp(identifier, "ToggleFlashlight") == 0) GHCFMenuAction_ToggleFlashlight();
+else if (strcmp(identifier, "ToggleNightShift") == 0) GHCFMenuAction_ToggleNightShift();
+else if (strcmp(identifier, "_toggleSmartInvert") == 0) GHCFMenuAction_ToggleSmartInvert();
+else if (strcmp(identifier, "activateLockButton") == 0) GHCFMenuAction_ActivateLockButton();
+else if (strcmp(identifier, "activateSiri") == 0) GHCFMenuAction_ActivateSiri();
+else if (strcmp(identifier, "decreaseVolume") == 0) GHCFMenuAction_DecreaseVolume();
+else if (strcmp(identifier, "increaseVolume") == 0) GHCFMenuAction_IncreaseVolume();
+else if (strcmp(identifier, "toggleAppLibrary") == 0) GHCFMenuAction_ToggleAppLibrary();
+else if (strcmp(identifier, "toggleAppSwitcher") == 0) GHCFMenuAction_ToggleAppSwitcher();
+else if (strcmp(identifier, "toggleCommandAndControl") == 0) GHCFMenuAction_ToggleCommandAndControl();
+else if (strcmp(identifier, "toggleControlCenter") == 0) GHCFMenuAction_ToggleControlCenter();
+else if (strcmp(identifier, "toggleLiveSpeech") == 0) GHCFMenuAction_ToggleLiveSpeech();
+else if (strcmp(identifier, "toggleMute") == 0) GHCFMenuAction_ToggleMute();
+else if (strcmp(identifier, "toggleNearbyDeviceControlPicker") == 0) GHCFMenuAction_ToggleNearbyDeviceControlPicker();
+else if (strcmp(identifier, "toggleNotificationCenter") == 0) GHCFMenuAction_ToggleNotificationCenter();
+else if (strcmp(identifier, "toggleWatchRemoteScreen") == 0) GHCFMenuAction_ToggleWatchRemoteScreen();
+else if (strcmp(identifier, "toggleQuickNote") == 0) GHCFMenuAction_ToggleQuickNote();
+else if (strcmp(identifier, "toggleDock") == 0) GHCFMenuAction_ToggleDock();
+else if (strcmp(identifier, "ToggleLocation") == 0) GHCFMenuAction_ToggleLocation();
+else if (strcmp(identifier, "takeScreenshot") == 0) GHCFMenuAction_TakeScreenshot();
+else if (strcmp(identifier, "takeScreenshotAndEdit") == 0) GHCFMenuAction_TakeScreenshotAndEdit();
+else if (strcmp(identifier, "ToggleAutoBrightness") == 0) GHCFMenuAction_ToggleAutoBrightness();
+else if (strcmp(identifier, "ToggleDND") == 0) GHCFMenuAction_ToggleDND();
+else if (strcmp(identifier, "screenshotToPasteboard") == 0) GHCFMenuAction_ScreenshotToPasteboard();
+else if (strcmp(identifier, "screenshotRegion") == 0) GHCFMenuAction_ScreenshotRegion();
+else {
+char ubuf[160];
+snprintf(ubuf, sizeof(ubuf), "ChinaFly menu action %s unknown identifier", identifier);
+GHCFLogLine(ubuf);
+}
+} @catch (NSException *e) {
+(void)e;
+char ebuf[160];
+snprintf(ebuf, sizeof(ebuf), "ChinaFly menu action %s exception", identifier);
+GHCFLogLine(ebuf);
+}
 }
 
-static void GHCFActivationApplyUnlock(void) {
-if (GHCFActivationLocked) {
-GHCFActivationLocked = NO;
-GHCFActivationSetState("authorized");
-GHCFLogLine("v43.28 activation authorized");
-}
-GHCFApplyEnabledState();
-}
-
-// v43.28：异步抓名单对码。结果：1 码在名单、0 码不在名单／没输码、
-// -1 抓不到／解不开（网络、超时、JSON 坏掉——这种不锁死，维持原状）。
-// 回调一定在主队列跑。码只放内存比对，绝不写日志。
-static void GHCFActivationFetchAndCheck(void (^completion)(int result)) {
-char *code = GHCFReadPrefsCString("activationCode");
-if (!code) {
-if (completion) completion(0);
+// ── ChinaFly（1.0.0）百度翻譯架子 ──
+// GHCFBaiduTranslate(text, from, to, completion)：讀 translateAppID／
+// translateSecretKey／translateDirection；空 Key 時什麼都不做只記日誌；
+// 有 Key 時調百度翻譯 API（POST＋MD5 簽名）回翻譯文本。
+// 不自動翻譯任何應用內容（沒有觸發點）；splitTranslation 開關先只存值。
+// Key 由皇上自己填，絕不寫死、絕不問他要。非 static（對外 API）。
+void GHCFBaiduTranslate(NSString *text, NSString *from, NSString *to, void (^completion)(NSString *translated)) {
+if (!text || [text length] == 0) {
+if (completion) completion(nil);
 return;
 }
-// 去掉头尾空白（设置页输码时手滑多打了空格也认）。
-size_t len = strlen(code);
-while (len > 0 && (code[len - 1] == ' ' || code[len - 1] == '\n' || code[len - 1] == '\t' || code[len - 1] == '\r')) code[--len] = '\0';
-size_t start = 0;
-while (code[start] == ' ' || code[start] == '\n' || code[start] == '\t' || code[start] == '\r') start++;
-if (start > 0) memmove(code, code + start, strlen(code + start) + 1);
-if (code[0] == '\0') {
-free(code);
-if (completion) completion(0);
+char *appID = GHCFReadPrefsCString("translateAppID");
+char *secret = GHCFReadPrefsCString("translateSecretKey");
+if (!appID || appID[0] == '\0' || !secret || secret[0] == '\0') {
+GHCFLogLine("ChinaFly translate no key, skipped");
+if (appID) free(appID);
+if (secret) free(secret);
+if (completion) completion(nil);
 return;
 }
-NSString *urlString = [NSString stringWithCString:"https://guhailong-repo.pages.dev/license/codes.json" encoding:NSUTF8StringEncoding];
+// from／to 沒傳就走 translateDirection（預設 auto-zh，顯示「自動 → 中」）。
+NSString *fromStr = from;
+NSString *toStr = to;
+if (!fromStr || !toStr) {
+char *dir = GHCFReadPrefsCString("translateDirection");
+NSString *dirStr = dir ? [NSString stringWithCString:dir encoding:NSUTF8StringEncoding] : nil;
+if (dir) free(dir);
+NSString *sep = [NSString stringWithCString:"-" encoding:NSUTF8StringEncoding];
+NSArray *parts = dirStr ? [dirStr componentsSeparatedByString:sep] : nil;
+if (!fromStr && parts && [parts count] >= 1) fromStr = (NSString *)[parts objectAtIndex:0];
+if (!toStr && parts && [parts count] >= 2) toStr = (NSString *)[parts objectAtIndex:1];
+if (!fromStr) fromStr = [NSString stringWithCString:"auto" encoding:NSUTF8StringEncoding];
+if (!toStr) toStr = [NSString stringWithCString:"zh" encoding:NSUTF8StringEncoding];
+}
+const char *qUTF8 = [text UTF8String];
+if (!qUTF8) qUTF8 = "";
+int salt = (int)arc4random();
+// 簽名：MD5(appid + q + salt + key)，q 用未編碼的原文。
+size_t signLen = strlen(appID) + strlen(qUTF8) + 32 + strlen(secret) + 1;
+char *signSrc = (char *)malloc(signLen);
+if (!signSrc) {
+free(appID);
+free(secret);
+if (completion) completion(nil);
+return;
+}
+snprintf(signSrc, signLen, "%s%s%d%s", appID, qUTF8, salt, secret);
+unsigned char digest[CC_MD5_DIGEST_LENGTH];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CC_MD5(signSrc, (CC_LONG)strlen(signSrc), digest);
+#pragma clang diagnostic pop
+free(signSrc);
+char signHex[33];
+for (int i = 0; i < CC_MD5_DIGEST_LENGTH; i++) snprintf(signHex + i * 2, 3, "%02x", digest[i]);
+signHex[32] = '\0';
+// Body（q 要 URL 編碼；簽名用的已是原文，不重算）。
+NSCharacterSet *allowed = [NSCharacterSet URLQueryAllowedCharacterSet];
+NSString *encodedQ = [text stringByAddingPercentEncodingWithAllowedCharacters:allowed];
+if (!encodedQ) encodedQ = text;
+const char *qEnc = [encodedQ UTF8String];
+if (!qEnc) qEnc = "";
+size_t bodyLen = strlen(qEnc) + strlen([fromStr UTF8String]) + strlen([toStr UTF8String]) + strlen(appID) + strlen(signHex) + 64;
+char *bodyBuf = (char *)malloc(bodyLen);
+if (!bodyBuf) {
+free(appID);
+free(secret);
+if (completion) completion(nil);
+return;
+}
+snprintf(bodyBuf, bodyLen, "q=%s&from=%s&to=%s&appid=%s&salt=%d&sign=%s", qEnc, [fromStr UTF8String], [toStr UTF8String], appID, salt, signHex);
+free(appID);
+free(secret);
+NSString *urlString = [NSString stringWithCString:"https://fanyi-api.baidu.com/api/trans/vip/translate" encoding:NSUTF8StringEncoding];
 NSURL *url = [NSURL URLWithString:urlString];
 if (!url) {
-free(code);
-if (completion) completion(-1);
+free(bodyBuf);
+if (completion) completion(nil);
 return;
 }
 NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
-request.timeoutInterval = 3.0;
+[request setHTTPMethod:[NSString stringWithCString:"POST" encoding:NSUTF8StringEncoding]];
+[request setValue:[NSString stringWithCString:"application/x-www-form-urlencoded" encoding:NSUTF8StringEncoding] forHTTPHeaderField:[NSString stringWithCString:"Content-Type" encoding:NSUTF8StringEncoding]];
+request.HTTPBody = [NSData dataWithBytes:bodyBuf length:strlen(bodyBuf)];
+free(bodyBuf);
+request.timeoutInterval = 10.0;
 NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
 (void)response;
-int result = -1;
+NSString *translated = nil;
 if (!error && data) {
 @try {
 id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-NSArray *codes = nil;
 if (parsed && [parsed isKindOfClass:[NSDictionary class]]) {
-NSString *codesKey = [NSString stringWithCString:"codes" encoding:NSUTF8StringEncoding];
-id arr = [(NSDictionary *)parsed objectForKey:codesKey];
-if (arr && [arr isKindOfClass:[NSArray class]]) codes = (NSArray *)arr;
-} else if (parsed && [parsed isKindOfClass:[NSArray class]]) {
-codes = (NSArray *)parsed;
+NSString *resultKey = [NSString stringWithCString:"trans_result" encoding:NSUTF8StringEncoding];
+id arr = [(NSDictionary *)parsed objectForKey:resultKey];
+if (arr && [arr isKindOfClass:[NSArray class]] && [(NSArray *)arr count] > 0) {
+id first = [(NSArray *)arr objectAtIndex:0];
+if (first && [first isKindOfClass:[NSDictionary class]]) {
+NSString *dstKey = [NSString stringWithCString:"dst" encoding:NSUTF8StringEncoding];
+id dst = [(NSDictionary *)first objectForKey:dstKey];
+if (dst && [dst isKindOfClass:[NSString class]]) translated = (NSString *)dst;
 }
-if (codes) {
-result = 0;
-NSString *wantCode = [NSString stringWithCString:code encoding:NSUTF8StringEncoding];
-for (id entry in codes) {
-if ([entry isKindOfClass:[NSString class]] && wantCode && [(NSString *)entry isEqualToString:wantCode]) {
-result = 1;
-break;
+}
+if (!translated) {
+NSString *errKey = [NSString stringWithCString:"error_code" encoding:NSUTF8StringEncoding];
+id errCode = [(NSDictionary *)parsed objectForKey:errKey];
+if (errCode) {
+char ebuf[128];
+snprintf(ebuf, sizeof(ebuf), "ChinaFly translate api error %s", [[errCode description] UTF8String]);
+GHCFLogLine(ebuf);
 }
 }
 }
 } @catch (NSException *e) {
 (void)e;
-result = -1;
+translated = nil;
 }
+} else {
+GHCFLogLine("ChinaFly translate request failed");
 }
-free(code);
-int finalResult = result;
+NSString *finalTranslated = translated;
 dispatch_async(dispatch_get_main_queue(), ^{
-if (completion) completion(finalResult);
+if (completion) completion(finalTranslated);
 });
 }];
 [task resume];
 }
 
-// v43.28：启动时／点「检查激活码」时跑一次对码（异步，不卡 SpringBoard）。
-// -1（抓不到名单）不锁死：只记日志、状态写 checkFailed，锁保持原状。
-static BOOL GHCFActivationCheckInFlight = NO;
-static BOOL GHCFActivationRecheckRegistered = NO;
-
-static void GHCFActivationCheckStart(void) {
-if (GHCFActivationCheckInFlight) return;
-if (!GHCFActivationRecheckRegistered) {
-GHCFActivationRecheckRegistered = YES;
-int recheckToken = 0;
-int recheckResult = notify_register_dispatch("com.guhailong.fly.activationRecheck", &recheckToken, dispatch_get_main_queue(), ^(int token) {
-(void)token;
-GHCFActivationCheckStart();
-});
-if (recheckResult != 0) {
-GHCFLogLine("v43.28 activation recheck notify register failed");
-}
-}
-GHCFActivationCheckInFlight = YES;
-GHCFActivationFetchAndCheck(^(int result) {
-GHCFActivationCheckInFlight = NO;
-if (result == 1) {
-GHCFActivationApplyUnlock();
-} else if (result == 0) {
-GHCFActivationApplyLock();
-} else {
-GHCFActivationSetState("checkFailed");
-GHCFLogLine("v43.28 activation check failed, lock unchanged");
-}
-});
-}
-
-
-// v43.26：helper 載入標記——helper（沙盒 App）自己寫 prefs 可能寫不到全域
-// domain，改由 helper 發 Darwin 通知（名字裡帶 bid），SpringBoard 收到就把
-// kbHelperLoaded-<bid>＝時間戳寫進共用 prefs（SpringBoard 寫得到；狀態頁
-// GHCFKbHelperMarkersText() 讀的就是這個 domain，不用改顯示格式）。
-// bid／suffix 只傳字串字面量（常駐），block 抓指標安全；不要在迴圈裡抓
-// 區域陣列變數。兩個後綴：helperLoaded（%ctor 載入時）／helperAlive
-// （App 啟動完成時）。只給微信／QQ 登記（過濾器改窄後 helper 只進這兩個）。
-static void GHCFRegisterHelperLoadedNotify(const char *bid, const char *suffix) {
-if (!bid || !suffix) return;
-char notifyName[256];
-snprintf(notifyName, sizeof(notifyName), "com.guhailong.fly.%s.%s", suffix, bid);
-int markerToken = 0;
-int markerResult = notify_register_dispatch(notifyName, &markerToken, dispatch_get_main_queue(), ^(int token) {
-(void)token;
-char keyBuf[192];
-snprintf(keyBuf, sizeof(keyBuf), "kbHelperLoaded-%s", bid);
-char valBuf[64];
-snprintf(valBuf, sizeof(valBuf), "%f", [NSDate timeIntervalSinceReferenceDate]);
-GHCFWritePrefsCString(keyBuf, valBuf);
-char lbuf[256];
-snprintf(lbuf, sizeof(lbuf), "v43.26 kb-helper marker %s %s", suffix, bid);
-GHCFLogLine(lbuf);
-});
-if (markerResult == 0) {
-char rbuf[256];
-snprintf(rbuf, sizeof(rbuf), "v43.26 kb-helper marker notify registered %s", notifyName);
-GHCFLogLine(rbuf);
-} else {
-char rbuf[256];
-snprintf(rbuf, sizeof(rbuf), "v43.26 kb-helper marker notify register failed %s", notifyName);
-GHCFLogLine(rbuf);
-}
-}
-
 static void GHCFDeferredSetupRun(void) {
+// ChinaFly（1.0.0，防撞）：舊 SeaDragon Split 開著就休眠——只寫一行
+// 日誌，不建鈕、不接手勢、不注入行為；舊插件那邊不動。檢查放在
+// deferred setup 裡建東西之前，絕不在 %ctor 裡同步跑
+//（1.0.102 安全模式循環的教訓）。
+if (GHCFReadOldSplitscreenEnabled()) {
+GHCFLogLine("ChinaFly dormant, old SeaDragon Split enabled");
+return;
+}
+// ChinaFly（1.0.0）：行為未接的設置鍵讀一遍記日誌（見
+// GHCFLogChinaFlyUnwiredSettings），不硬編假行為。
+GHCFLogChinaFlyUnwiredSettings();
 // 延后步骤（启动完成 5 秒后，主队列）：
 // 1) 寫日誌（v57：開關加回來，讀 enabled 鍵；預設關——裝完要自己去開）；
 // 2) 建右边缘感应带（24pt 宽透明窗），带子是自己写的普通视图，
 //    写日志；
 // 3) 感应带上挂右边缘滑动手势；觸發鈕单独一个 56x56 的小窗
-//    （右边缘、竖直居中，图从 prefs bundle 里读）。
+//    （初始左側中部、竖直居中，圖由代碼畫紙飛機）。
 // 不登记通知、不建 FBScene、不 hook。
 {
 char dbuf[64];
@@ -10358,8 +10845,6 @@ GHCFLogLine(dbuf);
 }
 // v69：啟動時自愈一次——清掉已存的小窗尺寸（拖大過的 App 也回到 112×242）。
 GHCFResetStoredPeekSizesOnce();
-// v43.18：鍵盤模式合一遷移一次（見 GHCFMigrateKeyboardModeOnce）。
-GHCFMigrateKeyboardModeOnce();
 // v41：自選 App 槽位從 prefs 讀進來（ARC 第一次打開就看得到）；
 // 已安裝 App 清單在後台列舉、寫緩存檔（不堵主線程），設定頁/ARC 只讀緩存。
 GHCFLoadCustomApps();
@@ -10445,11 +10930,10 @@ GHCFLogLine("v43.32 debug trigger window built");
 // v40：感应带跟小窗位置设定走（初始位置按设定放；设定改了，下次开
 // 启动器时 showLauncher 会再调 GHCFUpdateStripPosition 跟到对的边）。
 GHCFUpdateStripPosition();
-// v38：觸發鈕（皇上要金色「分」按钮改成可爱型觸發鈕图，3D 大笑
-// 版）。24pt 的感应带放不下 56pt 的圆钮（圆钮一半会伸出窗外、点
-// 不到），所以觸發鈕单独一个小窗（全屏任意位置，初始按設定落邊
-// 緣、豎直居中、圖从 prefs bundle 里读；读不到就退回金色圆钮 +
-// 「分」字（不空白、不崩）。
+// ChinaFly（1.0.0）：觸發鈕——紙飛機圖由代碼畫（見 GHCFDrawFlyTriggerImage）。
+// 24pt 的感应带放不下 56pt 的圆钮（圆钮一半会伸出窗外、点不到），
+// 所以觸發鈕单独一个小窗（全屏任意位置，初始按設定落邊緣、豎直居中；
+// 沒設過左右邊就默認左側中部，跟舊哆啦A夢鈕的默認右側分開）。
 // v41：大小走設定（flyTriggerIconSize，44–72，預設 56）；左右邊走設定
 // （flyTriggerSide，沒設跟小窗位置）；位置從 prefs 恢復（上次拖到的
 // x、y，沒拖過就按左右邊設定落邊緣、高度居中）；層級 Alert - 1.25
@@ -10664,51 +11148,6 @@ GHCFLogLine("v57 lockstate notify registered");
 } else {
 GHCFLogLine("v57 lockstate notify register failed");
 }
-// v43.5：鍵盤橋接——App 行程的鍵盤助手（GHCFKeyboardHelper）收到
-// 鍵盤彈出／收起就寫 kbNotifyInfo（"<包名>|<鍵盤高>"）再 notify_post
-// Darwin 通知；SpringBoard 側用 notify_register_dispatch 接（跟鎖屏
-// 同一寫法；不要用 CFNotificationCenterAddObserver，會凍住 SpringBoard）。
-// 收到就走上面共用邏輯（內彈出上移／外彈出關窗／橫屏放大）。
-int kbShowToken = 0;
-int kbShowResult = notify_register_dispatch("com.guhailong.fly.keyboardWillShow", &kbShowToken, dispatch_get_main_queue(), ^(int token) {
-(void)token;
-char *info = GHCFReadPrefsCString("kbNotifyInfo");
-if (!info) return;
-char bid[128] = {0};
-int height = 0;
-if (sscanf(info, "%127[^|]|%d", bid, &height) == 2) {
-[GHCFLauncherShared ghcfHandleKeyboardShowHeight:(CGFloat)height bundleID:bid];
-}
-free(info);
-});
-if (kbShowResult == 0) {
-GHCFLogLine("v43.5 keyboard show notify registered");
-} else {
-GHCFLogLine("v43.5 keyboard show notify register failed");
-}
-int kbHideToken = 0;
-int kbHideResult = notify_register_dispatch("com.guhailong.fly.keyboardDidHide", &kbHideToken, dispatch_get_main_queue(), ^(int token) {
-(void)token;
-char *info = GHCFReadPrefsCString("kbNotifyInfo");
-if (!info) return;
-char bid[128] = {0};
-if (sscanf(info, "%127[^|]|%*d", bid) == 1) {
-[GHCFLauncherShared ghcfHandleKeyboardHideBundleID:bid];
-}
-free(info);
-});
-if (kbHideResult == 0) {
-GHCFLogLine("v43.5 keyboard hide notify registered");
-} else {
-GHCFLogLine("v43.5 keyboard hide notify register failed");
-}
-// v43.26：helper 載入標記——四個通知（兩個 bid × 兩個後綴），收到就把
-// kbHelperLoaded-<bid> 寫進共用 prefs，狀態頁就看得到（見
-// GHCFRegisterHelperLoadedNotify）。
-GHCFRegisterHelperLoadedNotify("com.tencent.xin", "helperLoaded");
-GHCFRegisterHelperLoadedNotify("com.tencent.xin", "helperAlive");
-GHCFRegisterHelperLoadedNotify("com.tencent.mqq", "helperLoaded");
-GHCFRegisterHelperLoadedNotify("com.tencent.mqq", "helperAlive");
 // v43.13：設定變更通知——設定頁帶 PostNotification 的行一改就發
 // com.guhailong.fly.prefschanged（Darwin 通知，跟鎖屏／鍵盤
 // 同一寫法；不要用 CFNotificationCenterAddObserver，會凍住 SpringBoard）。
@@ -10778,7 +11217,4 @@ GHCFLogLine(nbuf);
 GHCFApplyEnabledState();
 GHCFSchedulePeriodicTick();
 GHCFLogLine("v57 periodic tick scheduled");
-// v43.28：激活码检查从这里启动（setup 跑起来之后、异步读名单；
-// 绝不在 %ctor 里跑——1.0.102 的教训）。
-GHCFActivationCheckStart();
 }

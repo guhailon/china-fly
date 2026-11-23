@@ -4,7 +4,7 @@ BUNDLE_NAME = ChinaFlyPrefs
 
 ChinaFlyPrefs_FILES = RootListController.m
 ChinaFlyPrefs_INSTALL_PATH = /Library/PreferenceBundles
-ChinaFlyPrefs_FRAMEWORKS = UIKit PhotosUI UniformTypeIdentifiers WebKit
+ChinaFlyPrefs_FRAMEWORKS = UIKit PhotosUI UniformTypeIdentifiers
 ChinaFlyPrefs_PRIVATE_FRAMEWORKS = Preferences
 ChinaFlyPrefs_CFLAGS = -fobjc-arc
 

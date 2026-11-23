@@ -1,32 +1,32 @@
-// 顾海龙集团分屏 — 设置页（PreferenceLoader）。
-// v43.30：主頁順序＝版本頭／激活／常用開關／歌词墙／启动器设置／
-// 浮窗设置／其他功能／配置管理（含檢查更新）／狀態；
-// 遊戲模式整套已刪（v43.30，皇上 2026-11-22 定）；激活是獨立頁
-// （Activation.plist，兩張卡：激活／狀態）。子頁是獨立 plist（浮窗／ARC／其他＋調度／陰影／
-// 橫幅／鍵盤／搜索／桌面圖標／懸浮圖標／ARC 按鈕＋手勢自定義／
-// 狀態頁），由 PreferenceLoader 的預設控制器
-// 載入；「加入 App」是動態頁（GHCFAppPickerListController，下面），
-// 按後台緩存的已安裝 App 清單即時建開關；日誌查看器、卡片頭像、搜索、
-// 每頁重置也都是動態頁（下面）。
+// China Fly 1.0.0 — 設置頁（PreferenceLoader）。
+// 從 v43.42（SeaDragon Split 1.0.115，頭 653fcaa）改過來的設置頁：
+// 歌詞播放器、激活、檢查更新、狀態頁已拿掉；備份／恢復留下；
+// 選擇應用加搜索欄＋首次默認開影片裡的 8 個；菜單編輯是新的
+// GHCFMenuEditListController（UITableViewController，可拖動排序）；
+// 觸發鈕圖默認改成代碼畫的紙飛機。子頁是獨立 plist（Dial／
+// SplitSettings／MenuEdit／Trigger／ActionButtonTap／
+// ActionButtonLongPress／FloatingIcon），由 PreferenceLoader 的預設
+// 控制器載入；「選擇應用」是動態頁（GHCFAppPickerListController，
+// 下面），按後台緩存的已安裝 App 清單即時建開關；日誌查看器、
+// 菜單編輯、觸發鈕圖也是動態頁（下面）。
 //
 // 注意（2026-11-12）：这个文件以前用写死字串和 CFSTR，设置一打开
 // 就闪退——和 SpringBoard 那边一样，咱们这套工具链编出来的写死
 // 字串是坏的。所以这里一个写死的字串都不能用：名字、路径、键名
 // 全在运行时现做（CFStringCreateWithCString / stringWithCString），
 // 读写开关直接用 CFPreferences（v13 证实过这条路是通的）。
-// v41：備份／導出／導入／恢復是真的做檔案（設定目錄裡的固定檔案），
-// 不是擺設；v43.8 起備份／導出改從 live 設定現取值建檔（重置已刪）。
-// v42：卡片頭像／背景圖用 PHPicker 選圖（iOS 14+，不用相冊權限）。
+// 備份／恢復是真的做檔案（設定目錄裡的固定檔案），不是擺設；
+// 備份改從 live 設定現取值建檔。
+// 下面 7 個控制器都是 prefs bundle 裡的自訂類（prefs bundle 不受
+// dylib「禁自訂 ObjC 類」那條限；主插件 Tweak.xm 裡還是只能用
+// Apple 類＋GHCFLauncher 一個自訂類）。
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 #import <Preferences/PSTableCell.h>
 #import <UIKit/UIKit.h>
 #import <PhotosUI/PhotosUI.h>
-#import <WebKit/WebKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <objc/message.h>
-#import <notify.h>
-#import "../GHCFUpdateCheck.h"
 
 // 运行时现做一个 NSString（不用写死字串）。
 static NSString *GHCFRuntimeString(const char *cstr) {
@@ -44,17 +44,7 @@ static NSString *GHCFPrefsDir(void) {
 }
 
 static NSString *GHCFBackupFilePath(void) {
-    return [GHCFPrefsDir() stringByAppendingPathComponent:GHCFRuntimeString("China Fly备份.plist")];
-}
-
-// v43.23：第 2 件——舊備份檔名（改名前備份寫在這裡）；恢復時新檔名找不到
-// 就回頭找它，舊備份不斷檔（遷移選了「恢復時雙檔名都找」，不是只改注腳）。
-static NSString *GHCFLegacyBackupFilePath(void) {
     return [GHCFPrefsDir() stringByAppendingPathComponent:GHCFRuntimeString("ChinaFly-backup.plist")];
-}
-
-static NSString *GHCFExportFilePath(void) {
-    return [GHCFPrefsDir() stringByAppendingPathComponent:GHCFRuntimeString("ChinaFly-export.plist")];
 }
 
 static NSString *GHCFAppCacheFilePath(void) {
@@ -75,28 +65,6 @@ static BOOL GHCFPrefsBool(const char *key, BOOL defaultValue) {
     }
     if (domain) CFRelease(domain);
     if (keyRef) CFRelease(keyRef);
-    return out;
-}
-
-// v43.28：先聲明（下面定義；激活狀態 helper 要讀字串，先用）。
-static char *GHCFPrefsCString(const char *key);
-
-// v43.28：激活状态文字（读 dylib 写的 activationState 快取；
-// authorized 已激活、locked 未激活、checkFailed 名单读不到暂不锁，
-// 没值＝还没检查）。
-static NSString *GHCFPrefsActivationStatusText(void) {
-    char *state = GHCFPrefsCString("activationState");
-    NSString *out;
-    if (state && strcmp(state, "authorized") == 0) {
-        out = GHCFRuntimeString("您的设备已授权");
-    } else if (state && strcmp(state, "locked") == 0) {
-        out = GHCFRuntimeString("未授权");
-    } else if (state && strcmp(state, "checkFailed") == 0) {
-        out = GHCFRuntimeString("名单读不到，暂不锁（检查网络／名单）");
-    } else {
-        out = GHCFRuntimeString("未检查（启动后异步检查）");
-    }
-    if (state) free(state);
     return out;
 }
 
@@ -292,17 +260,6 @@ static UITableView *GHCFSafeTableViewForController(PSListController *controller,
     return nil;
 }
 
-// v50：日誌尾段取 N 行（狀態頁要最後 5 行；查看日志仍是 200 行）。
-static NSString *GHCFLogTailNewestFirstN(int maxLines) {
-    if (maxLines <= 0) maxLines = 200;
-    NSString *full = GHCFLogTailNewestFirst();
-    if (!full) return GHCFRuntimeString("");
-    NSArray *lines = [full componentsSeparatedByString:GHCFRuntimeString("\n")];
-    if ((int)[lines count] <= maxLines) return full;
-    NSRange r = NSMakeRange(0, (NSUInteger)maxLines);
-    return [[lines subarrayWithRange:r] componentsJoinedByString:GHCFRuntimeString("\n")];
-}
-
 // v42：圖片居中裁方形（頭像用，512px）。
 static UIImage *GHCFPrefsSquareCropImage(UIImage *image, CGFloat size) {
     if (!image || !image.CGImage) return nil;
@@ -361,17 +318,6 @@ static int GHCFFixedIndexForBundleID(const char *bid) {
 
 // v43.24：第 6 件——自選 App 串列（customAppBundleIDs，逗號分隔 bundleID），
 // 開關是 sel-<bundleID>。
-static BOOL GHCFCustomAppListContainsBid(const char *bid) {
-    if (!bid || bid[0] == '\0') return NO;
-    char *raw = GHCFPrefsCString("customAppBundleIDs");
-    if (!raw) return NO;
-    NSString *rawStr = [NSString stringWithCString:raw encoding:NSUTF8StringEncoding];
-    free(raw);
-    if (!rawStr || [rawStr length] == 0) return NO;
-    NSArray *parts = [rawStr componentsSeparatedByString:GHCFRuntimeString(",")];
-    NSString *bidStr = [NSString stringWithCString:bid encoding:NSUTF8StringEncoding];
-    return [parts containsObject:bidStr];
-}
 static void GHCFSetCustomAppListBid(const char *bid, BOOL on) {
     if (!bid || bid[0] == '\0') return;
     NSMutableArray *ids = [NSMutableArray array];
@@ -391,16 +337,79 @@ static void GHCFSetCustomAppListBid(const char *bid, BOOL on) {
     GHCFWritePrefsCString("customAppBundleIDs", [joined UTF8String]);
 }
 
+// China Fly 1.0.0：首次使用默認開的 8 個 App（照 TrollOpen 影片裡
+// 機主的選擇：抖音、汽水音樂 Plus、設置、DynamicCow、Facebook、
+// Messenger、QQ、Telegram）。設置是固定 App（下面固定表裡已有，
+// 預設開）；其餘 7 個是已裝 App，用 sel-<bid> 開關。
+// 判定規則：sel-<bid> 寫過就照寫過的值；沒寫過才回默認（8 個裡
+// 的回 YES，其餘回 NO）——用戶親手關掉的不會被默認蓋回來。
+static BOOL GHCFIsDefaultOnAppBid(const char *bid) {
+    if (!bid) return NO;
+    static const char *defaults8[] = {
+        "com.ss.iphone.ugc.Aweme",
+        "com.soda.music",
+        "com.apple.Preferences",
+        "com.matteozappa.DynamicCowTS",
+        "com.facebook.Facebook",
+        "com.facebook.Messenger",
+        "com.tencent.mqq",
+        "ph.telegra.Telegram"
+    };
+    size_t n = sizeof(defaults8) / sizeof(defaults8[0]);
+    for (size_t i = 0; i < n; i++) {
+        if (strcmp(bid, defaults8[i]) == 0) return YES;
+    }
+    return NO;
+}
+
 // 某個 bundleID 是不是在啟動器裡（固定 App 讀開關，預設開；
-// 自選 App 看串列裡有沒有它且 sel-<bid> 開關開著）。
+// 自選 App：sel-<bid> 寫過就照它，沒寫過看是不是默認開的 8 個）。
+static BOOL GHCFSetAppInLauncherPrefs(const char *bid, BOOL on);
 static BOOL GHCFAppInLauncher(const char *bid) {
     if (!bid || bid[0] == '\0') return NO;
     int fixed = GHCFFixedIndexForBundleID(bid);
     if (fixed >= 0) return GHCFPrefsBool(GHCFFixedEnabledKeys[fixed], YES);
-    if (!GHCFCustomAppListContainsBid(bid)) return NO;
     char selKey[160];
     snprintf(selKey, sizeof(selKey), "sel-%s", bid);
-    return GHCFPrefsBool(selKey, YES);
+    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+    CFStringRef keyRef = GHCFRuntimeCFString(selKey);
+    BOOL hasValue = NO;
+    BOOL stored = NO;
+    if (domain && keyRef) {
+        CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+        if (v) {
+            hasValue = YES;
+            if (CFGetTypeID(v) == CFBooleanGetTypeID()) stored = CFBooleanGetValue((CFBooleanRef)v);
+            CFRelease(v);
+        }
+    }
+    if (domain) CFRelease(domain);
+    if (keyRef) CFRelease(keyRef);
+    if (hasValue) return stored;
+    return GHCFIsDefaultOnAppBid(bid);
+}
+
+// 首次打開挑選器時把默認開的 8 個真正寫進 prefs（串列＋開關＋
+// 已播種標記），dylib 那邊讀 customAppBundleIDs 才看得到它們；
+// 只播一次，之後用戶的開關不再被默認動到。
+static void GHCFSeedDefaultAppSelection(void) {
+    if (GHCFPrefsBool("appPickerDefaultsSeeded", NO)) return;
+    static const char *seedBids[] = {
+        "com.ss.iphone.ugc.Aweme",
+        "com.soda.music",
+        "com.matteozappa.DynamicCowTS",
+        "com.facebook.Facebook",
+        "com.facebook.Messenger",
+        "com.tencent.mqq",
+        "ph.telegra.Telegram"
+    };
+    size_t n = sizeof(seedBids) / sizeof(seedBids[0]);
+    for (size_t i = 0; i < n; i++) {
+        GHCFSetAppInLauncherPrefs(seedBids[i], YES);
+    }
+    GHCFWritePrefsBool("appSettingsEnabled", YES);
+    GHCFWritePrefsBool("appPickerDefaultsSeeded", YES);
+    GHCFPrefsLogLine("cf prefs-apppicker: seeded default 8 apps");
 }
 
 // 把某個 App 放進／拿出啟動器（跟主插件的 GHCFSetAppInLauncher 同款
@@ -420,6 +429,144 @@ static BOOL GHCFSetAppInLauncherPrefs(const char *bid, BOOL on) {
     return YES;
 }
 
+// 寫一個 prefs 陣列（menuAppOrder 用），立刻落盤。
+static void GHCFWritePrefsArray(const char *key, NSArray *value) {
+    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+    CFStringRef keyRef = GHCFRuntimeCFString(key);
+    if (domain && keyRef) {
+        CFPreferencesSetAppValue(keyRef, (__bridge CFPropertyListRef)value, domain);
+        CFPreferencesAppSynchronize(domain);
+    }
+    if (domain) CFRelease(domain);
+    if (keyRef) CFRelease(keyRef);
+}
+
+// 讀後台緩存的已安裝 App 清單（主插件列舉、寫檔；設定頁只讀。
+// 每項是 dict：bundleID／name）。讀不到回空陣列，不回 nil。
+static NSArray *GHCFReadCachedApps(void) {
+    NSArray *cached = [NSArray arrayWithContentsOfFile:GHCFAppCacheFilePath()];
+    if (!cached) return [NSArray array];
+    return cached;
+}
+
+// 菜單項解析：entry 是 bundleID 就找對應 App 名；是顯示名就按名
+// 找 bundleID；都找不到就原樣當顯示名（bid 回 nil，運行時按名找）。
+static void GHCFResolveMenuEntry(NSString *entry, NSString **outBid, NSString **outName) {
+    NSString *bid = nil;
+    NSString *name = nil;
+    if (entry && [entry length] > 0) {
+        int fixed = GHCFFixedIndexForBundleID([entry UTF8String]);
+        if (fixed >= 0) {
+            bid = entry;
+            name = GHCFRuntimeString(GHCFFixedNames[fixed]);
+        } else {
+            NSArray *cached = GHCFReadCachedApps();
+            for (id item in cached) {
+                if (![item isKindOfClass:[NSDictionary class]]) continue;
+                NSString *cbid = [item objectForKey:GHCFRuntimeString("bundleID")];
+                NSString *cname = [item objectForKey:GHCFRuntimeString("name")];
+                if (cbid && [cbid isEqualToString:entry]) {
+                    bid = cbid;
+                    name = cname;
+                    break;
+                }
+                if (cname && [cname isEqualToString:entry]) {
+                    bid = cbid;
+                    name = cname;
+                    break;
+                }
+            }
+        }
+    }
+    if (!name || [name length] == 0) name = entry ? entry : GHCFRuntimeString("");
+    if (outBid) *outBid = bid;
+    if (outName) *outName = name;
+}
+
+// 菜單默認順序（照 TrollOpen 影片露出的前 17 個，原樣保留；
+// 微信在影片裡出現多次，這裡照列出的順序留三個。知道 bundleID
+// 的存 bundleID，不知道的存顯示名，運行時按名找）。
+static NSArray *GHCFDefaultMenuOrder(void) {
+    return [NSArray arrayWithObjects:
+        GHCFRuntimeString("com.apple.Preferences"),
+        GHCFRuntimeString("com.tencent.xin"),
+        GHCFRuntimeString("com.apple.calculator"),
+        GHCFRuntimeString("AppsDump3"),
+        GHCFRuntimeString("com.ss.iphone.ugc.Aweme"),
+        GHCFRuntimeString("巨魔注入器"),
+        GHCFRuntimeString("愛思全能版"),
+        GHCFRuntimeString("com.tencent.mqq"),
+        GHCFRuntimeString("com.tencent.xin"),
+        GHCFRuntimeString("酷我音樂"),
+        GHCFRuntimeString("虛擬定位"),
+        GHCFRuntimeString("com.matteozappa.DynamicCowTS"),
+        GHCFRuntimeString("com.facebook.Messenger"),
+        GHCFRuntimeString("ph.telegra.Telegram"),
+        GHCFRuntimeString("TrollStore"),
+        GHCFRuntimeString("com.facebook.Facebook"),
+        GHCFRuntimeString("com.tencent.xin"),
+        nil];
+}
+
+// 讀 menuAppOrder（沒存過就寫一份默認順序再回它；
+// 存過但不是字串陣列就當沒存過，照默認來）。
+static NSMutableArray *GHCFReadMenuOrder(void) {
+    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+    CFStringRef keyRef = GHCFRuntimeCFString("menuAppOrder");
+    NSArray *stored = nil;
+    if (domain && keyRef) {
+        CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+        if (v) {
+            if (CFGetTypeID(v) == CFArrayGetTypeID()) stored = (__bridge_transfer NSArray *)v;
+            else CFRelease(v);
+        }
+    }
+    if (domain) CFRelease(domain);
+    if (keyRef) CFRelease(keyRef);
+    NSMutableArray *order = [NSMutableArray array];
+    if (stored) {
+        for (id item in stored) {
+            if ([item isKindOfClass:[NSString class]] && [(NSString *)item length] > 0) [order addObject:item];
+        }
+    }
+    if ([order count] == 0) {
+        order = [NSMutableArray arrayWithArray:GHCFDefaultMenuOrder()];
+        GHCFWritePrefsArray("menuAppOrder", order);
+        GHCFPrefsLogLine("cf prefs-menuedit: seeded default menu order");
+    }
+    return order;
+}
+
+static void GHCFWriteMenuOrder(NSArray *order) {
+    if (!order) order = [NSArray array];
+    GHCFWritePrefsArray("menuAppOrder", order);
+}
+
+// 代碼畫的紙飛機（觸發鈕默認圖；不要引用已刪的哆啦A夢 png）。
+// 機頭朝右上，兩片折面一深一淺。
+static UIImage *GHCFPaperPlaneImage(CGFloat size) {
+    if (size <= 0) size = 120.0;
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(size, size), NO, 0.0);
+    CGFloat s = size;
+    UIBezierPath *top = [UIBezierPath bezierPath];
+    [top moveToPoint:CGPointMake(0.08 * s, 0.50 * s)];
+    [top addLineToPoint:CGPointMake(0.90 * s, 0.10 * s)];
+    [top addLineToPoint:CGPointMake(0.44 * s, 0.64 * s)];
+    [top closePath];
+    [[UIColor colorWithRed:0.0 green:0.48 blue:1.0 alpha:1.0] setFill];
+    [top fill];
+    UIBezierPath *bottom = [UIBezierPath bezierPath];
+    [bottom moveToPoint:CGPointMake(0.44 * s, 0.64 * s)];
+    [bottom addLineToPoint:CGPointMake(0.90 * s, 0.10 * s)];
+    [bottom addLineToPoint:CGPointMake(0.60 * s, 0.90 * s)];
+    [bottom closePath];
+    [[UIColor colorWithRed:0.20 green:0.62 blue:1.0 alpha:1.0] setFill];
+    [bottom fill];
+    UIImage *out = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return out;
+}
+
 // v47：見下面 GHCFHandlePlistDetailTap 的定義——定義要用到白名單
 // GHCFPrefsIsKnownPlistName 與 PlistPage 的接口聲明，都在文件後面，
 // 這裡先給原型（主頁控制器與 PlistPage 共用同一個 didSelectRow）。
@@ -428,6 +575,11 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 // v72：見下面 GHCFHandleLinkListTap 的定義——LinkList 點按攔截，
 // 推我們自己的 GHCFLinkListController（定義在文件後面，這裡先給原型）。
 static BOOL GHCFHandleLinkListTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
+
+// China Fly 1.0.0：見下面 GHCFHandleMenuEditTap 的定義——detail 是
+// GHCFMenuEditListController 的連結行攔下來自己推（它是
+// UITableViewController 子類，框架預設的推頁路徑推不動）。
+static BOOL GHCFHandleMenuEditTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
 
 // v43：手動派發 PSButtonCell 點按——不再賭框架會不會從 action 字串派發。
 // 診斷：plist 的 action 字串、程式現拼的 action 字串、方法、target 全部合規，
@@ -512,152 +664,27 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
 }
 
 @interface ChinaFlyRootListController : PSListController <UIDocumentPickerDelegate>
-@property (nonatomic, strong) WKWebView *ghcfInlineLyricView;
-@property (nonatomic, strong) UIView *ghcfBannerContainer;
-@property (nonatomic, assign) BOOL ghcfBannerInstalled;
-@property (nonatomic, assign) int ghcfDocPickerKind;
 @end
-
-// v43.36：首页内嵌歌词墙改成整页 9:16 高——播放器是按整页 9:16 设计的
-// （stage 高 = min(100dvh, 100vw*16/9)），480pt 头把它压扁，3D 墙只剩
-// 一条、歌单也被挤得点不开。h = 宽 * 16 / 9，封顶屏幕高（皇上 iPhone 11
-// 屏宽 430 → 764pt）。viewDidLoad／viewDidAppear 两处共用这一个公式。
-static CGFloat GHCFInlineLyricWallHeight(CGFloat w) {
-    CGFloat h = w * 16.0 / 9.0;
-    CGFloat maxH = [UIScreen mainScreen].bounds.size.height;
-    if (h > maxH) h = maxH;
-    return h;
-}
 
 @implementation ChinaFlyRootListController
 
 // v43：記進了哪一頁（PlistPage 繼承這裡，類名是 GHCFPlistPageController，
 // 具體哪份 plist 由 specifiers 裡的 plistpage entry 行給出）。
+// China Fly 1.0.0：歌詞播放器已拿掉，主頁不再嵌 WKWebView。
 - (void)viewDidLoad {
     [super viewDidLoad];
     char buf[160];
     snprintf(buf, sizeof(buf), "v57 prefs-page: %s", [NSStringFromClass([self class]) UTF8String]);
     GHCFPrefsLogLine(buf);
-    // v43.30：設定主頁頂上直接嵌整个 3D 立体歌词墙播放器（整页 9:16 高的
-    // WKWebView 头，跟歌词墙那栏同一份 lyricwall/index.html，不是两套
-    // 播放器；触摸进墙里，不再点横幅进详情页）。只挂在設定主頁本身
-    //（isMemberOfClass），子頁（GHCFPlistPageController 繼承這裡）不掛。
-    // 主页列表滚动从播放器下面开始拖；主页消失时暂停内嵌播放器（见下面
-    // viewWillDisappear），防主页墙与详情页墙同时出声。
-    if ([self isMemberOfClass:[ChinaFlyRootListController class]]) {
-        // v43.35：单 webview 保证——viewDidLoad 只建一次，防重复建出第二个播放器。
-        if (self.ghcfInlineLyricView || self.ghcfBannerContainer) return;
-        @try {
-            CGFloat w = [UIScreen mainScreen].bounds.size.width;
-            CGFloat h = GHCFInlineLyricWallHeight(w);
-            UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, h)];
-            // v43.35：底色跟页面 #17112b 一致，有缝也不露黑。
-            container.backgroundColor = [UIColor colorWithRed:23.0/255.0 green:17.0/255.0 blue:43.0/255.0 alpha:1.0];
-            container.clipsToBounds = YES;
-            NSBundle *bundle = [NSBundle bundleForClass:[self class]];
-            NSString *htmlPath = [bundle pathForResource:GHCFRuntimeString("index") ofType:GHCFRuntimeString("html") inDirectory:GHCFRuntimeString("lyricwall")];
-            WKWebView *wv = nil;
-            if (htmlPath) {
-                WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
-                wv = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, w, h) configuration:config];
-                wv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-                // v43.38（1.0.111，捏合缩放锁）：只关内嵌播放器的捏合缩放，手指一捏不再放大、
-                // 缩不回去。滚动、点按、滑动手势不动。pinch 手势关掉＋maximumZoomScale 锁 1.0
-                // ＋bouncesZoom 关掉，三重保险。
-                wv.scrollView.pinchGestureRecognizer.enabled = NO;
-                wv.scrollView.maximumZoomScale = 1.0;
-                wv.scrollView.bouncesZoom = NO;
-                // v43.35：同上，跟页面底色一致。
-                wv.backgroundColor = [UIColor colorWithRed:23.0/255.0 green:17.0/255.0 blue:43.0/255.0 alpha:1.0];
-                wv.opaque = YES;
-                NSURL *fileURL = [NSURL fileURLWithPath:htmlPath];
-                NSURL *dirURL = [fileURL URLByDeletingLastPathComponent];
-                [wv loadFileURL:fileURL allowingReadAccessToURL:dirURL];
-                [container addSubview:wv];
-            } else {
-                UILabel *lb = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, w, h)];
-                lb.text = GHCFRuntimeString("歌词墙文件没找到，请重装一次插件再试。");
-                lb.font = [UIFont systemFontOfSize:15];
-                lb.textColor = [UIColor grayColor];
-                lb.textAlignment = NSTextAlignmentCenter;
-                lb.numberOfLines = 0;
-                lb.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-                [container addSubview:lb];
-                GHCFPrefsLogLine("v43.30 prefs-inline-lyricwall html missing");
-            }
-            self.ghcfInlineLyricView = wv;
-            self.ghcfBannerContainer = container;
-        } @catch (NSException *e) {
-            GHCFPrefsLogLine("v43.30 prefs-inline-lyricwall viewDidLoad EXCEPTION");
-        }
-    }
-}
-
-// v43.30：内嵌歌词墙挂载（viewDidAppear 才碰 table；只挂設定主頁本身）。
-// v54：掛載前核對取到的表就是主表（dataSource 是自己才掛），寬度改這時重取。
-- (void)viewDidAppear:(BOOL)animated {
-    [super viewDidAppear:animated];
-    if (![self isMemberOfClass:[ChinaFlyRootListController class]]) return;
-    if (self.ghcfBannerContainer && !self.ghcfBannerInstalled) {
-        UITableView *tv = GHCFSafeTableViewForController(self, "inline-lyricwall");
-        if (tv && tv.dataSource && (id)tv.dataSource != (id)self) {
-            GHCFPrefsLogLine("v43.30 prefs-inline-lyricwall: table mismatch, header not mounted");
-            return;
-        }
-        if (tv) {
-            @try {
-                CGFloat w = tv.bounds.size.width;
-                if (w <= 0) w = [UIScreen mainScreen].bounds.size.width;
-                CGFloat h = GHCFInlineLyricWallHeight(w);
-                self.ghcfBannerContainer.frame = CGRectMake(0, 0, w, h);
-                if (self.ghcfInlineLyricView) self.ghcfInlineLyricView.frame = CGRectMake(0, 0, w, h);
-                tv.tableHeaderView = self.ghcfBannerContainer;
-                self.ghcfBannerInstalled = YES;
-                GHCFPrefsLogLine("v43.30 prefs-inline-lyricwall: header mounted");
-            } @catch (NSException *e) {
-                GHCFPrefsLogLine("v43.30 prefs-inline-lyricwall: mount EXCEPTION");
-            }
-        } else {
-            GHCFPrefsLogLine("v43.30 prefs-inline-lyricwall: no table, header not mounted");
-        }
-    }
-}
-
-// v43.30：主页嵌了整个歌词墙（整页 9:16 高的 WKWebView 头）：离开主页时暂停内嵌
-// 播放器（停声音＋停渲染），防主页墙与详情页墙同时出声；回来时恢复渲染并
-// v43.41（1.0.114）：自动续播离开前正在播的声音（用户自己先停了的不续）。
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    if (![self isMemberOfClass:[ChinaFlyRootListController class]]) return;
-    if (self.ghcfInlineLyricView) {
-        [self.ghcfInlineLyricView evaluateJavaScript:GHCFRuntimeString("window.ghcfResumeView && window.ghcfResumeView()") completionHandler:nil];
-    }
-}
-
-- (void)viewWillDisappear:(BOOL)animated {
-    [super viewWillDisappear:animated];
-    if (![self isMemberOfClass:[ChinaFlyRootListController class]]) return;
-    if (self.ghcfInlineLyricView) {
-        [self.ghcfInlineLyricView evaluateJavaScript:GHCFRuntimeString("window.ghcfPausePlayer && window.ghcfPausePlayer()") completionHandler:nil];
-    }
-}
-
-// v43.35：单 webview 保证——控制器销毁时停掉内嵌播放器并释放 webview，
-// 防重建控制器后旧 webview 还在后台出声（双声）。
-- (void)dealloc {
-    if (self.ghcfInlineLyricView) {
-        [self.ghcfInlineLyricView evaluateJavaScript:GHCFRuntimeString("window.ghcfPausePlayer && window.ghcfPausePlayer()") completionHandler:nil];
-        [self.ghcfInlineLyricView removeFromSuperview];
-        self.ghcfInlineLyricView = nil;
-    }
-    self.ghcfBannerContainer = nil;
 }
 
 
 // v43：按鈕行自己派發（見上面 GHCFDispatchButtonTap）；其他行走框架。
 // v47：plist 名 detail 的連結行先攔下來自己推 PlistPage（見下面
 // GHCFHandlePlistDetailTap），不再走框架預設——框架推的原生頁是空的。
+// China Fly 1.0.0：菜單編輯行也先攔下來自己推（見 GHCFHandleMenuEditTap）。
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (GHCFHandleMenuEditTap(self, tableView, indexPath)) return;
     if (GHCFHandleLinkListTap(self, tableView, indexPath)) return;
     if (GHCFHandlePlistDetailTap(self, tableView, indexPath)) return;
     if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
@@ -686,34 +713,6 @@ static CGFloat GHCFInlineLyricWallHeight(CGFloat w) {
     return _specifiers;
 }
 
-// v50：主頁「檢查更新」——抓 live /Packages 比對已裝版本（跟浮窗設定卡片
-// 共用 GHCFUpdateCheck.h 同一份抓取邏輯；已裝版本就是跑著的代碼本身）。
-- (void)ghcfCheckForUpdate:(PSSpecifier *)specifier {
-    (void)specifier;
-    GHCFPrefsLogLine("v57 prefs-update: check started");
-    __weak typeof(self) weakSelf = self;
-    GHCFCheckForUpdate(^(NSString *latest, const char *error) {
-        typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        if (error || !latest) {
-            GHCFPrefsLogLine("v57 prefs-update: fetch failed");
-            [strongSelf ghcfShowAlertWithTitle:GHCFRuntimeString("检查失败") message:GHCFRuntimeString("检查失败，请检查网络。")];
-            return;
-        }
-        char buf[192];
-        snprintf(buf, sizeof(buf), "v57 prefs-update: latest %s", [latest UTF8String]);
-        GHCFPrefsLogLine(buf);
-        int cmp = GHCFCompareDottedVersions([latest UTF8String], "1.0.115");
-        if (cmp <= 0) {
-            [strongSelf ghcfShowAlertWithTitle:GHCFRuntimeString("已经是最新版") message:GHCFRuntimeString("已经是最新版 1.0.115。")];
-        } else {
-            NSString *msg = [[GHCFRuntimeString("有新版 ") stringByAppendingString:latest] stringByAppendingString:GHCFRuntimeString("，请去 Sileo 更新。")];
-            [strongSelf ghcfShowAlertWithTitle:GHCFRuntimeString("有新版") message:msg];
-        }
-    });
-}
-
-
 - (id)readPreferenceValue:(PSSpecifier *)specifier {
     CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
     NSString *keyName = GHCFRuntimeString("key");
@@ -733,9 +732,7 @@ static CGFloat GHCFInlineLyricWallHeight(CGFloat w) {
     NSString *defaultName = GHCFRuntimeString("default");
     id def = specifier.properties[defaultName];
     if (def) return def;
-    // v43.28：激活码是文字行，没存过回空字串（回 @(NO) 会在输入框里显示成 0）。
-    if ([key isEqualToString:GHCFRuntimeString("activationCode")]) return GHCFRuntimeString("");
-    return @(NO);
+    return [NSNumber numberWithBool:NO];
 }
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
@@ -748,15 +745,11 @@ static CGFloat GHCFInlineLyricWallHeight(CGFloat w) {
         CFPreferencesAppSynchronize(domain);
         // v43：記開關／滑桿／分段改了什麼值（只記用戶改動，不記讀取；
         // readPreferenceValue 每行渲染都跑，記了會刷爆日誌）。
-        // v43.29：激活码绝不写日志——key 是 activationCode 时跳过这行
-        //（值本身照常写 prefs，检查要读它；只不记日志，码不进日志文件）。
-        if (![key isEqualToString:GHCFRuntimeString("activationCode")]) {
-            char buf[256];
-            const char *keyC = [key UTF8String];
-            const char *valC = [[value description] UTF8String];
-            snprintf(buf, sizeof(buf), "v57 prefs-set: %s = %s", keyC ? keyC : "?", valC ? valC : "?");
-            GHCFPrefsLogLine(buf);
-        }
+        char buf[256];
+        const char *keyC = [key UTF8String];
+        const char *valC = [[value description] UTF8String];
+        snprintf(buf, sizeof(buf), "v57 prefs-set: %s = %s", keyC ? keyC : "?", valC ? valC : "?");
+        GHCFPrefsLogLine(buf);
     }
     if (domain) CFRelease(domain);
 }
@@ -894,34 +887,9 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
         [self ghcfShowAlertWithTitle:GHCFRuntimeString("备份失败") message:GHCFRuntimeString("复制配置文件时出错。")];
     }
 }
-
-
-// 導出配置（非備份配置）：live 設定現取值寫一份到導出檔，導入時讀它（v43.8）。
-- (void)ghcfExportConfig:(PSSpecifier *)specifier {
-    (void)specifier;
-    GHCFPrefsLogLine("v57 prefs-config export entry");
-    NSString *dst = GHCFExportFilePath();
-    NSUInteger count = 0;
-    unsigned long long bytes = 0;
-    BOOL ok = GHCFWriteLivePrefsToFile(dst, &count, &bytes);
-    if (count == 0) {
-        GHCFPrefsLogLine("v57 prefs-config export: no keys in live prefs");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("没有配置文件可导出") message:GHCFRuntimeString("先改一个设置，配置文件才会生成。")];
-        return;
-    }
-    if (ok) {
-        char buf[512];
-        snprintf(buf, sizeof(buf), "v57 prefs-config export: wrote %lu keys, %llu bytes to %s", (unsigned long)count, bytes, [dst UTF8String]);
-        GHCFPrefsLogLine(buf);
-        // v43.10：成功後直接把檔案遞給皇上（分享表），不用自己去文件找。
-        [self ghcfShareConfigFile:dst title:GHCFRuntimeString("已导出配置") what:GHCFRuntimeString("导出") restoreRow:GHCFRuntimeString("导入配置文件")];
-    } else {
-        GHCFPrefsLogLine("v57 prefs-config export: write failed");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("导出失败") message:GHCFRuntimeString("复制配置文件时出错。")];
-    }
-}
-
-// v43.10：恢復／導入共用——把字典逐鍵寫進 live prefs（走 CFPreferences，
+// China Fly 1.0.0：導出／導入已拿掉（新 Root.plist 不再有這兩行）；
+// 只留備份／恢復，備份檔是 ChinaFly-backup.plist。
+// v43.10：恢復——把字典逐鍵寫進 live prefs（走 CFPreferences，
 // cfprefsd 快取才更新；直接換檔看著像沒反應，v43 教訓）。
 - (void)ghcfApplyConfigDict:(NSDictionary *)dict sourceDescription:(NSString *)src title:(NSString *)title {
     CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
@@ -939,14 +907,13 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
     [self ghcfShowAlertWithTitle:title message:GHCFRuntimeString("配置已恢复，请重新启动 SpringBoard 生效。")];
 }
 
-// v43.10：文件挑選器——恢復／導入讓皇上自己挑配置文件（想換成別的
+// v43.10：文件挑選器——恢復讓皇上自己挑配置文件（想換成別的
 // 配置也能用，不只限於原來那一個固定備份檔）。用 initForOpeningContentTypes:
 // asCopy:YES（等於舊 Import 模式：系統把挑中的檔拷一份進容器再給我們讀，
 // 不用管 security-scoped resource；舊 initWithDocumentTypes:inMode: 在
-// iOS 14 起已棄用，-Werror 會直接報錯）。彈不出來就走舊固定路徑
-//（見下面兩個 FromFixedPath）。
-- (void)ghcfPresentDocPickerForKind:(int)kind {
-    self.ghcfDocPickerKind = kind;
+// iOS 14 起已棄用，-Werror 會直接報錯）。彈不出來就走固定路徑
+//（見下面 ghcfRestoreConfigFromFixedPath）。
+- (void)ghcfPresentRestoreDocPicker {
     @try {
         UTType *plistType = [UTType typeWithIdentifier:GHCFRuntimeString("com.apple.property-list")];
         NSArray *types = [NSArray arrayWithObjects:plistType, nil];
@@ -958,8 +925,7 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
         char buf[256];
         snprintf(buf, sizeof(buf), "v43.10 prefs-config docpicker EXCEPTION %s, fixed-path fallback", reason);
         GHCFPrefsLogLine(buf);
-        if (kind == 0) [self ghcfRestoreConfigFromFixedPath];
-        else [self ghcfImportConfigFromFixedPath];
+        [self ghcfRestoreConfigFromFixedPath];
     }
 }
 
@@ -976,11 +942,10 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
         char buf[512];
         snprintf(buf, sizeof(buf), "v43.10 prefs-config docpicker: unreadable %s", [path UTF8String]);
         GHCFPrefsLogLine(buf);
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("导入失败") message:GHCFRuntimeString("挑的配置文件读不出来（要 .plist 配置文件）。")];
+        [self ghcfShowAlertWithTitle:GHCFRuntimeString("恢复失败") message:GHCFRuntimeString("挑的配置文件读不出来（要 .plist 配置文件）。")];
         return;
     }
-    BOOL isRestore = (self.ghcfDocPickerKind == 0);
-    [self ghcfApplyConfigDict:dict sourceDescription:path title:GHCFRuntimeString(isRestore ? "已从备份恢复配置" : "已导入配置")];
+    [self ghcfApplyConfigDict:dict sourceDescription:path title:GHCFRuntimeString("已从备份恢复配置")];
 }
 
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
@@ -988,57 +953,18 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
     GHCFPrefsLogLine("v43.10 prefs-config docpicker: cancelled");
 }
 
-// 從文件中導入配置：先彈文件挑選器，讓皇上自己挑配置文件。
-// v43：不再直接換檔案——直接換檔不會動 cfprefsd 的快取，reload 後開關還是舊值，
-// 看著就像沒反應。改成讀出字典、逐鍵用 CFPreferencesSetAppValue 寫進去，快取才會更新。
-- (void)ghcfImportConfig:(PSSpecifier *)specifier {
-    (void)specifier;
-    GHCFPrefsLogLine("v57 prefs-config import entry");
-    [self ghcfPresentDocPickerForKind:1];
-}
-
-// v43.10：挑選器彈不出來時的 fallback——讀固定導出檔（舊做法）。
-- (void)ghcfImportConfigFromFixedPath {
-    NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *src = GHCFExportFilePath();
-    if (![fm fileExistsAtPath:src]) {
-        GHCFPrefsLogLine("v57 prefs-config import: no export file");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("没有找到导出的配置文件") message:GHCFRuntimeString("先点「导出当前配置」，再导入。")];
-        return;
-    }
-    NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:src];
-    if (!dict) {
-        char buf[512];
-        snprintf(buf, sizeof(buf), "v57 prefs-config import: export file unreadable %s", [src UTF8String]);
-        GHCFPrefsLogLine(buf);
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("导入失败") message:GHCFRuntimeString("导出的配置文件读不出来。")];
-        return;
-    }
-    [self ghcfApplyConfigDict:dict sourceDescription:src title:GHCFRuntimeString("已导入配置")];
-}
-
 // 從備份文件恢復配置：先彈文件挑選器，讓皇上自己挑配置文件。
-// v43：同導入，改走 CFPreferences 逐鍵寫入（見上）。
+// v43：改走 CFPreferences 逐鍵寫入（見上）。
 - (void)ghcfRestoreConfig:(PSSpecifier *)specifier {
     (void)specifier;
     GHCFPrefsLogLine("v57 prefs-config restore entry");
-    [self ghcfPresentDocPickerForKind:0];
+    [self ghcfPresentRestoreDocPicker];
 }
 
-// v43.10：挑選器彈不出來時的 fallback——讀固定備份檔（舊做法）。
-// v43.23：第 2 件——備份檔名改了（China Fly备份.plist），舊檔名
-// （ChinaFly-backup.plist）的備份恢復時也找得到：新檔沒有
-// 就用舊檔，找到舊檔記一行（下次備份會寫成新檔名）。
+// v43.10：挑選器彈不出來時的 fallback——讀固定備份檔 ChinaFly-backup.plist。
 - (void)ghcfRestoreConfigFromFixedPath {
     NSFileManager *fm = [NSFileManager defaultManager];
     NSString *src = GHCFBackupFilePath();
-    if (![fm fileExistsAtPath:src]) {
-        NSString *legacy = GHCFLegacyBackupFilePath();
-        if ([fm fileExistsAtPath:legacy]) {
-            GHCFPrefsLogLine("v43.23 prefs-config restore: using legacy backup filename");
-            src = legacy;
-        }
-    }
     if (![fm fileExistsAtPath:src]) {
         GHCFPrefsLogLine("v57 prefs-config restore: no backup file");
         [self ghcfShowAlertWithTitle:GHCFRuntimeString("没有找到备份文件") message:GHCFRuntimeString("先点「备份配置」，再恢复。")];
@@ -1055,11 +981,6 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
     [self ghcfApplyConfigDict:dict sourceDescription:src title:GHCFRuntimeString("已从备份恢复配置")];
 }
 
-// v42：布局預設——點一下一次換整套設定（各預設改哪些 key，
-// Root.plist 的頁腳列出來了）。改完要重新啟動 SpringBoard 才生效
-//（浮窗尺寸／任務欄那幾項 2 秒 tick 會自己跟上）。
-// v56：遊戲布局已取消（§141-5）。ghcfApplyLayoutGame 整段刪掉。
-// v53：工作／默認布局已刪（皇上 23:29：布局只要遊戲布局就好了）。
 @end
 // 開的那份清單的設定頁版，同一份 key、同一份清單，兩邊同步。
 // 清單讀後台緩存檔（主插件啟動 5 秒後在後台列舉、寫檔；設定頁
@@ -1092,7 +1013,10 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
 }
 
 
-@interface GHCFAppPickerListController : PSListController
+@interface GHCFAppPickerListController : PSListController <UISearchBarDelegate>
+@property (nonatomic, strong) UISearchBar *ghcfSearchBar;
+@property (nonatomic, strong) NSString *ghcfSearchText;
+@property (nonatomic, assign) BOOL ghcfSearchBarInstalled;
 @end
 
 @implementation GHCFAppPickerListController
@@ -1111,6 +1035,59 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
     GHCFPrefsLogLine("v57 prefs-page: AppPicker");
 }
 
+// China Fly 1.0.0：搜索欄掛在表頭（viewDidAppear 才碰 table，
+// 只掛一次；搜尋字變了就清快取重組，表頭的搜索欄留著不動）。
+- (void)viewDidAppear:(BOOL)animated {
+    @try {
+        [super viewDidAppear:animated];
+    } @catch (NSException *e) {
+        GHCFPrefsLogLine("v57 prefs-apppicker: super viewDidAppear EXCEPTION");
+    }
+    if (self.ghcfSearchBarInstalled) return;
+    UITableView *tv = GHCFSafeTableViewForController(self, "apppicker-search");
+    if (!tv) {
+        GHCFPrefsLogLine("v57 prefs-apppicker: no table, search bar not mounted");
+        return;
+    }
+    @try {
+        UISearchBar *bar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, tv.bounds.size.width, 44)];
+        bar.delegate = self;
+        bar.placeholder = GHCFRuntimeString("搜尋 App");
+        bar.showsCancelButton = YES;
+        bar.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        bar.autocorrectionType = UITextAutocorrectionTypeNo;
+        self.ghcfSearchBar = bar;
+        tv.tableHeaderView = bar;
+        self.ghcfSearchBarInstalled = YES;
+        GHCFPrefsLogLine("v57 prefs-apppicker: search bar mounted");
+    } @catch (NSException *e) {
+        GHCFPrefsLogLine("v57 prefs-apppicker: search bar mount EXCEPTION");
+    }
+}
+
+// 搜索字變了：清快取重組（specifiers 裡按字過濾）；
+// 重組後把焦點還給搜索欄，鍵盤不掉。
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
+    (void)searchBar;
+    BOOL wasFirstResponder = [self.ghcfSearchBar isFirstResponder];
+    self.ghcfSearchText = searchText;
+    _specifiers = nil;
+    [self reloadSpecifiers];
+    if (wasFirstResponder) [self.ghcfSearchBar becomeFirstResponder];
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
+    [searchBar resignFirstResponder];
+}
+
+- (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar {
+    searchBar.text = GHCFRuntimeString("");
+    self.ghcfSearchText = nil;
+    _specifiers = nil;
+    [self reloadSpecifiers];
+    [searchBar resignFirstResponder];
+}
+
 // v50：按鈕行自己派發（GHCFDispatchButtonTap；框架自己的派發對裸方法名
 // 不補冒號，點了沒反應——見 v42.1/v42.2；「重新掃描」按鈕靠這個才動）。
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -1121,6 +1098,8 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
 - (NSArray *)specifiers {
     if (!_specifiers) {
         @try {
+            // China Fly 1.0.0：首次開這頁先把默認開的 8 個播進 prefs。
+            GHCFSeedDefaultAppSelection();
             NSMutableArray *specs = [NSMutableArray array];
             // 說明組。
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
@@ -1138,7 +1117,7 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
                 PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:name target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:PSSwitchCell edit:nil];
                 [spec setProperty:GHCFRuntimeString(GHCFFixedEnabledKeys[i]) forKey:GHCFRuntimeString("key")];
                 [spec setProperty:GHCFRuntimeString("com.guhailong.fly") forKey:GHCFRuntimeString("defaults")];
-                [spec setProperty:@(YES) forKey:GHCFRuntimeString("default")];
+                [spec setProperty:[NSNumber numberWithBool:YES] forKey:GHCFRuntimeString("default")];
                 UIImage *fixedIcon = GHCFAppIconForBundleID(GHCFRuntimeString(GHCFFixedBundleIDs[i]));
                 if (fixedIcon) [spec setProperty:fixedIcon forKey:GHCFRuntimeString("iconImage")];
                 [specs addObject:spec];
@@ -1160,7 +1139,7 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
                     NSString *selKey = [GHCFRuntimeString("sel-") stringByAppendingString:bidStr];
                     [spec setProperty:selKey forKey:GHCFRuntimeString("key")];
                     [spec setProperty:GHCFRuntimeString("com.guhailong.fly") forKey:GHCFRuntimeString("defaults")];
-                    [spec setProperty:@(NO) forKey:GHCFRuntimeString("default")];
+                    [spec setProperty:[NSNumber numberWithBool:NO] forKey:GHCFRuntimeString("default")];
                     UIImage *cachedIcon = GHCFAppIconForBundleID(bidStr);
                     if (cachedIcon) [spec setProperty:cachedIcon forKey:GHCFRuntimeString("iconImage")];
                     [specs addObject:spec];
@@ -1171,7 +1150,24 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
                 [emptyGroup setProperty:GHCFRuntimeString("还没有已安装 App 清单（后台列举中，稍后再开这个页）。") forKey:GHCFRuntimeString("footerText")];
                 [specs addObject:emptyGroup];
             }
-            _specifiers = specs;
+            // China Fly 1.0.0：搜索過濾——有搜尋字時只留說明組、
+            // 「重新掃描」和名字裡有搜尋字的 App 開關行。
+            if (self.ghcfSearchText && [self.ghcfSearchText length] > 0) {
+                NSMutableArray *filtered = [NSMutableArray array];
+                for (PSSpecifier *sp in specs) {
+                    if (sp.cellType != PSSwitchCell) {
+                        [filtered addObject:sp];
+                        continue;
+                    }
+                    NSString *label = sp.name;
+                    if (label && [label rangeOfString:self.ghcfSearchText options:NSCaseInsensitiveSearch].location != NSNotFound) {
+                        [filtered addObject:sp];
+                    }
+                }
+                _specifiers = filtered;
+            } else {
+                _specifiers = specs;
+            }
     
         } @catch (NSException *e) {
             const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
@@ -1200,11 +1196,11 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
 
 - (id)readPreferenceValue:(PSSpecifier *)specifier {
     NSString *key = specifier.properties[GHCFRuntimeString("key")];
-    if (!key) return @(NO);
+    if (!key) return [NSNumber numberWithBool:NO];
     NSString *selPrefix = GHCFRuntimeString("sel-");
     if ([key hasPrefix:selPrefix]) {
         NSString *bidStr = [key substringFromIndex:[selPrefix length]];
-        return @(GHCFAppInLauncher([bidStr UTF8String]));
+        return [NSNumber numberWithBool:GHCFAppInLauncher([bidStr UTF8String])];
     }
     // 固定 App：讀 prefs，沒設回 plist 的 default（開）。
     CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
@@ -1221,9 +1217,7 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
     NSString *defaultName = GHCFRuntimeString("default");
     id def = specifier.properties[defaultName];
     if (def) return def;
-    // v43.28：激活码是文字行，没存过回空字串（回 @(NO) 会在输入框里显示成 0）。
-    if ([key isEqualToString:GHCFRuntimeString("activationCode")]) return GHCFRuntimeString("");
-    return @(NO);
+    return [NSNumber numberWithBool:NO];
 }
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
@@ -1260,13 +1254,114 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
 @end
 
 
-// v60：标题栏整个拿掉，「三屏工具栏排序」页跟着删（没有按钮可排了）。
-// GHCFToolbarSortListController、GHCFToolbarSortIDs／Names 全删；
-// App 排序頁 v43.24 也刪了（三屏取消）。
-// ── v42 動態頁 ──
-// 下面 9 個控制器都是 prefs bundle 裡的自訂類（prefs bundle 不受
+// ── China Fly 1.0.0 動態頁 ──
+// 下面 6 個控制器都是 prefs bundle 裡的自訂類（prefs bundle 不受
 // dylib「禁自訂 ObjC 類」那條限；主插件 Tweak.xm 裡還是只能用
 // Apple 類＋GHCFLauncher 一個自訂類）。
+
+// China Fly 1.0.0：菜單編輯頁——「當前列表」可拖動排序。
+// UITableViewController 子類（不用 PSListController：這頁是純列表＋
+// 拖動重排，編輯模式的 reorder control 就夠了）。讀／寫 prefs 鍵
+// menuAppOrder（有序字串陣列：知道 bundleID 的存 bundleID，
+// 不知道的存顯示名，運行時按名找——見 GHCFResolveMenuEntry）。
+// 右上角「編輯」按鈕進編輯模式，拖動右邊的手柄重排，鬆手即存。
+@interface GHCFMenuEditListController : UITableViewController
+@property (nonatomic, strong) NSMutableArray *ghcfMenuItems;
+@end
+
+@implementation GHCFMenuEditListController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    GHCFPrefsLogLine("cf prefs-page: MenuEdit");
+    self.navigationItem.rightBarButtonItem = self.editButtonItem;
+    self.ghcfMenuItems = GHCFReadMenuOrder();
+    UILabel *footer = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, 44)];
+    footer.text = GHCFRuntimeString("按右上角「編輯」，拖動右邊的手柄排序，鬆手就存好了。");
+    footer.font = [UIFont systemFontOfSize:13];
+    footer.textColor = [UIColor grayColor];
+    footer.textAlignment = NSTextAlignmentCenter;
+    footer.numberOfLines = 0;
+    self.tableView.tableFooterView = footer;
+}
+
+- (void)setEditing:(BOOL)editing animated:(BOOL)animated {
+    [super setEditing:editing animated:animated];
+    [self.tableView setEditing:editing animated:animated];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    (void)tableView;
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    (void)tableView;
+    (void)section;
+    return (NSInteger)[self.ghcfMenuItems count];
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    NSString *reuseId = GHCFRuntimeString("GHCFMenuEditCell");
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:reuseId];
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:reuseId];
+    }
+    NSString *entry = nil;
+    if (indexPath.row >= 0 && indexPath.row < (NSInteger)[self.ghcfMenuItems count]) entry = [self.ghcfMenuItems objectAtIndex:(NSUInteger)indexPath.row];
+    NSString *bid = nil;
+    NSString *name = nil;
+    GHCFResolveMenuEntry(entry, &bid, &name);
+    cell.textLabel.text = name;
+    cell.imageView.image = nil;
+    if (bid) {
+        UIImage *icon = GHCFAppIconForBundleID(bid);
+        if (icon) cell.imageView.image = icon;
+    }
+    return cell;
+}
+
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+    (void)tableView;
+    (void)indexPath;
+    return YES;
+}
+
+- (UITableViewCellEditingStyle)tableView:(UITableView *)tableView editingStyleForRowAtIndexPath:(NSIndexPath *)indexPath {
+    (void)tableView;
+    (void)indexPath;
+    return UITableViewCellEditingStyleNone;
+}
+
+- (BOOL)tableView:(UITableView *)tableView shouldIndentWhileEditingRowAtIndexPath:(NSIndexPath *)indexPath {
+    (void)tableView;
+    (void)indexPath;
+    return NO;
+}
+
+- (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath {
+    (void)tableView;
+    (void)indexPath;
+    return YES;
+}
+
+- (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath {
+    (void)tableView;
+    NSInteger from = fromIndexPath.row;
+    NSInteger to = toIndexPath.row;
+    if (from == to) return;
+    if (from < 0 || from >= (NSInteger)[self.ghcfMenuItems count]) return;
+    if (to < 0 || to >= (NSInteger)[self.ghcfMenuItems count]) return;
+    NSString *moved = [self.ghcfMenuItems objectAtIndex:(NSUInteger)from];
+    [self.ghcfMenuItems removeObjectAtIndex:(NSUInteger)from];
+    [self.ghcfMenuItems insertObject:moved atIndex:(NSUInteger)to];
+    GHCFWriteMenuOrder(self.ghcfMenuItems);
+    char buf[256];
+    snprintf(buf, sizeof(buf), "cf prefs-menuedit: moved row %ld to %ld", (long)from, (long)to);
+    GHCFPrefsLogLine(buf);
+}
+
+@end
 
 // v42：「查看日誌」——設定 App 裡直接看分屏日誌：最新在最上面
 //（讀尾段，預設最後 200 行）、能刷新、能清空（檔案截斷；寫不動就
@@ -1492,9 +1587,9 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
     @try {
         UIImage *img = [UIImage imageWithContentsOfFile:GHCFFlyTriggerIconPath()];
         if (!img) {
-            NSBundle *bundle = [NSBundle bundleForClass:[self class]];
-            NSString *path = [bundle pathForResource:GHCFRuntimeString("flyTrigger-button") ofType:GHCFRuntimeString("png")];
-            if (path) img = [UIImage imageWithContentsOfFile:path];
+            // China Fly 1.0.0：沒有自訂圖就顯示代碼畫的紙飛機
+            //（不要引用已刪的哆啦A夢 png）。
+            img = GHCFPaperPlaneImage(120.0);
         }
         self.previewView.image = img;
     } @catch (NSException *e) {
@@ -1506,7 +1601,7 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
     if (!_specifiers) {
         NSMutableArray *specs = [NSMutableArray array];
         PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-        [group setProperty:GHCFRuntimeString("上面那张圆图是现在的悬浮图标；从相册选一张、居中裁成方形存起来，触发钮 2 秒内就换成它。") forKey:GHCFRuntimeString("footerText")];
+        [group setProperty:GHCFRuntimeString("上面那张圆图是现在的触发钮图，默认是纸飞机；从相册选一张、居中裁成方形存起来，触发钮 2 秒内就换成它。") forKey:GHCFRuntimeString("footerText")];
         [specs addObject:group];
         PSSpecifier *pick = [PSSpecifier preferenceSpecifierNamed:GHCFRuntimeString("从相册选图（换钮图片）") target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
         [pick setProperty:GHCFRuntimeString("ghcfPickFlyTriggerIcon") forKey:GHCFRuntimeString("action")];
@@ -1586,13 +1681,14 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
 @interface GHCFLinkListController : ChinaFlyRootListController
 @end
 
-// v43：子頁要跳的 plist 白名單（15 份真實檔案；不在裡面的
+// China Fly 1.0.0：子頁要跳的 plist 白名單（8 份真實檔案；不在裡面的
 // 名字一律不載，免得 loadSpecifiersFromPlistName 拿到壞名字）。
-// v50：Advanced 刪了（去重）、Status 新加。
-// v43.37：Trigger 新加（1.0.110 觸發設置頁，ARC／邊緣／懸浮條三套）。
+// 舊頁（ARC、ARCButtons、Floating、Window、Shadow、Scheduler、Banner、
+// GestureCustom、Keyboard、Info、Status、Other、Activation）已刪，
+// 不在白名單裡，點了也不會載。
 static BOOL GHCFPrefsIsKnownPlistName(const char *name) {
     if (!name || name[0] == '\0') return NO;
-    static const char *known[] = {"ARC", "ARCButtons", "Activation", "Banner", "Floating", "FloatingIcon", "GestureCustom", "Info", "Keyboard", "Other", "Root", "Scheduler", "Shadow", "Status", "Trigger", "Window"};
+    static const char *known[] = {"ActionButtonLongPress", "ActionButtonTap", "Dial", "FloatingIcon", "MenuEdit", "Root", "SplitSettings", "Trigger"};
     size_t n = sizeof(known) / sizeof(known[0]);
     for (size_t i = 0; i < n; i++) {
         if (strcmp(name, known[i]) == 0) return YES;
@@ -1600,6 +1696,32 @@ static BOOL GHCFPrefsIsKnownPlistName(const char *name) {
     return NO;
 }
 
+
+// China Fly 1.0.0：攔截 detail=GHCFMenuEditListController 的連結行，
+// 自己推菜單編輯頁。GHCFMenuEditListController 是 UITableViewController
+// 子類（不是 PSListController），框架預設的推頁路徑是照 PSListController
+// 做的，直接交給框架會推不動；這裡用 navigationController 直推。
+// 回傳 YES 表示這一行已經處理了（呼叫方直接 return，不要再走 super）。
+static BOOL GHCFHandleMenuEditTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
+    if (!controller || !indexPath) return NO;
+    PSSpecifier *spec = [controller specifierAtIndexPath:indexPath];
+    if (!spec) return NO;
+    if (spec.cellType != PSLinkCell) return NO;
+    NSString *detail = spec.properties[GHCFRuntimeString("detail")];
+    if (!detail || ![detail isEqualToString:GHCFRuntimeString("GHCFMenuEditListController")]) return NO;
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    GHCFMenuEditListController *page = [[GHCFMenuEditListController alloc] initWithStyle:UITableViewStyleGrouped];
+    NSString *label = spec.name;
+    page.title = (label && [label length] > 0) ? label : GHCFRuntimeString("當前列表");
+    UINavigationController *nav = controller.navigationController;
+    if (nav) {
+        [nav pushViewController:page animated:YES];
+        GHCFPrefsLogLine("cf prefs-menuedit push");
+    } else {
+        GHCFPrefsLogLine("cf prefs-menuedit push FAILED: no navigationController");
+    }
+    return YES;
+}
 
 // v72：攔截 PSLinkListCell 的點按，自己推 GHCFLinkListController。
 // 根因（皇上 2026-11-17 14:11 報：鍵盤子清單只顯示內弹出，頁面幾乎空白）：
@@ -1741,33 +1863,7 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
             [safe addObject:group];
             _specifiers = safe;
         }
-        // v43.18：鍵盤模式下面兩行按模式動態換行——外置只留外置兩行
-        //（enlargeOnExternalKeyboard／externalKeyboardCornerRadius），
-        // 內置只留內置兩行（enlargeOnKeyboardPortrait／
-        // landscapeEnlargeOnKeyboard）。模式變了回這一頁時 viewWillAppear
-        // 已清快取重組（v71），讀到的就是新值。
-        // v43.23：第 8 件——鍵盤頁只剩圖裡的行（模式＋兩行）：其餘三行
-        //（真外置鍵盤（實驗）／橫屏時可拖動外置鍵盤／鍵盤彈出時浮窗自動上移）
-        // 已從 Keyboard.plist 拿掉，鍵的值不動（kill switch keyboardExternalEnabled
-        // 還留著 ON，helper 還靠它；四個放大／圓角鍵的值／預設也不動）。
-        // 這裡的過濾不動——外置只留外置兩行、內置只留內置兩行，頁面就是 3 行。
-        if (targetPlist && [targetPlist isEqualToString:GHCFRuntimeString("Keyboard")]) {
-            char *kmode = GHCFPrefsCString("keyboardMode");
-            BOOL outerMode = (kmode && strcmp(kmode, "outer") == 0);
-            if (kmode) free(kmode);
-            NSMutableArray *kept = [NSMutableArray array];
-            for (PSSpecifier *sp in _specifiers) {
-                NSString *spKey = sp.properties[GHCFRuntimeString("key")];
-                const char *kc = spKey ? [spKey UTF8String] : NULL;
-                if (!kc) { [kept addObject:sp]; continue; }
-                BOOL isOuterRow = (strcmp(kc, "enlargeOnExternalKeyboard") == 0) || (strcmp(kc, "externalKeyboardCornerRadius") == 0);
-                BOOL isInnerRow = (strcmp(kc, "enlargeOnKeyboardPortrait") == 0) || (strcmp(kc, "landscapeEnlargeOnKeyboard") == 0);
-                if (outerMode && isInnerRow) continue;
-                if (!outerMode && isOuterRow) continue;
-                [kept addObject:sp];
-            }
-            _specifiers = kept;
-        }
+        // China Fly 1.0.0：Keyboard.plist 已刪，鍵盤過濾整段拿掉。
         // v43.32：觸發方式下面三套按方式動態換行——ARC 只留 ARC 兩行
         //（arcStartAngle／arcFanAngle），邊緣只留邊緣那套（觸發側／
         // 滑幾次／左／右×豎／橫屏各三根滑桿），懸浮條只留懸浮條兩行
@@ -1925,523 +2021,6 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 
 @end
 
-// v43.23：第 8 件——讀 kbHelperLoaded-<bid> 標記（97 的 %ctor 寫的 prefs 鍵）：
-// helper 載入過哪個 App，這裡列哪個；主 dylib 以前沒有任何代碼讀這個鍵。
-// 用 CopyKeyList 列舉 domain 裡 kbHelperLoaded- 開頭的鍵。沒找到回 nil。
-static NSString *GHCFKbHelperMarkersText(void) {
-    NSMutableString *marks = [NSMutableString string];
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    if (domain) {
-        CFArrayRef keys = CFPreferencesCopyKeyList(domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
-        if (keys) {
-            CFIndex n = CFArrayGetCount(keys);
-            for (CFIndex i = 0; i < n; i++) {
-                CFStringRef kr = (CFStringRef)CFArrayGetValueAtIndex(keys, i);
-                if (!kr || CFGetTypeID(kr) != CFStringGetTypeID()) continue;
-                char kbuf[192] = {0};
-                if (!CFStringGetCString(kr, kbuf, sizeof(kbuf), kCFStringEncodingUTF8)) continue;
-                if (strncmp(kbuf, "kbHelperLoaded-", 15) != 0) continue;
-                if ([marks length] > 0) [marks appendString:GHCFRuntimeString("、")];
-                [marks appendString:GHCFRuntimeString(kbuf + 15)];
-            }
-            CFRelease(keys);
-        }
-        CFRelease(domain);
-    }
-    if ([marks length] == 0) return nil;
-    return marks;
-}
-
-// v50：狀態頁——版本、插件開關狀態（開關值，不是即時載入狀態）、日誌最後
-// 5 行、查看完整日誌、複製診斷信息、聯繫與源（QQ／QQ群／越獄源）。
-// 繼承主頁控制器，所以按鈕派發（冒號 SEL）與提示框都是現成的。
-@interface GHCFStatusListController : ChinaFlyRootListController
-@end
-
-@implementation GHCFStatusListController
-
-- (void)viewDidLoad {
-    @try {
-        [super viewDidLoad];
-    } @catch (NSException *e) {
-        const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
-        char buf[256];
-        snprintf(buf, sizeof(buf), "v57 prefs-status viewDidLoad EXCEPTION %s", reason);
-        GHCFPrefsLogLine(buf);
-    }
-    GHCFPrefsLogLine("v57 prefs-page: Status");
-}
-
-// v55：狀態頁每次開頁重讀快照（實時狀態跟著浮窗走；不加定時器）。
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    [self reloadSpecifiers];
-}
-
-// v52：狀態頁自己接點按，不再只靠繼承主頁的 didSelectRow——
-// 15.log 證明點「源」／QQ／QQ群在日誌裡全無痕跡（派發沒跑、handler
-// 沒跑、連入口日誌都沒有）；自己接，入口先記一行，派發走同一套
-// GHCFDispatchButtonTap（它現在也會讀 spec.action 兜底），其他行走 super。
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    char buf[160];
-    snprintf(buf, sizeof(buf), "v57 prefs-status tap: section %ld row %ld", (long)indexPath.section, (long)indexPath.row);
-    GHCFPrefsLogLine(buf);
-    if (GHCFHandlePlistDetailTap(self, tableView, indexPath)) return;
-    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
-    [super tableView:tableView didSelectRowAtIndexPath:indexPath];
-}
-
-- (NSArray *)specifiers {
-    if (!_specifiers) {
-        @try {
-            NSMutableArray *loaded = [self loadSpecifiersFromPlistName:GHCFRuntimeString("Status") target:self];
-            // v57（§144-1）：插件開關顯示行加回來，只填這一行的值（1.0.55 寫法）；
-            // 最近日誌 tail、實時狀態組仍是刪掉的，不恢復。
-            for (PSSpecifier *spec in loaded) {
-                NSString *k = spec.properties[GHCFRuntimeString("key")];
-                if ([k isKindOfClass:[NSString class]] && [k isEqualToString:GHCFRuntimeString("statusEnabledState")]) {
-                    BOOL on = GHCFPrefsBool("enabled", NO);
-                    NSString *txt = on ? GHCFRuntimeString("启用分屏开关：开（这是系统设定里的开关状态，不是即时载入状态）") : GHCFRuntimeString("启用分屏开关：关（这是系统设定里的开关状态，不是即时载入状态）");
-                    [spec setProperty:txt forKey:GHCFRuntimeString("footerText")];
-                } else if ([k isKindOfClass:[NSString class]] && [k isEqualToString:GHCFRuntimeString("statusKbHelperMarkers")]) {
-                    // v43.23：第 8 件——狀態頁顯示 kbHelperLoaded-<bid> 標記，
-                    // 讓 Lee 在手機上看得到微信／QQ 的 helper 到底載入沒有。
-                    NSString *marks = GHCFKbHelperMarkersText();
-                    NSString *txt = marks ? [GHCFRuntimeString("键盘助手已载入：") stringByAppendingString:marks] : GHCFRuntimeString("键盘助手：未检测到已载入标记（helper 还没进过任何 App）");
-                    [spec setProperty:txt forKey:GHCFRuntimeString("footerText")];
-                } else if ([k isKindOfClass:[NSString class]] && [k isEqualToString:GHCFRuntimeString("statusActivationState")]) {
-                    NSString *status = GHCFPrefsActivationStatusText();
-                    NSString *txt = [GHCFRuntimeString("激活状态：") stringByAppendingString:status];
-                    [spec setProperty:txt forKey:GHCFRuntimeString("footerText")];
-                }
-            }
-            _specifiers = loaded;
-        } @catch (NSException *e) {
-            const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
-            char buf[512];
-            snprintf(buf, sizeof(buf), "v57 prefs-status specifiers EXCEPTION %s", reason);
-            GHCFPrefsLogLine(buf);
-            NSMutableArray *safe = [NSMutableArray array];
-            PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("状态页组装出错（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
-            [safe addObject:group];
-            _specifiers = safe;
-        }
-        if (!_specifiers) _specifiers = [NSMutableArray array];
-    }
-    return _specifiers;
-}
-
-- (void)ghcfCopyDiagnostics:(PSSpecifier *)specifier {
-    (void)specifier;
-    BOOL on = GHCFPrefsBool("enabled", NO);
-    NSString *tail = GHCFLogTailNewestFirstN(5);
-    if (!tail) tail = GHCFRuntimeString("");
-    NSString *onOff = on ? GHCFRuntimeString("开") : GHCFRuntimeString("关");
-    NSString *diag = [[[GHCFRuntimeString("顾海龙集团分屏 v1.0.115\n插件开关：") stringByAppendingString:onOff] stringByAppendingString:GHCFRuntimeString("\n最近日志：\n")] stringByAppendingString:tail];
-    // v43.23：第 8 件——診斷信息也帶上 kbHelperLoaded 標記。
-    NSString *marks = GHCFKbHelperMarkersText();
-    if (marks) {
-        diag = [[diag stringByAppendingString:GHCFRuntimeString("\n键盘助手已载入：")] stringByAppendingString:marks];
-    }
-    // v43.28：诊断信息也带上激活状态。
-    NSString *activationStatus = GHCFPrefsActivationStatusText();
-    diag = [[diag stringByAppendingString:GHCFRuntimeString("\n激活状态：")] stringByAppendingString:activationStatus];
-    [UIPasteboard generalPasteboard].string = diag;
-    GHCFPrefsLogLine("v57 prefs-status diagnostics copied");
-    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("诊断信息已复制到剪贴板。")];
-}
-
-- (void)ghcfCopyQQ:(PSSpecifier *)specifier {
-    (void)specifier;
-    [UIPasteboard generalPasteboard].string = GHCFRuntimeString("2309103548");
-    GHCFPrefsLogLine("v57 prefs-status QQ copied");
-    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("QQ 2309103548 已复制到剪贴板。")];
-}
-
-- (void)ghcfCopyQQGroup:(PSSpecifier *)specifier {
-    (void)specifier;
-    [UIPasteboard generalPasteboard].string = GHCFRuntimeString("1130823454");
-    GHCFPrefsLogLine("v57 prefs-status QQ group copied");
-    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("QQ交流群 1130823454 已复制到剪贴板。")];
-}
-
-- (void)ghcfOpenRepoSource:(PSSpecifier *)specifier {
-    (void)specifier;
-    // v54：皇上 01:20 定——改成點一下複製源地址，不再打開（打不開也閃退過，
-    // 複製最穩；閃退靠派發修法，不靠這一改）。
-    [UIPasteboard generalPasteboard].string = GHCFRuntimeString("https://guhailong-repo.pages.dev");
-    GHCFPrefsLogLine("v57 prefs-status repo copied");
-    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("越狱源地址已复制到剪贴板，去 Sileo／Zebra 贴上加入。")];
-}
-
-- (void)ghcfOpenTelegramGroup:(PSSpecifier *)specifier {
-    (void)specifier;
-    // v71：Telegram 行改成複製為主——23.log 證明點按每次都派發、openURL
-    // 每次都回 success（34 次全是 opened），手機上卻什麼都沒跳出來；
-    // 設定頁進程裡 openURL 就是不可見的失敗（v54 越獄源行「打不開也閃退過」
-    // 同一類問題）。做法：先順手試 tg:// 深鏈（能打開最好，純添頭），
-    // 不管成不成都複製 https 邀請連結＋彈「已複製」，保證一定有可見回饋、
-    // 連結一定到手。注意：openURL: 已廢棄（-Werror 會報錯），用
-    // openURL:options:completionHandler:（異步，結果在回調裡回來）。
-    NSURL *tgURL = [NSURL URLWithString:GHCFRuntimeString("tg://join?invite=UaeIYedetWtiZGQ1")];
-    if (tgURL) {
-        [[UIApplication sharedApplication] openURL:tgURL options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
-            (void)success;
-            dispatch_async(dispatch_get_main_queue(), ^{
-                GHCFPrefsLogLine("v71 prefs-status telegram tg attempted");
-            });
-        }];
-    }
-    [UIPasteboard generalPasteboard].string = GHCFRuntimeString("https://t.me/+UaeIYedetWtiZGQ1");
-    GHCFPrefsLogLine("v71 prefs-status telegram copied");
-    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("Telegram 群链接已复制到剪贴板，去 Telegram 贴上进群。")];
-}
-
-@end
-
-// v43.30：激活页专用行（图标＋主标题＋副标题／右值，仿电话助手激活页）。
-// PreferenceLoader 的 cellClass 键指定本类；读 specifier 的 label／
-// subtitle／iconName／valueText 四个属性排版。cellClass 万一不生效，
-// 行退回 stock PSButtonCell／PSLinkCell，只剩主标题、点按功能照常；
-// 值行要 cellClass 才显示右值（状态页仍有同一状态可看）。
-@interface GHCFActivationRowCell : PSTableCell
-@end
-
-@implementation GHCFActivationRowCell {
-    UIImageView *_actIconView;
-    UILabel *_actTitleLabel;
-    UILabel *_actSubtitleLabel;
-    UILabel *_actValueLabel;
-    UIImageView *_actChevronView;
-}
-
-- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier specifier:(PSSpecifier *)specifier {
-    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier specifier:specifier];
-    if (self) {
-        self.accessoryType = UITableViewCellAccessoryNone;
-        _actIconView = [[UIImageView alloc] init];
-        _actIconView.contentMode = UIViewContentModeScaleAspectFit;
-        _actIconView.tintColor = [UIColor systemBlueColor];
-        [self.contentView addSubview:_actIconView];
-        _actTitleLabel = [[UILabel alloc] init];
-        _actTitleLabel.font = [UIFont systemFontOfSize:16];
-        _actTitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-        [self.contentView addSubview:_actTitleLabel];
-        _actSubtitleLabel = [[UILabel alloc] init];
-        _actSubtitleLabel.font = [UIFont systemFontOfSize:13];
-        _actSubtitleLabel.textColor = [UIColor grayColor];
-        _actSubtitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-        [self.contentView addSubview:_actSubtitleLabel];
-        _actValueLabel = [[UILabel alloc] init];
-        _actValueLabel.font = [UIFont systemFontOfSize:16];
-        _actValueLabel.textColor = [UIColor grayColor];
-        _actValueLabel.textAlignment = NSTextAlignmentRight;
-        _actValueLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-        [self.contentView addSubview:_actValueLabel];
-        _actChevronView = [[UIImageView alloc] init];
-        _actChevronView.contentMode = UIViewContentModeScaleAspectFit;
-        _actChevronView.tintColor = [UIColor grayColor];
-        [self.contentView addSubview:_actChevronView];
-    }
-    return self;
-}
-
-- (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
-    [super refreshCellContentsWithSpecifier:specifier];
-    self.textLabel.text = nil;
-    self.textLabel.hidden = YES;
-    self.detailTextLabel.text = nil;
-    self.detailTextLabel.hidden = YES;
-    NSString *title = specifier.properties[GHCFRuntimeString("label")];
-    _actTitleLabel.text = title;
-    NSString *subtitle = specifier.properties[GHCFRuntimeString("subtitle")];
-    _actSubtitleLabel.text = subtitle;
-    _actSubtitleLabel.hidden = (!subtitle || [subtitle length] == 0);
-    NSString *iconName = specifier.properties[GHCFRuntimeString("iconName")];
-    UIImage *icon = nil;
-    if (iconName && [iconName length] > 0) icon = [UIImage systemImageNamed:iconName];
-    _actIconView.image = icon;
-    _actIconView.hidden = (icon == nil);
-    NSString *value = specifier.properties[GHCFRuntimeString("valueText")];
-    _actValueLabel.text = value;
-    _actValueLabel.hidden = (!value || [value length] == 0);
-    BOOL hasAction = (specifier.properties[GHCFRuntimeString("action")] != nil);
-    if (hasAction) {
-        _actChevronView.image = [UIImage systemImageNamed:GHCFRuntimeString("chevron.right")];
-        _actChevronView.hidden = NO;
-    } else {
-        _actChevronView.image = nil;
-        _actChevronView.hidden = YES;
-    }
-    [self setNeedsLayout];
-}
-
-- (void)layoutSubviews {
-    [super layoutSubviews];
-    CGFloat w = self.contentView.bounds.size.width;
-    CGFloat h = self.contentView.bounds.size.height;
-    CGFloat textX = _actIconView.hidden ? 15 : 53;
-    CGFloat textRight = w - 15;
-    if (!_actChevronView.hidden) textRight = w - 40;
-    if (!_actIconView.hidden) _actIconView.frame = CGRectMake(15, (h - 28) / 2, 28, 28);
-    if (!_actChevronView.hidden) _actChevronView.frame = CGRectMake(w - 25, (h - 14) / 2, 10, 14);
-    CGFloat valueW = _actValueLabel.hidden ? 0 : 160;
-    if (valueW > 0) _actValueLabel.frame = CGRectMake(textRight - valueW, 0, valueW, h);
-    CGFloat titleW = textRight - valueW - (valueW > 0 ? 8 : 0) - textX;
-    if (titleW < 0) titleW = 0;
-    if (_actSubtitleLabel.hidden) {
-        _actTitleLabel.frame = CGRectMake(textX, 0, titleW, h);
-    } else {
-        _actTitleLabel.frame = CGRectMake(textX, 7, titleW, 22);
-        _actSubtitleLabel.frame = CGRectMake(textX, 29, titleW, 18);
-    }
-}
-
-@end
-
-// v43.30：激活页（两张卡：上卡激活／赞助／管理三行，下卡状态行＋
-// 加入群组＋底部「关于 China Fly」）。旧激活组（输入行＋检查
-// 按钮）已由本页代替；状态文字走同一套 GHCFPrefsActivationStatusText，
-// 跟状态页一致。值行在 -specifiers 里现填，viewWillAppear 重载。
-// 设备号那行不加（设备号读不出来才整条取消的，不把已删的链加回来）。
-@interface GHCFActivationListController : ChinaFlyRootListController
-@end
-
-@implementation GHCFActivationListController
-
-- (void)viewDidLoad {
-    @try {
-        [super viewDidLoad];
-    } @catch (NSException *e) {
-        const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
-        char buf[256];
-        snprintf(buf, sizeof(buf), "v43.30 prefs-activation viewDidLoad EXCEPTION %s", reason);
-        GHCFPrefsLogLine(buf);
-    }
-    GHCFPrefsLogLine("v43.30 prefs-page: Activation");
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    [self reloadSpecifiers];
-}
-
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    char buf[160];
-    snprintf(buf, sizeof(buf), "v43.30 prefs-activation tap: section %ld row %ld", (long)indexPath.section, (long)indexPath.row);
-    GHCFPrefsLogLine(buf);
-    if (GHCFHandlePlistDetailTap(self, tableView, indexPath)) return;
-    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
-    [super tableView:tableView didSelectRowAtIndexPath:indexPath];
-}
-
-- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    (void)tableView;
-    (void)indexPath;
-    return 56;
-}
-
-- (NSArray *)specifiers {
-    if (!_specifiers) {
-        @try {
-            NSMutableArray *loaded = [self loadSpecifiersFromPlistName:GHCFRuntimeString("Activation") target:self];
-            for (PSSpecifier *spec in loaded) {
-                NSString *vk = spec.properties[GHCFRuntimeString("valueKey")];
-                if (![vk isKindOfClass:[NSString class]]) continue;
-                if ([vk isEqualToString:GHCFRuntimeString("activationState")]) {
-                    [spec setProperty:GHCFPrefsActivationStatusText() forKey:GHCFRuntimeString("valueText")];
-                } else if ([vk isEqualToString:GHCFRuntimeString("systemVersion")]) {
-                    NSString *ver = [[UIDevice currentDevice] systemVersion];
-                    NSString *txt = [GHCFRuntimeString("iOS ") stringByAppendingString:(ver ? ver : GHCFRuntimeString("?"))];
-                    [spec setProperty:txt forKey:GHCFRuntimeString("valueText")];
-                } else if ([vk isEqualToString:GHCFRuntimeString("pluginVersion")]) {
-                    [spec setProperty:GHCFRuntimeString("1.0.115") forKey:GHCFRuntimeString("valueText")];
-                }
-            }
-            _specifiers = loaded;
-        } @catch (NSException *e) {
-            const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
-            char buf[512];
-            snprintf(buf, sizeof(buf), "v43.30 prefs-activation specifiers EXCEPTION %s", reason);
-            GHCFPrefsLogLine(buf);
-            NSMutableArray *safe = [NSMutableArray array];
-            PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("激活页打不开（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
-            [safe addObject:group];
-            _specifiers = safe;
-        }
-        if (!_specifiers) _specifiers = [NSMutableArray array];
-    }
-    return _specifiers;
-}
-
-// v43：提示框改走最上层 presenter、主队列（同 ghcfShowAlertWithTitle
-// 的做法；本页的输入框／操作表不能走那个只带「好」的 helper）。
-- (void)ghcfActivationPresent:(UIAlertController *)alert {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIViewController *presenter = self;
-        while (presenter.presentedViewController) presenter = presenter.presentedViewController;
-        if (!presenter.view.window) {
-            UIWindow *keyWindow = nil;
-            for (UIScene *s in [[UIApplication sharedApplication] connectedScenes]) {
-                if (![s isKindOfClass:[UIWindowScene class]]) continue;
-                UIWindowScene *ws = (UIWindowScene *)s;
-                if (ws.activationState != UISceneActivationStateForegroundActive) continue;
-                for (UIWindow *w in ws.windows) {
-                    if (w.isKeyWindow) { keyWindow = w; break; }
-                }
-                if (keyWindow) break;
-            }
-            if (keyWindow && keyWindow.rootViewController) {
-                presenter = keyWindow.rootViewController;
-                while (presenter.presentedViewController) presenter = presenter.presentedViewController;
-            }
-        }
-        if (alert.popoverPresentationController) {
-            alert.popoverPresentationController.sourceView = self.view;
-            alert.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 1, 1);
-        }
-        if (presenter) {
-            [presenter presentViewController:alert animated:YES completion:nil];
-        } else {
-            GHCFPrefsLogLine("v43.30 prefs-activation present FAILED: no presenter");
-        }
-    });
-}
-
-// 发 Darwin 通知给 dylib 重抓名单对码，4 秒后重载本页（状态行自己翻成
-// 「您的设备已授权」／「未授权」，不用退出重进）。
-- (void)ghcfActivationPostRecheck {
-    notify_post("com.guhailong.fly.activationRecheck");
-    GHCFPrefsLogLine("v43.30 prefs-activation recheck posted");
-    __weak typeof(self) weakSelf = self;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) return;
-        [strongSelf reloadSpecifiers];
-    });
-}
-
-// 上卡第 1 行：弹输入框输激活码，确认就写 prefs＋发检查（码不记日志）。
-- (void)ghcfActivationEnterCode:(PSSpecifier *)specifier {
-    (void)specifier;
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("激活正版授权") message:GHCFRuntimeString("输入激活码来绑定当前的设备。") preferredStyle:UIAlertControllerStyleAlert];
-    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        textField.placeholder = GHCFRuntimeString("激活码，如 SD-XXXX-XXXX-XXXX");
-        textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
-        textField.autocorrectionType = UITextAutocorrectionTypeNo;
-    }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
-    __weak UIAlertController *weakAlert = alert;
-    UIAlertAction *ok = [UIAlertAction actionWithTitle:GHCFRuntimeString("确认") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        (void)action;
-        UIAlertController *strongAlert = weakAlert;
-        NSString *raw = strongAlert ? strongAlert.textFields.firstObject.text : nil;
-        NSString *code = [[raw stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] uppercaseString];
-        if (!code || [code length] == 0) {
-            [self ghcfShowAlertWithTitle:GHCFRuntimeString("请输入激活码") message:GHCFRuntimeString("激活码是空的，先输入再确认。")];
-            return;
-        }
-        CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-        if (domain) {
-            CFStringRef cfKey = GHCFRuntimeCFString("activationCode");
-            if (cfKey) {
-                CFPreferencesSetAppValue(cfKey, (__bridge CFPropertyListRef)code, domain);
-                CFRelease(cfKey);
-            }
-            CFPreferencesAppSynchronize(domain);
-            CFRelease(domain);
-        }
-        [self ghcfActivationPostRecheck];
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已发送检查") message:GHCFRuntimeString("已发送检查，稍等几秒再看「当前授权状态」，通过了会显示「您的设备已授权」。")];
-    }];
-    [alert addAction:cancel];
-    [alert addAction:ok];
-    [self ghcfActivationPresent:alert];
-}
-
-// 上卡第 2 行：没有在线购买页，去 Telegram 频道找 Lee 要码。
-- (void)ghcfActivationSponsor:(PSSpecifier *)specifier {
-    (void)specifier;
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("赞助购买授权") message:GHCFRuntimeString("没有在线购买页，去 Telegram 频道找 Lee 要激活码。") preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
-    UIAlertAction *open = [UIAlertAction actionWithTitle:GHCFRuntimeString("打开频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        (void)action;
-        [self ghcfActivationOpenTelegramChannel];
-    }];
-    [alert addAction:cancel];
-    [alert addAction:open];
-    [self ghcfActivationPresent:alert];
-}
-
-// v71 同款：设置页进程里 openURL 不可靠，先顺手试 tg:// 深链，
-// 不管成不成都复制 https 邀请链接＋弹「已复制」，保证链接一定到手。
-- (void)ghcfActivationOpenTelegramChannel {
-    NSURL *tgURL = [NSURL URLWithString:GHCFRuntimeString("tg://join?invite=UaeIYedetWtiZGQ1")];
-    if (tgURL) {
-        [[UIApplication sharedApplication] openURL:tgURL options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
-            (void)success;
-            dispatch_async(dispatch_get_main_queue(), ^{
-                GHCFPrefsLogLine("v43.30 prefs-activation telegram tg attempted");
-            });
-        }];
-    }
-    [UIPasteboard generalPasteboard].string = GHCFRuntimeString("https://t.me/+UaeIYedetWtiZGQ1");
-    GHCFPrefsLogLine("v43.30 prefs-activation telegram copied");
-    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("Telegram 频道链接已复制到剪贴板，去 Telegram 贴上进群找 Lee 要码。")];
-}
-
-// 上卡第 3 行：清除已保存的激活码、重新检查。
-- (void)ghcfActivationManage:(PSSpecifier *)specifier {
-    (void)specifier;
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("管理配置授权") message:GHCFRuntimeString("重置配置，授权找回等操作。") preferredStyle:UIAlertControllerStyleActionSheet];
-    UIAlertAction *clear = [UIAlertAction actionWithTitle:GHCFRuntimeString("清除已保存的激活码") style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
-        (void)action;
-        CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-        if (domain) {
-            CFStringRef cfKey = GHCFRuntimeCFString("activationCode");
-            if (cfKey) {
-                CFPreferencesSetAppValue(cfKey, NULL, domain);
-                CFRelease(cfKey);
-            }
-            CFPreferencesAppSynchronize(domain);
-            CFRelease(domain);
-        }
-        [self ghcfActivationPostRecheck];
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已清除") message:GHCFRuntimeString("已保存的激活码已清除，状态回到未授权。")];
-    }];
-    UIAlertAction *recheck = [UIAlertAction actionWithTitle:GHCFRuntimeString("重新检查激活码") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        (void)action;
-        [self ghcfActivationPostRecheck];
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已发送检查") message:GHCFRuntimeString("已发送检查，稍等几秒再看「当前授权状态」。")];
-    }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
-    [sheet addAction:clear];
-    [sheet addAction:recheck];
-    [sheet addAction:cancel];
-    [self ghcfActivationPresent:sheet];
-}
-
-// 下卡：加入官方群组——QQ 群号复制、Telegram 频道。
-- (void)ghcfActivationJoinGroup:(PSSpecifier *)specifier {
-    (void)specifier;
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("加入官方群组") message:GHCFRuntimeString("选择加入官方交流群") preferredStyle:UIAlertControllerStyleActionSheet];
-    UIAlertAction *qq = [UIAlertAction actionWithTitle:GHCFRuntimeString("QQ 群 1130823454") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        (void)action;
-        [UIPasteboard generalPasteboard].string = GHCFRuntimeString("1130823454");
-        GHCFPrefsLogLine("v43.30 prefs-activation QQ group copied");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("QQ交流群 1130823454 已复制到剪贴板，去 QQ 搜索群号加入。")];
-    }];
-    UIAlertAction *tg = [UIAlertAction actionWithTitle:GHCFRuntimeString("Telegram 频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        (void)action;
-        [self ghcfActivationOpenTelegramChannel];
-    }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
-    [sheet addAction:qq];
-    [sheet addAction:tg];
-    [sheet addAction:cancel];
-    [self ghcfActivationPresent:sheet];
-}
-
-@end
+// China Fly 1.0.0：狀態頁（GHCFStatusListController）、激活頁
+//（GHCFActivationListController、GHCFActivationRowCell）與鍵盤助手標記
+//（GHCFKbHelperMarkersText）已整段拿掉；檔案到此為止。
