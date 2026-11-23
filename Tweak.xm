@@ -4653,6 +4653,10 @@ if (image) [GHCFFlyTriggerButton setImage:image forState:UIControlStateNormal];
 // 感應帶。開關狀態變了才動手，沒變直接回（tick 便宜）。
 static BOOL GHCFAppliedEnabledState = NO;
 static BOOL GHCFAppliedEnabledValue = NO;
+// ChinaFly 1.0.0：激活码锁（定义在这里，GHCFApplyEnabledState 和下面
+// %ctor 后的激活模块共用）——锁住时分屏开关就当关着。跟旧分屏同一套
+// 码表（拉同一份线上的 codes.json），但实现、键、通知名全用自己的。
+static BOOL GHCFActivationLocked = NO;
 // v43.43（1.0.115，觸發鈕開關）：顯示開關跟進（tick 每 2 秒跑一次＋
 // prefschanged 立刻跑一次）。關→藏鈕；開→只在分屏開著、表盤沒藏
 // 著鈕時顯示回來。開關狀態變了才動手，沒變直接回（tick 便宜）。
@@ -4669,15 +4673,15 @@ GHCFFlyTriggerButtonWindow.hidden = YES;
 GHCFLogLine("v43.43 flyTrigger button disabled");
 return;
 }
-// 開：表盤正藏著鈕時不搶回來（dismissLauncher 會放回）；分屏關著時
-// 也不顯示（GHCFApplyEnabledState 管那邊）。
+// 開：表盤正藏著鈕時不搶回來（dismissLauncher 會放回）；分屏關著／
+// 激活鎖住時也不顯示（GHCFApplyEnabledState 管那邊）。
 if (GHCFDialHidFlyTriggerButton) return;
-if (!GHCFReadEnabled()) return;
+if (!GHCFReadEnabled() || GHCFActivationLocked) return;
 GHCFFlyTriggerButtonWindow.hidden = NO;
 GHCFLogLine("v43.43 flyTrigger button enabled");
 }
 static void GHCFApplyEnabledState(void) {
-BOOL enabled = GHCFReadEnabled();
+BOOL enabled = GHCFReadEnabled() && !GHCFActivationLocked;
 if (GHCFAppliedEnabledState && enabled == GHCFAppliedEnabledValue) return;
 GHCFAppliedEnabledState = YES;
 GHCFAppliedEnabledValue = enabled;
@@ -10371,6 +10375,7 @@ return;
 @end
 
 static void GHCFDeferredSetupRun(void);
+static void GHCFActivationCheckStart(void);
 
 static BOOL GHCFSetupRan = NO; // 延后 setup 跑过一次（重复跑会建两套窗／重复登记通知）。
 
@@ -10383,6 +10388,143 @@ dispatch_get_main_queue(), ^{
 if (!GHCFSetupRan) {
 GHCFSetupRan = YES;
 GHCFDeferredSetupRun();
+}
+});
+}
+
+// ChinaFly 1.0.0：激活码（皇上 2026-11-23 定加进 1.0.0，照旧分屏
+// 1.0.103 那套）——设置里输码，输对才能用插件；输错／没输锁住，
+// 只藏窗、不崩、不进安全模式。码表跟旧分屏用同一套：拉同一份线上的
+// codes.json（https://guhailong-repo.pages.dev/license/codes.json），
+// 码只放名单文件，不要写死在代码里。名单是异步抓的（NSURLSession，
+// 3 秒超时），抓不到不锁死；判断只在 setup 跑起来之后做，绝不在
+// %ctor 里同步跑（1.0.102 就是 %ctor 同步跑 setup 进的安全模式）。
+// 锁法：复用 GHCFApplyEnabledState——锁住时分屏开关就当关着，
+// 感应带／触发钮／已开浮窗全藏、启动器关掉；解锁时恢复。
+// 锁不是死的：设置页输码＋发重查就能解；名单抓不到时不锁（维持原状）。
+// 除了共用这份码表，China Fly 别的什么都不碰旧分屏（皇上 21:36 定）。
+
+// ChinaFly 1.0.0：激活状态写 prefs（设置页状态行读这个键）：
+// authorized 已激活、locked 未激活（码不对或没输）、checkFailed 名单
+// 读不到（暂不锁）。只写状态字，不写码本身。
+static void GHCFActivationSetState(const char *state) {
+if (!state) return;
+GHCFWritePrefsCString("activationState", state);
+}
+
+static void GHCFActivationApplyLock(void) {
+if (!GHCFActivationLocked) {
+GHCFActivationLocked = YES;
+GHCFActivationSetState("locked");
+GHCFLogLine("ChinaFly activation locked");
+}
+GHCFApplyEnabledState();
+}
+
+static void GHCFActivationApplyUnlock(void) {
+if (GHCFActivationLocked) {
+GHCFActivationLocked = NO;
+GHCFActivationSetState("authorized");
+GHCFLogLine("ChinaFly activation authorized");
+}
+GHCFApplyEnabledState();
+}
+
+// ChinaFly 1.0.0：异步抓名单对码。结果：1 码在名单、0 码不在名单／没输码、
+// -1 抓不到／解不开（网络、超时、JSON 坏掉——这种不锁死，维持原状）。
+// 回调一定在主队列跑。码只放内存比对，绝不写日志。
+static void GHCFActivationFetchAndCheck(void (^completion)(int result)) {
+char *code = GHCFReadPrefsCString("activationCode");
+if (!code) {
+if (completion) completion(0);
+return;
+}
+// 去掉头尾空白（设置页输码时手滑多打了空格也认）。
+size_t len = strlen(code);
+while (len > 0 && (code[len - 1] == ' ' || code[len - 1] == '\n' || code[len - 1] == '\t' || code[len - 1] == '\r')) code[--len] = '\0';
+size_t start = 0;
+while (code[start] == ' ' || code[start] == '\n' || code[start] == '\t' || code[start] == '\r') start++;
+if (start > 0) memmove(code, code + start, strlen(code + start) + 1);
+if (code[0] == '\0') {
+free(code);
+if (completion) completion(0);
+return;
+}
+NSString *urlString = [NSString stringWithCString:"https://guhailong-repo.pages.dev/license/codes.json" encoding:NSUTF8StringEncoding];
+NSURL *url = [NSURL URLWithString:urlString];
+if (!url) {
+free(code);
+if (completion) completion(-1);
+return;
+}
+NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+request.timeoutInterval = 3.0;
+NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+(void)response;
+int result = -1;
+if (!error && data) {
+@try {
+id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+NSArray *codes = nil;
+if (parsed && [parsed isKindOfClass:[NSDictionary class]]) {
+NSString *codesKey = [NSString stringWithCString:"codes" encoding:NSUTF8StringEncoding];
+id arr = [(NSDictionary *)parsed objectForKey:codesKey];
+if (arr && [arr isKindOfClass:[NSArray class]]) codes = (NSArray *)arr;
+} else if (parsed && [parsed isKindOfClass:[NSArray class]]) {
+codes = (NSArray *)parsed;
+}
+if (codes) {
+result = 0;
+NSString *wantCode = [NSString stringWithCString:code encoding:NSUTF8StringEncoding];
+for (id entry in codes) {
+if ([entry isKindOfClass:[NSString class]] && wantCode && [(NSString *)entry isEqualToString:wantCode]) {
+result = 1;
+break;
+}
+}
+}
+} @catch (NSException *e) {
+(void)e;
+result = -1;
+}
+}
+free(code);
+int finalResult = result;
+dispatch_async(dispatch_get_main_queue(), ^{
+if (completion) completion(finalResult);
+});
+}];
+[task resume];
+}
+
+// ChinaFly 1.0.0：启动时／点「检查激活码」时跑一次对码（异步，不卡 SpringBoard）。
+// -1（抓不到名单）不锁死：只记日志、状态写 checkFailed，锁保持原状。
+static BOOL GHCFActivationCheckInFlight = NO;
+static BOOL GHCFActivationRecheckRegistered = NO;
+
+static void GHCFActivationCheckStart(void) {
+if (GHCFActivationCheckInFlight) return;
+if (!GHCFActivationRecheckRegistered) {
+GHCFActivationRecheckRegistered = YES;
+int recheckToken = 0;
+int recheckResult = notify_register_dispatch("com.guhailong.fly.activationRecheck", &recheckToken, dispatch_get_main_queue(), ^(int token) {
+(void)token;
+GHCFActivationCheckStart();
+});
+if (recheckResult != 0) {
+GHCFLogLine("ChinaFly activation recheck notify register failed");
+}
+}
+GHCFActivationCheckInFlight = YES;
+GHCFActivationFetchAndCheck(^(int result) {
+GHCFActivationCheckInFlight = NO;
+if (result == 1) {
+GHCFActivationApplyUnlock();
+} else if (result == 0) {
+GHCFActivationApplyLock();
+} else {
+GHCFActivationSetState("checkFailed");
+GHCFLogLine("ChinaFly activation check failed, lock unchanged");
 }
 });
 }
@@ -11217,4 +11359,7 @@ GHCFLogLine(nbuf);
 GHCFApplyEnabledState();
 GHCFSchedulePeriodicTick();
 GHCFLogLine("v57 periodic tick scheduled");
+// ChinaFly 1.0.0：激活码检查从这里启动（setup 跑起来之后、异步读名单；
+// 绝不在 %ctor 里跑——1.0.102 的教训）。
+GHCFActivationCheckStart();
 }

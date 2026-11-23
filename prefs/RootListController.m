@@ -27,6 +27,7 @@
 #import <PhotosUI/PhotosUI.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <objc/message.h>
+#import <notify.h>
 
 // 运行时现做一个 NSString（不用写死字串）。
 static NSString *GHCFRuntimeString(const char *cstr) {
@@ -123,6 +124,25 @@ static void GHCFWritePrefsCString(const char *key, const char *value) {
     }
     if (domain) CFRelease(domain);
     if (keyRef) CFRelease(keyRef);
+}
+
+// ChinaFly 1.0.0：激活状态文字（读 dylib 写的 activationState 快取；
+// authorized 已激活、locked 未激活、checkFailed 名单读不到暂不锁，
+// 没值＝还没检查）。
+static NSString *GHCFPrefsActivationStatusText(void) {
+    char *state = GHCFPrefsCString("activationState");
+    NSString *out;
+    if (state && strcmp(state, "authorized") == 0) {
+        out = GHCFRuntimeString("您的设备已授权");
+    } else if (state && strcmp(state, "locked") == 0) {
+        out = GHCFRuntimeString("未授权");
+    } else if (state && strcmp(state, "checkFailed") == 0) {
+        out = GHCFRuntimeString("名单读不到，暂不锁（检查网络／名单）");
+    } else {
+        out = GHCFRuntimeString("未检查（启动后异步检查）");
+    }
+    if (state) free(state);
+    return out;
 }
 
 
@@ -745,11 +765,14 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
         CFPreferencesAppSynchronize(domain);
         // v43：記開關／滑桿／分段改了什麼值（只記用戶改動，不記讀取；
         // readPreferenceValue 每行渲染都跑，記了會刷爆日誌）。
-        char buf[256];
-        const char *keyC = [key UTF8String];
-        const char *valC = [[value description] UTF8String];
-        snprintf(buf, sizeof(buf), "v57 prefs-set: %s = %s", keyC ? keyC : "?", valC ? valC : "?");
-        GHCFPrefsLogLine(buf);
+        // ChinaFly 1.0.0：激活码绝不写日志——key 是 activationCode 时跳过这行。
+        if (![key isEqualToString:GHCFRuntimeString("activationCode")]) {
+            char buf[256];
+            const char *keyC = [key UTF8String];
+            const char *valC = [[value description] UTF8String];
+            snprintf(buf, sizeof(buf), "v57 prefs-set: %s = %s", keyC ? keyC : "?", valC ? valC : "?");
+            GHCFPrefsLogLine(buf);
+        }
     }
     if (domain) CFRelease(domain);
 }
@@ -1681,14 +1704,15 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
 @interface GHCFLinkListController : ChinaFlyRootListController
 @end
 
-// China Fly 1.0.0：子頁要跳的 plist 白名單（8 份真實檔案；不在裡面的
+// China Fly 1.0.0：子頁要跳的 plist 白名單（9 份真實檔案；不在裡面的
 // 名字一律不載，免得 loadSpecifiersFromPlistName 拿到壞名字）。
 // 舊頁（ARC、ARCButtons、Floating、Window、Shadow、Scheduler、Banner、
-// GestureCustom、Keyboard、Info、Status、Other、Activation）已刪，
-// 不在白名單裡，點了也不會載。
+// GestureCustom、Keyboard、Info、Status、Other）已刪，不在白名單裡，
+// 點了也不會載。Activation 是 1.0.0 新加的激活頁（照舊分屏 1.0.103
+// 那套，碼表跟舊分屏用同一份線上的 codes.json）。
 static BOOL GHCFPrefsIsKnownPlistName(const char *name) {
     if (!name || name[0] == '\0') return NO;
-    static const char *known[] = {"ActionButtonLongPress", "ActionButtonTap", "Dial", "FloatingIcon", "MenuEdit", "Root", "SplitSettings", "Trigger"};
+    static const char *known[] = {"ActionButtonLongPress", "ActionButtonTap", "Activation", "Dial", "FloatingIcon", "MenuEdit", "Root", "SplitSettings", "Trigger"};
     size_t n = sizeof(known) / sizeof(known[0]);
     for (size_t i = 0; i < n; i++) {
         if (strcmp(name, known[i]) == 0) return YES;
@@ -2021,6 +2045,347 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 
 @end
 
-// China Fly 1.0.0：狀態頁（GHCFStatusListController）、激活頁
-//（GHCFActivationListController、GHCFActivationRowCell）與鍵盤助手標記
-//（GHCFKbHelperMarkersText）已整段拿掉；檔案到此為止。
+// China Fly 1.0.0：狀態頁（GHCFStatusListController）與鍵盤助手標記
+//（GHCFKbHelperMarkersText）已整段拿掉。激活頁（下面兩類）是 1.0.0
+// 新加的（皇上 21:34 定，照舊分屏 1.0.103 那套；碼表跟舊分屏用同一份
+// 線上的 codes.json，實現、鍵、通知名全用 China Fly 自己的）。
+// 除了共用這份碼表，China Fly 別的什麼都不碰舊分屏（皇上 21:36 定）。
+
+@interface GHCFActivationRowCell : PSTableCell
+@end
+
+@implementation GHCFActivationRowCell {
+    UIImageView *_actIconView;
+    UILabel *_actTitleLabel;
+    UILabel *_actSubtitleLabel;
+    UILabel *_actValueLabel;
+    UIImageView *_actChevronView;
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier specifier:(PSSpecifier *)specifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier specifier:specifier];
+    if (self) {
+        self.accessoryType = UITableViewCellAccessoryNone;
+        _actIconView = [[UIImageView alloc] init];
+        _actIconView.contentMode = UIViewContentModeScaleAspectFit;
+        _actIconView.tintColor = [UIColor systemBlueColor];
+        [self.contentView addSubview:_actIconView];
+        _actTitleLabel = [[UILabel alloc] init];
+        _actTitleLabel.font = [UIFont systemFontOfSize:16];
+        _actTitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        [self.contentView addSubview:_actTitleLabel];
+        _actSubtitleLabel = [[UILabel alloc] init];
+        _actSubtitleLabel.font = [UIFont systemFontOfSize:13];
+        _actSubtitleLabel.textColor = [UIColor grayColor];
+        _actSubtitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        [self.contentView addSubview:_actSubtitleLabel];
+        _actValueLabel = [[UILabel alloc] init];
+        _actValueLabel.font = [UIFont systemFontOfSize:16];
+        _actValueLabel.textColor = [UIColor grayColor];
+        _actValueLabel.textAlignment = NSTextAlignmentRight;
+        _actValueLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        [self.contentView addSubview:_actValueLabel];
+        _actChevronView = [[UIImageView alloc] init];
+        _actChevronView.contentMode = UIViewContentModeScaleAspectFit;
+        _actChevronView.tintColor = [UIColor grayColor];
+        [self.contentView addSubview:_actChevronView];
+    }
+    return self;
+}
+
+- (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
+    [super refreshCellContentsWithSpecifier:specifier];
+    self.textLabel.text = nil;
+    self.textLabel.hidden = YES;
+    self.detailTextLabel.text = nil;
+    self.detailTextLabel.hidden = YES;
+    NSString *title = specifier.properties[GHCFRuntimeString("label")];
+    _actTitleLabel.text = title;
+    NSString *subtitle = specifier.properties[GHCFRuntimeString("subtitle")];
+    _actSubtitleLabel.text = subtitle;
+    _actSubtitleLabel.hidden = (!subtitle || [subtitle length] == 0);
+    NSString *iconName = specifier.properties[GHCFRuntimeString("iconName")];
+    UIImage *icon = nil;
+    if (iconName && [iconName length] > 0) icon = [UIImage systemImageNamed:iconName];
+    _actIconView.image = icon;
+    _actIconView.hidden = (icon == nil);
+    NSString *value = specifier.properties[GHCFRuntimeString("valueText")];
+    _actValueLabel.text = value;
+    _actValueLabel.hidden = (!value || [value length] == 0);
+    BOOL hasAction = (specifier.properties[GHCFRuntimeString("action")] != nil);
+    if (hasAction) {
+        _actChevronView.image = [UIImage systemImageNamed:GHCFRuntimeString("chevron.right")];
+        _actChevronView.hidden = NO;
+    } else {
+        _actChevronView.image = nil;
+        _actChevronView.hidden = YES;
+    }
+    [self setNeedsLayout];
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGFloat w = self.contentView.bounds.size.width;
+    CGFloat h = self.contentView.bounds.size.height;
+    CGFloat textX = _actIconView.hidden ? 15 : 53;
+    CGFloat textRight = w - 15;
+    if (!_actChevronView.hidden) textRight = w - 40;
+    if (!_actIconView.hidden) _actIconView.frame = CGRectMake(15, (h - 28) / 2, 28, 28);
+    if (!_actChevronView.hidden) _actChevronView.frame = CGRectMake(w - 25, (h - 14) / 2, 10, 14);
+    CGFloat valueW = _actValueLabel.hidden ? 0 : 160;
+    if (valueW > 0) _actValueLabel.frame = CGRectMake(textRight - valueW, 0, valueW, h);
+    CGFloat titleW = textRight - valueW - (valueW > 0 ? 8 : 0) - textX;
+    if (titleW < 0) titleW = 0;
+    if (_actSubtitleLabel.hidden) {
+        _actTitleLabel.frame = CGRectMake(textX, 0, titleW, h);
+    } else {
+        _actTitleLabel.frame = CGRectMake(textX, 7, titleW, 22);
+        _actSubtitleLabel.frame = CGRectMake(textX, 29, titleW, 18);
+    }
+}
+
+@end
+
+// ChinaFly 1.0.0：激活页（两张卡：上卡激活／赞助／管理三行，下卡状态行＋
+// 加入群组＋底部「关于 China Fly」）。状态文字走同一套
+// GHCFPrefsActivationStatusText。值行在 -specifiers 里现填，viewWillAppear 重载。
+@interface GHCFActivationListController : ChinaFlyRootListController
+@end
+
+@implementation GHCFActivationListController
+
+- (void)viewDidLoad {
+    @try {
+        [super viewDidLoad];
+    } @catch (NSException *e) {
+        const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
+        char buf[256];
+        snprintf(buf, sizeof(buf), "ChinaFly prefs-activation viewDidLoad EXCEPTION %s", reason);
+        GHCFPrefsLogLine(buf);
+    }
+    GHCFPrefsLogLine("ChinaFly prefs-page: Activation");
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self reloadSpecifiers];
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    char buf[160];
+    snprintf(buf, sizeof(buf), "ChinaFly prefs-activation tap: section %ld row %ld", (long)indexPath.section, (long)indexPath.row);
+    GHCFPrefsLogLine(buf);
+    if (GHCFHandlePlistDetailTap(self, tableView, indexPath)) return;
+    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
+    [super tableView:tableView didSelectRowAtIndexPath:indexPath];
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    (void)tableView;
+    (void)indexPath;
+    return 56;
+}
+
+- (NSArray *)specifiers {
+    if (!_specifiers) {
+        @try {
+            NSMutableArray *loaded = [self loadSpecifiersFromPlistName:GHCFRuntimeString("Activation") target:self];
+            for (PSSpecifier *spec in loaded) {
+                NSString *vk = spec.properties[GHCFRuntimeString("valueKey")];
+                if (![vk isKindOfClass:[NSString class]]) continue;
+                if ([vk isEqualToString:GHCFRuntimeString("activationState")]) {
+                    [spec setProperty:GHCFPrefsActivationStatusText() forKey:GHCFRuntimeString("valueText")];
+                } else if ([vk isEqualToString:GHCFRuntimeString("systemVersion")]) {
+                    NSString *ver = [[UIDevice currentDevice] systemVersion];
+                    NSString *txt = [GHCFRuntimeString("iOS ") stringByAppendingString:(ver ? ver : GHCFRuntimeString("?"))];
+                    [spec setProperty:txt forKey:GHCFRuntimeString("valueText")];
+                } else if ([vk isEqualToString:GHCFRuntimeString("pluginVersion")]) {
+                    [spec setProperty:GHCFRuntimeString("1.0.0") forKey:GHCFRuntimeString("valueText")];
+                }
+            }
+            _specifiers = loaded;
+        } @catch (NSException *e) {
+            const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
+            char buf[512];
+            snprintf(buf, sizeof(buf), "ChinaFly prefs-activation specifiers EXCEPTION %s", reason);
+            GHCFPrefsLogLine(buf);
+            NSMutableArray *safe = [NSMutableArray array];
+            PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
+            [group setProperty:GHCFRuntimeString("激活页打不开（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
+            [safe addObject:group];
+            _specifiers = safe;
+        }
+        if (!_specifiers) _specifiers = [NSMutableArray array];
+    }
+    return _specifiers;
+}
+
+// 提示框改走最上层 presenter、主队列（同 ghcfShowAlertWithTitle
+// 的做法；本页的输入框／操作表不能走那个只带「好」的 helper）。
+- (void)ghcfActivationPresent:(UIAlertController *)alert {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *presenter = self;
+        while (presenter.presentedViewController) presenter = presenter.presentedViewController;
+        if (!presenter.view.window) {
+            UIWindow *keyWindow = nil;
+            for (UIScene *s in [[UIApplication sharedApplication] connectedScenes]) {
+                if (![s isKindOfClass:[UIWindowScene class]]) continue;
+                UIWindowScene *ws = (UIWindowScene *)s;
+                if (ws.activationState != UISceneActivationStateForegroundActive) continue;
+                for (UIWindow *w in ws.windows) {
+                    if (w.isKeyWindow) { keyWindow = w; break; }
+                }
+                if (keyWindow) break;
+            }
+            if (keyWindow && keyWindow.rootViewController) {
+                presenter = keyWindow.rootViewController;
+                while (presenter.presentedViewController) presenter = presenter.presentedViewController;
+            }
+        }
+        if (alert.popoverPresentationController) {
+            alert.popoverPresentationController.sourceView = self.view;
+            alert.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 1, 1);
+        }
+        if (presenter) {
+            [presenter presentViewController:alert animated:YES completion:nil];
+        } else {
+            GHCFPrefsLogLine("ChinaFly prefs-activation present FAILED: no presenter");
+        }
+    });
+}
+
+// 发 Darwin 通知给 dylib 重抓名单对码，4 秒后重载本页（状态行自己翻成
+// 「您的设备已授权」／「未授权」，不用退出重进）。
+- (void)ghcfActivationPostRecheck {
+    notify_post("com.guhailong.fly.activationRecheck");
+    GHCFPrefsLogLine("ChinaFly prefs-activation recheck posted");
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        [strongSelf reloadSpecifiers];
+    });
+}
+
+// 上卡第 1 行：弹输入框输激活码，确认就写 prefs＋发检查（码不记日志）。
+- (void)ghcfActivationEnterCode:(PSSpecifier *)specifier {
+    (void)specifier;
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("激活正版授权") message:GHCFRuntimeString("输入激活码来绑定当前的设备。") preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = GHCFRuntimeString("激活码，如 SD-XXXX-XXXX-XXXX");
+        textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    }];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    __weak UIAlertController *weakAlert = alert;
+    UIAlertAction *ok = [UIAlertAction actionWithTitle:GHCFRuntimeString("确认") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        (void)action;
+        UIAlertController *strongAlert = weakAlert;
+        NSString *raw = strongAlert ? strongAlert.textFields.firstObject.text : nil;
+        NSString *code = [[raw stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] uppercaseString];
+        if (!code || [code length] == 0) {
+            [self ghcfShowAlertWithTitle:GHCFRuntimeString("请输入激活码") message:GHCFRuntimeString("激活码是空的，先输入再确认。")];
+            return;
+        }
+        CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+        if (domain) {
+            CFStringRef cfKey = GHCFRuntimeCFString("activationCode");
+            if (cfKey) {
+                CFPreferencesSetAppValue(cfKey, (__bridge CFPropertyListRef)code, domain);
+                CFRelease(cfKey);
+            }
+            CFPreferencesAppSynchronize(domain);
+            CFRelease(domain);
+        }
+        [self ghcfActivationPostRecheck];
+        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已发送检查") message:GHCFRuntimeString("已发送检查，稍等几秒再看「当前授权状态」，通过了会显示「您的设备已授权」。")];
+    }];
+    [alert addAction:cancel];
+    [alert addAction:ok];
+    [self ghcfActivationPresent:alert];
+}
+
+// 上卡第 2 行：没有在线购买页，去 Telegram 频道找 Lee 要码。
+- (void)ghcfActivationSponsor:(PSSpecifier *)specifier {
+    (void)specifier;
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("赞助购买授权") message:GHCFRuntimeString("没有在线购买页，去 Telegram 频道找 Lee 要激活码。") preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    UIAlertAction *open = [UIAlertAction actionWithTitle:GHCFRuntimeString("打开频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        (void)action;
+        [self ghcfActivationOpenTelegramChannel];
+    }];
+    [alert addAction:cancel];
+    [alert addAction:open];
+    [self ghcfActivationPresent:alert];
+}
+
+// 设置页进程里 openURL 不可靠，先顺手试 tg:// 深链，
+// 不管成不成都复制 https 邀请链接＋弹「已复制」，保证链接一定到手。
+- (void)ghcfActivationOpenTelegramChannel {
+    NSURL *tgURL = [NSURL URLWithString:GHCFRuntimeString("tg://join?invite=UaeIYedetWtiZGQ1")];
+    if (tgURL) {
+        [[UIApplication sharedApplication] openURL:tgURL options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
+            (void)success;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                GHCFPrefsLogLine("ChinaFly prefs-activation telegram tg attempted");
+            });
+        }];
+    }
+    [UIPasteboard generalPasteboard].string = GHCFRuntimeString("https://t.me/+UaeIYedetWtiZGQ1");
+    GHCFPrefsLogLine("ChinaFly prefs-activation telegram copied");
+    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("Telegram 频道链接已复制到剪贴板，去 Telegram 贴上进群找 Lee 要码。")];
+}
+
+// 上卡第 3 行：清除已保存的激活码、重新检查。
+- (void)ghcfActivationManage:(PSSpecifier *)specifier {
+    (void)specifier;
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("管理配置授权") message:GHCFRuntimeString("重置配置，授权找回等操作。") preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertAction *clear = [UIAlertAction actionWithTitle:GHCFRuntimeString("清除已保存的激活码") style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+        (void)action;
+        CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+        if (domain) {
+            CFStringRef cfKey = GHCFRuntimeCFString("activationCode");
+            if (cfKey) {
+                CFPreferencesSetAppValue(cfKey, NULL, domain);
+                CFRelease(cfKey);
+            }
+            CFPreferencesAppSynchronize(domain);
+            CFRelease(domain);
+        }
+        [self ghcfActivationPostRecheck];
+        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已清除") message:GHCFRuntimeString("已保存的激活码已清除，状态回到未授权。")];
+    }];
+    UIAlertAction *recheck = [UIAlertAction actionWithTitle:GHCFRuntimeString("重新检查激活码") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        (void)action;
+        [self ghcfActivationPostRecheck];
+        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已发送检查") message:GHCFRuntimeString("已发送检查，稍等几秒再看「当前授权状态」。")];
+    }];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    [sheet addAction:clear];
+    [sheet addAction:recheck];
+    [sheet addAction:cancel];
+    [self ghcfActivationPresent:sheet];
+}
+
+// 下卡：加入官方群组——QQ 群号复制、Telegram 频道。
+- (void)ghcfActivationJoinGroup:(PSSpecifier *)specifier {
+    (void)specifier;
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("加入官方群组") message:GHCFRuntimeString("选择加入官方交流群") preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertAction *qq = [UIAlertAction actionWithTitle:GHCFRuntimeString("QQ 群 1130823454") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        (void)action;
+        [UIPasteboard generalPasteboard].string = GHCFRuntimeString("1130823454");
+        GHCFPrefsLogLine("ChinaFly prefs-activation QQ group copied");
+        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("QQ交流群 1130823454 已复制到剪贴板，去 QQ 搜索群号加入。")];
+    }];
+    UIAlertAction *tg = [UIAlertAction actionWithTitle:GHCFRuntimeString("Telegram 频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        (void)action;
+        [self ghcfActivationOpenTelegramChannel];
+    }];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    [sheet addAction:qq];
+    [sheet addAction:tg];
+    [sheet addAction:cancel];
+    [self ghcfActivationPresent:sheet];
+}
+
+@end
