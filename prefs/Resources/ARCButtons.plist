@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>defaults</key>
+	<string>com.guhailong.fly</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>default</key>
+			<real>56.0</real>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>arcIconSize</string>
+			<key>label</key>
+			<string>启动器图标大小</string>
+			<key>max</key>
+			<real>72.0</real>
+			<key>min</key>
+			<real>40.0</real>
+			<key>showValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>浮窗里 App 图标排几圈同心弧，1–5 层，预设 2 层；改了下次开启动器生效。图标少于层数时不留空层。</string>
+			<key>label</key>
+			<string>启动器层数</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>default</key>
+			<string>2</string>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>arcLayerCount</string>
+			<key>label</key>
+			<string>启动器层数</string>
+			<key>validTitles</key>
+			<array>
+				<string>1 层</string>
+				<string>2 层</string>
+				<string>3 层</string>
+				<string>4 层</string>
+				<string>5 层</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<string>1</string>
+				<string>2</string>
+				<string>3</string>
+				<string>4</string>
+				<string>5</string>
+			</array>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>没选时跟小窗显示位置走。</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>arcShowOpenDots</string>
+			<key>label</key>
+			<string>显示已开 App 的绿点</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>arcShowNames</string>
+			<key>label</key>
+			<string>显示 App 名字</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.guhailong.fly.prefschanged</string>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>default</key>
+			<string>right</string>
+			<key>defaults</key>
+			<string>com.guhailong.fly</string>
+			<key>key</key>
+			<string>arcSlideSide</string>
+			<key>label</key>
+			<string>启动器滑出方向</string>
+			<key>validTitles</key>
+			<array>
+				<string>左侧边出</string>
+				<string>右侧边出</string>
+				<string>从底部出</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<string>left</string>
+				<string>right</string>
+				<string>bottom</string>
+			</array>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>启动器 App 图标从左／右侧边缘扇形滑出，弧心锚在边缘（触发钮或滑动手指的位置）；从底部出时，圆环从底部往上展开、圆心跟着触发位置走。改了下次开启动器生效。跟浮窗滑出方向是两个设定，各管各的。</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>启动器层数/按钮设置</string>
+</dict>
+</plist>

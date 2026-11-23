@@ -1,0 +1,10784 @@
+// v43.6 (1.0.81)：恢复黑窗修复——restoreHostedWindow 改尺寸之前先预抓快照（小卡最后一帧活内容），恢复动画优先播这张；改完尺寸再抓是黑的（皇上 2026-11-18 20:37 影片定案）。L4377 任务栏快照／L6410 碎裂退出快照查过：都在改尺寸之前抓，没有同样问题，原样不动。
+// v43.6 (1.0.81)：自選 App 上限 7 個→10 個（皇上 2026-11-18 20:32 點的：7 個不夠，加到 10 個）。
+// v43.5 (1.0.80)：鍵盤設置（皇上 2026-11-17 21:28–21:32 打√：6 鍵盤設置，最後一項）。
+// (a) 設定頁對齊別人那頁：豎屏／橫屏分開內／外彈出、橫屏鍵盤彈起放大浮窗、
+// 橫屏時拖動外置鍵盤（震動那項別人自己說半成品，不做）。舊 keyboardPopupMode
+// 單鍵只當遷移 fallback。(b) 新 dylib GHCFKeyboardHelper 塞進 App 進程：
+// 橋接鍵盤通知給 SpringBoard（Darwin 通知＋kbNotifyInfo），內彈上移／外彈
+// 關窗／橫屏放大才真正生效；kill switch 開著＋外彈出＋已託管時才移鍵盤窗
+// 到屏幕底部全寬（實驗，預設關）。SpringBoard 側橫屏拖鍵盤探針已刪
+// （鍵盤窗不在 SpringBoard 進程裡，永遠找不到；拖動改由助手做）。
+// v43.2 (1.0.77)：環形啟動器重做（皇上 2026-11-17 21:28–21:32 打√：4 環形啟動器）。
+// v43 (1.0.76)：真分屏多活窗第一步（皇上 2026-11-17 21:28–21:32 打√：1 多活窗先做）。
+// v42.33 (1.0.75)：繁体文案转简体中文（设定页／浮窗／提示全部简体）；含 1.0.74 的转圈修复。
+// ChinaFly v1.0.73 (v42.31) — 顾海龙集团原创分屏插件（实验版）
+//
+// ── v43.2 (1.0.77)：環形啟動器重做——圖標按環容量同心圓密排（不再用層數權重分環，
+// 有多少 App 排多少，不寫死 40 個）、中間一個大設定齒輪（點了開系統設定，
+// 分屏設定頁深連結）、背景按樣式變暗（圓環 0.65、格狀照舊 0.55）、關閉時
+// 圖標往外四散飛走（不是直接消失）。launcherStyle 預設改圓環（沒設過＝
+// radial；明確選 grid 才走格狀）。三屏／分屏工具鈕 1.0.79 已拿掉（皇上 2026-11-18 說沒必要留）。
+// 格狀版（addARCIconsForBids）一字不動；1.0.76 分屏邏輯不動。
+// 已知局限：齒輪的深連結（App-Prefs:root=ChinaFly）有沒有直達
+// 分屏設定頁，要真機驗（落不到就停在設定根目錄，結果記 v43.2 日誌）。
+// ── v43.24 (1.0.99)：嚴格單主窗——分屏配對與三屏／側窗整個拿掉（皇上 2026-11-22 15:46：
+// 只要一個大的浮窗，點到其他都縮小浮窗，跟 FV 一樣）。同一時間只有一個大浮窗；
+// 點開另一個 App 時當前主窗自動縮成小卡（GHCFAutoPeekOtherWindows 本來就這樣做，
+// 配對與側窗的豁免拿掉後就是完整規則）。邊緣滑動回默認：開啟動器（第 2 下也是）。
+// 拿掉的：分屏配對入口與佈局、分隔線窗與拖動、三屏入口與組合鍵、
+// 側窗分支與側窗設定讀值。
+// 留下的共用路：單窗／peek／任務欄／啟動器；windowPosition（小窗顯示位置）仍在，
+// 只是不再是側窗專用。
+// ── v42.31 (1.0.73)：只修黑半邊（皇上 2026-11-17 15:37：主修就是主浮窗跟小浮窗的問題，
+// 其他都先放著——圓環重排／退出動畫 16 種／FPS 顯示／視窗參數全部停掉，不進這版）──
+// 黑半邊修復：1.0.72 影片 f055／f057，設定從小卡恢復成大窗，內容只佔左邊約 55%，
+// 右邊約 45% 全黑約 2 秒。根因：門控只看 contentState==2，但 scene 是在舊尺寸（小卡寬）
+// 下就緒的，窗放大後 scene 還沒重畫到新尺寸，門就放行了。改：尺寸門——scene frame
+// 對上窗 frame（誤差 3pt 內）＋內容縮放對上＋contentState==2 才顯示，不然佔位繼續蓋著、
+// 每 0.5 秒重推一次 resize；卡滿 5 秒重建 scene（沿用 1.0.72 的重建路徑）。覆蓋 peek 恢復、
+// promote、新窗、拖調尺寸鬆手後（resizeActiveWindowToFrame）。看門狗在尺寸門控進行中
+// 不拿活動窗的佔位。快照動畫也一樣：尺寸沒對上就播佔位塊，不播小內容快照。
+// v43 第一步（真分屏多活窗）順延到 1.0.73 之後。
+//
+// ── v42.30 (1.0.72)：修 1.0.71 真機測「退出動畫＋啟動器樣式選了沒用」（皇上 2026-11-17 14:00）──
+// (1) 診斷日誌：closeHostedWindow 讀完 exitAnim 記一行「v72 exit anim N」；
+// rebuildARCContent 樣式分支記一行「v72 launcher style radial／grid」——
+// 下次日誌直接證明讀值有沒有到 dylib。
+// (2) 退出動畫套到拖去收小卡：皇上平常關窗是拖主窗到邊緣放手＝
+// minimizeHostedWindow，那條路從來不跑退出動畫（只掛在 closeHostedWindow
+// 上）。改：拖去貼邊放手時，先按設定的 exitAnimation 播一次關窗效果
+// （0 island＝現有行為不動；1 縮小淡出／2 向右滑散／3 下沉淡出 0.35 秒；
+// 4 方块拼散複用 closeHostedWindowWithShatter，結束改走 minimize 顯示
+// peek 不是藏窗），播完還原 frame／alpha／transform 再走現有 minimize。
+// 自動 peek／遊戲模式／點窗外收起不走這裡。遊戲模式開著時動畫 0.01 秒。
+// v43 第一步順延到 1.0.73。
+//
+// ── v42.29 (1.0.71)：只修 1.0.70 真機測出來的三件事（皇上 2026-11-17 11:06）──
+// (1) Telegram 行：23.log 證明點按每次都派發、openURL 每次都回 success，
+// 手機上卻什麼都沒跳出來——設定頁進程裡 openURL 就是不可見的失敗
+// （v54 越獄源行「打不開也閃退過」同一類問題）。改成複製為主：先順手試
+// tg://join?invite= 深鏈（能開最好），不管成不成都複製 https 邀請連結＋
+// 彈「已複製」，保證一定有可見回饋、連結一定到手。
+// (2) 兩行設定看不到（浮窗退出動畫、啟動器樣式）：出貨包裡兩行結構完整，
+// 手機端設定 App 的每頁快取嫌疑最大。三重保險：兩行複製一份到 Root 主頁
+// （同一 key）；GHCFPlistPageController 學手勢總覽頁，viewWillAppear
+// 清 _specifiers 快取重組；頁面載入時記一行 plist 名＋item 數量，下次日誌
+// 直接證明載的是新版還是舊版。
+// (3) 小浮窗切回主窗閃黑邊：恢復那一下 scene 還在準備（contentState=1），
+// 窗已經顯示了。改：恢復先藏窗，等 scene 就緒（contentState==2）再淡入；
+// 約 2.5 秒還沒就緒也顯示（超時兜底，窗永不卡死隱藏）。收起路徑、鎖屏、
+// 看門狗都不動。
+// v43 第一步順延到 1.0.73。
+//
+// ── v42.28 (1.0.70)：改名＋Telegram 行＋影片 5 項全做（皇上 2026-11-17 10:22「全部」）──
+// (1) 改名 China Fly：插件內（設定入口 label、Root.plist 標題、
+// Status.plist 頁腳）改 China Fly；Sileo 列表名改混合名
+// 「China Fly（顧海龍分屏）」；包名 com.guhailong.fly 不動。
+// (2) 系統狀態頁「聯繫與源」加 Telegram 交流群行，點了進群
+// （https://t.me/+UaeIYedetWtiZGQ1；打不開就複製連結＋提示，v54 教訓）。
+// (3) 浮窗退出動畫（設定頁選）：靈動島（默認＝現有的彈簧滑出＋淡出）、
+// 縮小淡出、向右滑散、下沉淡出、方块拼散（快照切片＋CAAnimation）。
+// 影片另外 11 種不在這版。(4) 環形啟動器：ARC 圖標排成圓環（設定頁選，
+// 預設格狀弧圈不動）。(5) 點窗外多一個「懸掛」：窗掛到最近的邊、只露
+// 30pt，點那截恢復。(6) 浮窗大小滑桿 50–100%，預設 100%＝346×749；
+// 寬高一起縮、寬高比鎖住，黑邊不會回來；計算器保持 320×693。
+// (7) 拖窗軌跡：拖浮窗時手指後面跟一條虛線，放手後淡出。
+//
+// ── v42.27 (1.0.69)：皇上 2026-11-16 20:45 挑 A ──
+// 小浮窗（peek）黑邊：小窗 112×216 寬高比 0.519，屏幕 414×896 是 0.462；
+// 內容按最小貼合比 0.241 縮、左右置中，寬只剩 99.8，左右各留約 6pt 黑邊。
+// 1.0.67 只改了主窗，小窗沒動所以還在。A：小窗改 112×242（寬不變、高 26pt，
+// 寬高比和屏幕一致，內容正好填滿，沒黑邊；小窗像個迷你手機屏，字大 12%）。
+// 記住的尺寸：皇上 20:47 說已經開大過的 App 也要取消——啟動時一次清掉全部
+// 已存的 PeekW/PeekH（寫 0＝沒存過，GHCFResetStoredPeekSizesOnce，照 v53
+// 自愈的寫法，%ctor 延後塊裡跑），全部回到 112×242；以後想改大再拖。
+// 4 扇以上本來就會等比縮高排布（shrink），242 只讓 4 扇時縮得更多一點，
+// 1–3 扇不影響。
+//
+// ── v42.26 (1.0.68)：皇上 2026-11-16 20:04 勾中的 4 ──
+// 其他拖動手勢同款不跟手（和 1.0.65 小浮窗下滑同一個根因：
+// translationInView 量在會動的窗／容器上，增量式穩態只有手指一半速度、
+// 走走停停）。四處一起換固定不動的邊條窗（GHCFStripWindow）當參考座標，
+// 只換參考視圖，其餘夾取／門檻邏輯不動：觸發鈕拖動、主浮窗拖動
+// （細條拖窗，最常用）、小窗右下角手柄調尺寸（約 2/3 速度；這正是
+// 項目 4 的測試點，修完請皇上重測）、三屏分隔線（右貼邊時有毛病）。
+// 外置鍵盤拖動是探針，順手一起換。6560 行大窗手柄調尺寸是死碼
+// （v63 固定尺寸後開頭就 return），不動。
+//
+// ── v42.25 (1.0.67)：皇上 2026-11-16 19:59 挑 A ──
+// 浮窗底部黑邊：主窗容器／內容區底色本來就是黑色；layer-host 路內容按寬
+// 等比縮（346/414≈0.836），高只剩 749，比窗 769 矮 20pt，貼左上對齊，
+// 黑條全在底部。A：窗改成 346×749（寬高比和屏幕 414×896 一致，內容正好
+// 填滿，完全沒黑邊；窗只矮 20pt）。計算器 320×693 早就是按屏幕比例算
+// 的，一致。本版包含 1.0.66 的兩項修法（拖動跟手＋鎖屏不推後台），
+// 1.0.66 不用單獨推，直接推 1.0.67。
+//
+// ── v42.24 (1.0.66)：皇上 2026-11-16 19:53 真機測 ──
+// (1) 恢復很順很快了 ✓（1.0.65 的動畫＋延後有效）。
+// (2) 小浮窗往下滑不跟手，好像要貼著邊才可以關：1.0.65 的 bug——
+// translationInView:w 量位移，w 是小窗自己（跟著手指走），量出來的
+// 位移被窗的移動吃掉，拖了不跟手、只有快甩才關得了。改拿固定不動的
+// 邊條窗（GHCFStripWindow）當參考座標量手指位置，窗跟著手指走才準；
+// 閾值不變（≥60pt 或 ≥700pt/s 關，否則彈回）。
+// (3) 鎖屏後密碼可以按了，不卡 ✓（1.0.65 藏小卡有效）。
+// (4) 黑 peek 會亮回來，但皇上要全程不黑屏：鎖屏不再把 scene 推回後台
+// （鎖後黑的主因）；窗還是藏起來，密碼修法不動。代價是鎖屏時 App 進程
+// 還在跑，會多耗點電；鎖很久系統自己掛起／殺掉進程的話還是會黑，
+// 那時看門狗／恢復延後會把它推回來，關掉重開也行。解鎖推前景保留。
+//
+// ── v42.23 (1.0.65)：皇上 2026-11-16 15:23 真機測＋15:39 補充 ──
+// (1) 點小浮窗變主窗慢＋不順：恢復改 0.25 秒 ease-out 動畫（peek 位置長到
+// 目標尺寸，不再瞬間跳變）；先推前景讓進程醒，contentState=0 時 resize
+// 延後（1 秒後再看，醒了就推；還 0 就 2.5 秒再看一次，還 0 就推並記
+// still not ready）——不對死 scene 同步推 resize／前景硬上。
+// (2) 小浮窗下滑手感不好：UISwipeGestureRecognizer 改 UIPanGestureRecognizer，
+// 手指往下拖小窗跟著走＋漸淡，放手下滑 ≥60pt 或速度 ≥700pt/s 關掉，否則
+// 彈回原位；手柄在點按層之上，落在手柄上還是拖調尺寸。
+// (3) 鎖屏後密碼解不了（先修）：鎖屏藏全部窗——貼邊小卡也藏（v32 只藏開著
+// 的窗，假設小卡不擋密碼；小卡 112x216 貼邊正好可能蓋住密碼鍵盤邊列數字）。
+// 解鎖時 HiddenByLock 路徑照舊把小卡顯示回來。22.log 另證：恢復 contentState=0
+// 的窗 4 次後立刻 respring（21.log 計算器那次也是），恢復死 scene 是另一條
+// 嫌疑線，(1) 的延後 resize 就是對著它。
+// (4) 22.log 診斷（18,999 行，滾動日誌自 v13 起；1.0.64 只佔 18406 行之後）：
+// 看門狗只推了 3 次（計算器 cs=0、豆包 cs=1→重試後回到 2、豆包 cs=0；後兩次
+// 皇上隨手滑掉了，恢復沒看到）；解鎖推前景正常；1.0.64 期間只 respring 1 次
+// （143 次是全日誌歷史數，別當 1.0.64 的數）；黑 peek 還在——快速連點時
+// 2 秒一輪的看門狗來不及，且恢復時 scene 已是 0。
+//
+// ── v42.22 (1.0.64)：皇上 2026-11-16 13:46 定 ──
+// 小浮窗打叉取消，改 FV 式手勢（推薦版：點小浮窗本身變主窗，往下滑取消）：
+// (1) peek 右上角紅 X 整個拿掉（GHCFPeekCloseButtons、handleDockPeekClose
+// 全刪）；點小浮窗本身恢復主窗不變（handleDockPeekTap 走
+// promoteWindowToMainIndex）；點小浮窗外面照常用底下的 App，不攔截。
+// (2) 小浮窗加往下滑手勢取消：點按層上掛 UISwipeGestureRecognizer（只認
+// 往下），觸發走現有關窗路（closeHostedWindow，scene 留著不銷毀，別的窗
+// 不受影響）；右下角 36×36 調尺寸手柄在點按層之上，落在手柄上還是拖調
+// 尺寸，不誤關。長按觸發鈕關全部、拖到邊緣收起照舊。
+// (3) 小黑屏已定案（21.log，18,296 行）：黑的是計算器 peek。收起時是好
+// 的（retry2 查 contentState=2）；豆包開了又關、連鎖 4 次後，解鎖推前景
+// 的日誌一次都沒有，點開恢復時 contentState=0（全日誌近期唯一一次 0），
+// 隨後卡屏、respring。v63 只在收起那一刻推前景，鎖屏又推後台，解鎖通
+// 知沒送到就一直黑。修法：2 秒 tick 加看門狗（GHCFPeekWatchdogTick），
+// 可見窗的 scene 沒就緒（contentState != 2）就再推前景；鎖著時跳過，
+// 不跟鎖屏回調打架；鎖屏旗標 GHCFScreenLocked 由鎖屏回調維護。進程
+// 本身死了的 scene 推了也沒用，要關掉重開。卡屏本身日誌定不了機制
+// （恢復 contentState=0 的窗後立刻 respring，只能說有關聯）；真機測
+// 時看黑 peek 會不會在 2 秒內自己亮回來。
+//
+// ── v42.21 (1.0.63)：皇上 2026-11-16 勾的五項 ──
+// (1) ★5 遊戲工具箱：遊戲模式激活時 ARC 變精簡工具箱（回遊戲／微信／QQ／
+// 清後台／錄屏），取代置頂／最近／全部三段；沒激活時 ARC 原樣不動。
+// (2) 17 每款遊戲記浮窗位置：只記位置、不記尺寸（尺寸固定，見 (4)）；
+// 進遊戲前存一份位置，出遊戲只還原位置。
+// (3) 修小浮窗黑屏：peek 顯示時（GHCFShowDockPeekForIndex，所有 peek
+// 的必經之路）補推 scene foreground=YES，喚醒被掛起的進程／丟了前景的
+// scene；不銷毀、不重建 scene；鎖屏推後台邏輯不動。能不能修死要真機測。
+// (4) 浮窗尺寸固定：照片量到約 346×769pt（透視誤差 ±10pt），一律開這個
+// 尺寸；拖角落縮放、細條點按開縮放滑桿、拖頂放大、maximize 手勢、設定頁
+// 尺寸預設行全停用；計算器保持自己的 320×693，三屏側窗保持自己的寬度，
+// peek 小卡保持 112×216；拉大拉小後續再做，這版沒有。
+// (5) ARC 層數最高 5 層：設定 1–5 層、預設 2 層；addARCIconsForBids 四個
+// 陣列全擴到 [5]（weights {1,2,3,4,5}），不然 L=5 會越界壞棧。
+//
+// ── v42.3：浮窗切換改 FV 式＋小窗可拖調尺寸（皇上 2026-11-14 18:19–18:22） ──
+// 皇上說：主浮窗開著再點副浮窗，現在兩個大窗疊著，他不要；要 FV 那樣——
+// 點副浮窗時主浮窗自動縮成小的浮窗，點小的換回來，可以來回切；而且小
+// 的浮窗也要能縮大縮小，跟 FV 一樣。
+// (1) 一次只有一個大浮窗：帶到最前的中心路徑（GHCFBringWindowToFront，
+// ARC 點 App、任務欄、點 peek、雙擊觸發鈕輪切、重開緩存窗、開新窗、
+// 恢復、點窗頂細條全都走這裡）裡加 GHCFAutoPeekOtherWindows——其他
+// 看得見的大浮窗自動縮成 v41 peek（112x216 活內容小窗、貼邊疊著、
+// scene 保活絕不銷毀；收起前先存位置/大小、scene 推回後台，跟手動最
+// 小化同一套）。不縮的：釘選的窗（釘＝鎖定）、三屏側窗、已收著的、
+// 藏著的；被帶到最前的窗本身是側窗時整條跳過（三屏會話不動）。
+// (2) 來回切：點 peek 恢復成大窗時，中央規則把剛才那個大窗縮成 peek，
+// 對稱。手動拖到邊緣 peek、貼邊小卡、紅 X 關窗、長按觸發鈕關全部照舊。
+// (3) 小窗可拖調尺寸：peek 右下角放跟大窗一樣的 36x36 手柄（點按層之
+// 上，不然點按層會吃掉拖動；自動排版先關，恢復大窗時再還原），拖著
+// 自由放大縮小——最小 112x216、最大滿窗（存過的位置/大小，沒存過走
+// 預設 350x757／計算器 320x693）；中心不動（貼邊小窗往外拖會出屏）。
+// 放手時寬高都超過滿窗 80% → 直接升為大窗（走 restoreHostedWindow，
+// 中央規則把剛才的大窗縮成 peek）；否則留在小窗、記住該 App 的小窗
+// 尺寸（PeekW/PeekH，per-App，跟記位置一樣）、內容按新尺寸重排（現
+// 成的 resizeHostedSceneToContentSize，sublayerTransform／scale 機制
+// 不動）、整疊 peek 重排。恢復大窗時也把 scene frame 推回去（否則小
+// 窗時推過的小 frame 會留在大窗裡）——見 restoreHostedWindow。
+// (4) 順手修卡片頭版本字：v1.0.42 → 真版本 v1.0.45。日誌前綴 v45
+// （prefs 側不動，仍是 v44）；詳見 BUILD_LOG §121。
+//
+// ── v42：30 項（皇上 2026-11-14 13:22–13:32 五次批准：三次「全做」＋
+// 浮窗設定卡片＋卡片頭像/背景可換＋最後五項 1/4/6/7/8） ──
+// A. 查看日誌（其他雜項功能）：設定 App 裡直接看分屏日誌（最新在上、
+// 預設最後 200 行、刷新、清空、分享；自訂控制器 GHCFLogViewerListController，
+// 跟主聊天抖音 1.0.6 的「顧海龍日誌」是兩回事）。
+// B. 三屏設置加 6 項：側窗寬度預設（窄 25%/中 30%/寬 40%）、記住上次
+// 三屏組合（重開）、三屏組合子頁（最多 3 對）、分隔線粗細+顏色、邊緣
+// 滑動直接開三屏、側窗圓角/陰影跟浮窗分開調。
+// C. 另外 8 項：浮窗大小預設（小/中/大）、浮窗置頂鎖定、貼邊吸附（左右
+// 吸住留 8pt、拖到頂放大）、重啟後自動恢復浮窗、鍵盤彈出時浮窗自動上移
+// （探針：通知可能不到 SpringBoard）、底部任務欄、浮窗透明度（每窗 0.5–1.0）。
+// （v53：全屏觸發鈕自動藏已取消——鈕永遠顯示，不再跟全屏狀態走。）
+// D. 設置改版 8 項：主頁搜索框（靜態索引對照表，非全文搜索）、常用開關
+// 放主頁、每開關一句說明（豎屏固定中心 vs 記住位置互斥）、布局預設
+// （遊戲/工作/默認）、配置方案（多套並存）、新手/專家模式（新手藏
+// 「高級設置」一頁）、每頁單獨重置、手勢總覽頁。
+// E. 浮窗設定卡片（概念圖已獲皇上 13:27「不錯」）：ARC 裡「設置」入口
+// 開一張浮在當前 App 上的白卡（金邊、龍頭+版本 v1.0.42、右上 X、
+// 點外面收起、層級低於鎖屏），五段同系統設定頁；子頁能在卡片裡做的
+// 就做，做不到的跳回系統設定、頁腳寫明。系統設定五頁全部保留當備用。
+// F. 卡片頭像/背景可換：頭像點一下換（相冊選圖、居中裁方形、存設定目錄
+// 固定檔名；長按或設定行恢復默認龍頭）、卡片背景圖（設定主頁頂上橫幅點圖換、
+// 半透明白遮罩保可讀性、可恢復默認白卡）；picker 在系統設定頁做
+// （PHPicker，不用相冊權限），卡片只讀存好的圖；卡片點頭像是探針。
+// G. 最後五項：1 手勢自定義（調度設置子頁：三擊窗/窗上下滑/窗左右滑/
+// 雙指點窗 → 釘選/收起貼邊/關掉/輪切/放大；綁在窗頂細條上，不誤觸
+// App 內容）、（v53：4 懸浮球已整個拿掉，只留一個觸發鈕按鈕）、
+// 6 低電量自動收窗（開關+閾值 10–30% 預設 20% 預設開；低於閾值收成
+// peek + 橫幅）、7 智能配對推薦（1.0.48 已整個拿掉：ARC 裡「常跟 XX 一起開：YY」推薦列
+// 和 recentPairs 配對記錄都不留）、8 （v52 整個取消：藏鈕／藏欄、角落留小點退出的那個模式，鍵與開關全部拿掉）。
+// 全部新 key 進 plist + 運行時拼字串讀 prefs；日誌前綴 v42；
+// 詳見 BUILD_LOG §115（逐項誠實狀態 + 30 項真機測試清單）。
+// 目標：iPhone 11 / iOS 16.5 / Dopamine (rootless)，iphoneos-arm64。
+//
+// 目标：iPhone 11 / iOS 16.5 / Dopamine (rootless)，iphoneos-arm64。
+//
+// ── v41：修觸發鈕拖動 + FV 式切換/設定重構/ARC/三屏（macOS 编） ──
+// 皇上 2026-11-14 12:28 報 v40 真機測 5 項、12:30 批准做 v41，12:29 糾正：
+// 不要白色相框做法，要王者榮耀那樣顯示（三屏：主 App 占大半屏幕 +
+// 窄豎屏側窗貼邊，兩邊都活著）。12:32 又發兩張 FV 實機截圖當顯示樣板：
+// 圖 1：主屏右邊緣上下疊著 3 張收起的浮窗（只露出一截內容，活的），
+// 觸發鈕貼在右邊緣、疊在最下面那張卡上；圖 2：一個大浮窗（微信聊
+// 天列表）浮在主屏之上，大圓角，App 內容從頂到底貼邊填滿整個窗——
+// 白的是 App 自己的內容，不是裝圖標的白框；觸發鈕貼在右邊緣中間；
+// 右上角還露出一張收起小卡的一角。所以 v41 的收起改成「peek」：窗不藏
+// 起來改放小卡，改成縮到邊緣、露出一截活內容（點那截叫回來）；白色啟
+// 動器面板拿掉，改 ARC 式（下面第 5 项）。
+// 第 1 项：觸發鈕拖不動（v40 bug，根因在代碼裡定死）：拖動手勢
+// handleFlyTriggerButtonDrag 寫了，但共用的手勢代理
+// gestureRecognizer:shouldReceiveTouch: 對「touch.view 是 UIButton」
+// 一律回 NO，而鈕上的 pan 與 long-press 兩個手勢都掛在這個代理上——
+// 手指碰到鈕，兩個手勢根本收不到觸摸，鈕動不了（長按關全部也一樣死）。
+// 這個代理本來是 v38 為細條/控制條點按寫的（點在紅 X、黃最小化、±
+// 上時手勢不認、按鈕自己處理）。修法：shouldReceiveTouch 先判——
+// 手勢掛在觸發鈕上（recognizer.view == GHCFFlyTriggerButton）就回
+// YES；其他手勢碰到 UIButton 才回 NO。拖動只沿右邊緣上下（Y，夾在
+// 100 到 h-100），拖完記住 Y（prefs 鍵 flyTriggerButtonY，運行時現拼），
+// 下次啟動恢復到那個高度。長按 0.5 秒關全部也因此活過來（pan 與
+// long-press 同時識別本來就回 YES；long-press 內建 allowableMovement
+// 約 10pt，拖動了它就不認）。另加雙擊鈕輪流切窗（第 2 项）：點按改成
+// 單擊手勢（single-tap），雙擊手勢認出來時單擊不觸發（require
+// GestureRecognizerToFail），點按不再走 TouchUpInside——單擊開 ARC，
+// 雙擊輪切主窗。
+// 第 2 项：浮窗切換像 FV 影片 49：窗有前後順序——最前可見的是主浮窗，
+// 其次副浮窗、再副副浮窗，其餘收成貼邊 peek。順序存在靜態陣列
+// GHCFFrontOrder（最近帶到最前的在前），帶到最前/恢復/建新窗時更新。
+// 點 peek 把那個窗升為主窗（恢復 + 推前景）；雙擊觸發鈕按順序輪切
+// 主窗；ARC 裡開著的 App 帶標記點，點一下升為主窗。日誌「v41 window
+// promoted to main」/「v41 window cycled main」。
+// 第 3 项：設定頁改成 FV 真實結構（皇上 2026-11-12 發的 FV 設定截圖）：
+// 主頁 = 啟用開關 + 四個子頁連結（浮窗設置 / 三屏設置 / ARC設置 /
+// 其他設置），子頁是標準 iOS 設定子頁（各一個 plist + 各一個
+// PSListController 子類，都在 prefs bundle 裡，不進 SpringBoard 的
+// dylib）。浮窗設置：陰影開關、圓角滑桿（預設 35）、安全距離滑桿
+// （沿用 safeDistance，預設 50）、點窗外開關 + 動作（沿用舊鍵）、
+// 豎屏開窗固定中心開關、鍵盤設置頁、通知橫幅開關、調度窗口設置連結
+// （第 4 项）。三屏設置：選 App（沿用 5 個 app*Enabled 鍵）、排序
+// （v46：三屏工具欄／App 排序頁真拖動＋存順序鍵，dylib 按順序排）、關三屏同時關側邊小窗開關
+// （預設關，按 FV 截圖）、小窗左右位置（沿用 windowPosition）。
+// ARC設置：開 ARC、ARC 顯示位置跟小窗位置走。其他設置：備份/導出/
+// 導入/恢復/重置（備份與恢復是真的複製設定檔；導出/導入走固定檔案；
+// 重置清掉全部已知鍵；見 BUILD_LOG §113）。**白色相框拿掉**：v40 的
+// 白底圓角啟動器面板刪掉，改成 FV ARC 式（第 5 项）。三屏 = 王者榮耀
+// 式（影片 95）：主 App 占大半屏幕 + 窄豎屏側窗貼邊，兩邊都活著，
+// 中間一條可拖分隔線（調側窗寬度；主窗不自動縮——底下那個 App 本來就
+// 是全屏在跑，見 §113）。
+// 第 4 项：調度窗口設置（浮窗設置裡的子頁）：邊緣滑動開 ARC——滑幾次
+// （1 或 2，預設 2）、滑哪邊（左/右，預設跟小窗位置走）；浮窗拖動手勢
+// 開關（預設開）；側邊小窗手勢開關（管分隔線拖動，預設開）；觸發鈕
+// 雙擊輪切開關（預設開）；長按多久關全部（滑桿 0.3–1.0 秒，預設 0.5）。
+// 第 5 项：ARC 圓形啟動器（影片 95 最後幾秒）：暗背景 + 一列圓形 App
+// 圖標直接浮在上面（沒有白框面板），下面一顆 X 關掉；點圖標開那個 App
+// 的浮窗（已開著的升為主窗）；開著的 App 圖標右上角有標記點（主窗金
+// 色、其他白色）。觸發：點觸發鈕（單擊）或邊緣滑動（按調度設定）。
+// 只有測過的 5 個 App。
+// 不做：鍵盤自動上移（探針，見 §115）；橫屏三屏（本版先做直屏側窗，橫屏
+// 支持仍在真分屏那一步）；任務欄快照、關閉彈性動畫（點綴）。
+//
+// ── v40：多窗 5.3 + 贴边小卡 + 拖到右緣收起 + 點窗外事件 + 安全距離（macOS 编） ──
+// 皇上 2026-11-14 11:05 批准想法、11:32「接下来就是你的想法」。
+// v39 真机测「改的非常好」（觸發鈕圖、計算機/設置位置、關屏黑窗三處
+// 都修好了）；11:34–11:38 又報三個跟進問題，全進 v40：
+// 第 1 项：多窗（5.3，V5_DESIGN.md §5.3 + BUILD_LOG §104 的影片）：
+// 一次開多個浮窗（最多 5 個，v35 每 App 快取的底子）；點啟動器裡的
+// App：已開著的帶到最前、收著的從小卡恢復、沒開的在新窗打開，別的窗
+// 不動；「window busy」那條擋切換的邏輯刪掉（最小化後點別的 App
+// 也能開，不再被擋）。新窗錯位放（每多一個看得見的窗錯開 44pt，
+// 橫豎交錯、夾在屏幕裡），不直接蓋在舊窗正上方。點窗頂細條/控制條
+// 把窗帶到最前（層級：宿主窗基礎 Alert - 2、帶到最前 Alert - 1.75、
+// 貼邊小卡 Alert - 1.5、啟動器 Alert - 1、鎖屏 2000）。
+// 第 2 项：貼邊小卡（最小化改成看得見的停靠）：黃最小化不再只是藏窗，
+// 窗藏起來、右邊緣留一張 68x76 的小卡（App 圖標 + App 名），一張張
+// 豎著排、上下居中；點卡恢復窗（帶到最前、推前景）。卡右上角一顆
+// 小 X，點 X 徹底關掉（窗藏起來、卡收掉、scene 留著不銷毀，下次從
+// 啟動器重開直接復用）。控制條裡的紅 X 留著當備用。scene 永遠不
+// 銷毀（v35 規則），關窗/最小化都只藏窗 + 推後台。
+// 第 3 项：拖到右邊緣貼邊收起（主關閉路徑，像影片一樣）：影片裡的浮窗
+// 根本沒有標題列、沒有 X 鈕，是拖到右邊緣收成小卡的。拖著浮窗往右邊
+// 緣拖、放手時窗中心進了右緣 60pt 內，就收成一張貼邊小卡（跟最小化
+// 一樣，scene 活著）；沒拖到那麼邊、放手就停在原地（但窗不能半截
+// 出屏，放手夾回全可見）。拖動的夾制也放寬（右邊 maxX 放到屏寬 - 20，
+// 才拖得到收起門檻）。
+// 第 4 项：拖動修（皇上 11:34：v39 浮窗拖不動）：拖動是靠窗頂細條，
+// 但細條只有 16pt、太透明（只有一顆 56x5 的小 pill），找不到地方抓。
+// 細條加寬到 24pt（GHCF_HOSTED_STRIP_H，建窗與 resize 都用這個常量，
+// 一起改），pill 改 72x6、alpha 0.7、垂直置中，更好找；細條保持透明
+//（App 內容透出來）。控制條 36pt 不動、滑桿條 y=36 不動。手勢改成
+// 動「手勢所屬的窗」（recognizer.view 所在的 window），不是只動
+// GHCFHostedWindow 這個單一靜態（多窗時拖 B 窗會動到 A 窗）；拖動、
+// 縮放、滑桿、控制條點按都先切活動量到手勢所屬的窗再做事。
+// 第 5 项：點窗外事件 + 安全距離（皇上 11:38 發 floatingView 設定頁
+// 截圖「可以搞這樣子」）：設定頁加三項（同一個 prefs domain）：
+// ①「點窗外事件」開關（預設開）；②「點窗外動作」二選一（關閉浮窗 /
+// 側邊，預設側邊）；③「與劉海方向安全距離」滑桿（0–100，預設 50）。
+// 開關開著、且有浮窗看得見時，浮窗後面出一層陰影背景（overlay
+// window，Alert - 4.5，在主屏之上、感應帶/觸發鈕之下、浮窗之下——
+// 點浮窗本身、點觸發鈕、滑感應帶都不受影響）；點陰影背景時，按
+// 設定把最上面/主浮窗關掉或移到側邊貼成小卡。開關關掉時不出陰影、
+// 點窗外不做事。安全距離：拖窗時窗頂離劉海（屏幕頂緣）不到這個值
+// 就自動回彈（夾住位置，讓窗頂至少離頂緣這個距離；舊 minY=100 是
+// 夾中心，頂緣能出屏——v40 改成夾窗頂）。設定值讀法跟現有開關一樣
+//（CFPreferencesCopyAppValue，用時現讀 + CFPreferencesAppSynchronize
+// 同步，不用通知中心——那個被禁；零字面量規則不動）。
+// 第 6 项：记位置/大小（皇上 11:55 糾正「全加」）：每个 App 单独记住
+// 最后一次的窗口位置（中心）与尺寸（宽高）+ 缩放 scale，存 CFPreferences
+//（同一个 domain，键 "geo<App>X/Y/W/H/Scale"，runtime 现拼，零字面量
+// 规则不动）。下次开同一 App 时恢复到上次的位置和大小；没有存过的用
+// 现有默认（+ 新窗错位）。恢复后夹在屏幕内（左右留 8pt、顶留安全距离、
+// 底留 8pt），并遵守安全距离。拖动结束、缩放改变、收起/关窗、调尺寸
+// 结束时保存。日誌「v40 geometry restored/saved」。
+// 第 7 项：一键关全部浮窗（皇上 11:55 糾正「全加」）：长按觸發鈕
+//（约 0.5 秒）关掉全部已开的浮窗 + 已收起的小卡（每个窗走现有的关闭
+// 路径：hide + background scene，不在 session 内 destroy scene，
+// 遵守 v35 规则；小卡清除）。长按松手不触发启动器（长按旗标 suppress
+// TouchUpInside，拖动钮时也清掉——长按后拖出按钮外的兜底）；短按
+//（无拖动、无长按）仍是开启动器。日誌「v40 close all windows」。
+// 第 8 项：窗上显示 App 名（皇上 11:55 糾正「全加」）：24pt 顶部拖动条
+// 中央加一个小字 App 名（12pt，置于拖动条内，不遮挡内容，触摸仍归
+// 拖动条的拖动手势，不影响拖动；白字 + 黑色阴影，浅色内容上也看得见）。
+// 控制条里的 App 名保留；Dock 小卡上本来就有 App 名，不用改。细条里的
+// pill 从垂直置中改成贴条底（72x6 不变，y=17），给名字让位。
+// 第 9 项：拖动角落调整大小（皇上 11:55 糾正「全加」）：窗口右下角一顆
+// 可拖的角落手柄（36x36 触摸区——比说的 24 稍大，好抓；带一个看得见
+// 的白色角落括号「⌟」标记，0.8 alpha，原来 60x60 透明窗 + 0.2 alpha
+// 淡菱形太难找）。拖动即改窗口 frame，并走现有的
+// GHCFApplyScaleToHostedWindow 缩放逻辑重算内容（松手时调 scene 的
+// frame，跟原来一样）；限制最小 200x300、最大不超过屏幕，保持圆角
+// 35 与 anchorPoint (0,0) 的 v39 修正。调整结束保存大小（第 6 项）。
+// 日誌记 resize（scene resized + geometry saved）。
+// 不做：三屏、ARC 菜單、鍵盤/mediaserverd 辅助 dylib（5.4 / 5.3 之後
+// 才評估）；任務欄快照（我們沒有任務欄）、關閉彈性動畫（點綴）。
+//
+// ── v39：觸發鈕读图路径 + sublayerTransform 左上锚点 + 解锁推前景（macOS 编） ──
+// 皇上 2026-11-14 11:02 批准做 v39（v38 真机测：撞崩修法有效——已在跑
+// 的设置再打开不进安全模式；剩下三个显示问题，日志 ChinaFly-9.log
+// 定死，见 BUILD_LOG §107–§108）。三件事：
+// 第 1 项：觸發鈕还是金色「分」——读图路径写死 /Library/...，
+// Dopamine 是 rootless，实际在 /var/jb/Library/...，bundleWithPath
+// 拿到 nil、图读不到、退回金色「分」（日志只有 image missing，没有
+// image loaded）。修法：先试 /var/jb/Library/...，再试 /Library/...。
+// 第 2 项：计算器/设置位置往右下偏——sublayerTransform 是繞內容區
+// layer 的 anchorPoint 縮，預設 (0.5,0.5) 是中心，不是左上；
+// scale<1.0 的 App（計算機 0.77、設置 0.845）偏了中心×(1−scale)，
+// scale=1.0 的 App 沒事（日志数字全对、窗没被改过，见 §108）。
+// 修法：建 contentView 時把 anchorPoint=(0,0)、position=(0,0)
+//（frame 仍是 (0,0,winW,winH)），一次改，建窗、resize、滑桿的
+// sublayerTransform 全都繞左上縮；GHCFApplyScaleToHostedWindow 裡
+// 兩個分支各重申一次錨點（防萬一）。scene frame、scale 數值不動；
+// presenterView/layerHostView 自己的錨點本來就是 (0,0)，不動。
+// 第 3 项：浮窗开着、关屏、再进去是黑的——解锁 handler 只把窗显示
+// 回来、不推 foreground，恢复路径又只在最小化时跑，scene 一直在
+// 後台（日志：unlock 後沒有 foreground push）。修法：解锁分支顯示
+// 窗之後，順手推 foreground=YES + backgrounded=NO（跟
+// restoreHostedWindow 裡 v30 的做法一樣，包 @try/@catch；解鎖時
+// 鎖屏已不在，不影響密碼）。
+//
+// ── v38：托管已在跑 App 的已有主 scene + 无标题栏大窗 + 觸發鈕（macOS 编） ──
+// 皇上 2026-11-13 22:26 批准做 v38。三件事，崩溃修第一：
+// 第 1 项：已在跑的 App 撞固定 ID 崩（v36 日志定死：设置已在跑、
+// 再建 scene 就在 createSceneWithDefinition 里撞 registerHost
+// fromRemnant 断言进安全模式）。修法按 KonbanXV（作者 Hoangdus，
+// MIT，https://github.com/Hoangdus/KonbanXV——只仿它的结构与做法，
+// 代码全部原创；註明写进这里与查表函数的注释）：建 scene 之前先
+// 查现有 scene——新增纯 C helper GHCFExistingMainSceneForBundleID：
+// FBSceneManager sharedInstance → object_getIvar 读 _workspace →
+// object_getIvar 读 _allScenesByID（NSDictionary）→ 找 identifier
+// 等于固定 sceneID `sceneID:<bundleID>-default` 或含 bundleID 的
+// 那一项，返回 FBScene（找不到返回 nil）。每一步都判 nil，任何一步
+// 失败就走老路（createScene），不崩、不拦。找到现有 scene 就走新
+// 路：不调 registerProcessForAuditToken（进程已在跑、SpringBoard
+// 早就管着它）、不调 createSceneWithDefinition、不建 presenter——
+// 用 _UISceneLayerHostContainerView（initWithScene:debugDescription:
+// + _setPresentationContext:，context 是 UIScenePresentationContext
+// 的 _initWithDefaultValues）建一个 layer host view，把它当
+// presenterView 用，嵌进内容区；scene 照常存 GHCFHostedScene，
+// 前景/后台生命周期照常走（显示时 foreground=YES + backgrounded=
+// NO，最小化/关窗/锁屏时 foreground=NO + backgrounded=YES）；
+// **这个 scene 永远不调 destroyScene**（它是 App 自己的主 scene，
+// 销毁会杀掉 App 的界面；复用守卫判旧时也分叉：layer-host 的项只
+// 清缓存引用、不销毁）。frame **不要改**（它是 App 的全屏主 scene，
+// frame 就是屏幕尺寸；缩放只靠 view 的 transform / sublayerTransform，
+// 不动 scene 的 frame——反向耦合的 frame 更新只对新建 scene 用）。
+// 安全区 insets **不要动**（主 scene 的 insets 是 App 正常显示用
+// 的）。presenter 为空的处理：缓存里加一个平行数组
+// GHCFCacheLayerHostViews[5]（和 presenter 数组平行）+ 活动量
+// GHCFHostedLayerHostView；复用守卫改成「presenter 与 view 活着
+// **或** layer host view 活着」才复用；buildHostedWindow 的嵌入
+// 分叉（有 presenter 走老路，有 layer host view 走新路）；resize/
+// 滑杆的 helper 分叉（有 presenter 走 GHCFApplyScaleToHostedWindow
+// 的老路，有 layer host view 只改 view 的 bounds + sublayerTransform，
+// **不推 scene frame**）；GHCFDestroyCachedEntryAtIndex 分叉
+//（layer-host 的项只清引用、不 deactivate/invalidate presenter、
+// 不 destroyScene）。**不要**用 _UIScenePresenter 挂现有 scene——
+// FBAL 的 presenter 是从新建 scene 的 uiPresentationManager 建的，
+// 没有现成例子证明它能挂一个已有主 scene；KonbanXV 的 layer host
+// 是唯一有代码可循的做法。未验证点（真机前先想好）：layer host 在
+// SpringBoard 主屏（非 Today 页）是否显示——KonbanXV 只在 Today 页
+// 用过，机制上它就是个显示 scene 图层的 UIView，嵌进哪个 view 层
+// 级都一样，但没在主屏证实过；_workspace / _allScenesByID 的 ivar
+// 名在 iOS 16.5 上是否就是 KonbanXV 用的那两个（对不上就走老路，
+// 有 nil 守卫，不崩）；已有主 scene 的 foreground=YES 推送会不会
+// 把 App 的全屏版也顶出来（主 scene 本来就在前台跑着，推 foreground
+// 应该是空操作，但没证实——真机要看点开浮窗后，主屏的 App 有没有
+// 被顶到前台）。
+// 第 2 项：无标题栏大窗（皇上 2026-11-13 22:12 的外观反馈：我们的
+// v37 装了、能用、没问题，但长得不如 floatingView——对方的窗又大
+// 又长、约 85% 宽、80% 高、圆角、没有标题栏，内容从顶到底贴边填
+// 满）。改：① 44pt 标题栏**拿掉**，内容区就是整个窗（App 内容从
+// 顶到底贴边填满，圆角 35、阴影不变）；② 默认窗改大：一般 App 内
+// 容 350x757（85% 宽，757 是按屏高宽比算的——350/414×896≈757，
+// 和屏幕同宽高比，这样已有主 scene（414x896）按宽缩放正好贴边填
+// 满、不切不留边；新建 scene 的 App 则按 350x757 重排版）；计算器
+// 内容仍是 320x693（窗 320x693，之前 320x737 是含 44pt 标题栏的
+// 总高，内容几何不变、scale 仍是 0.77）。③ 标题栏的活儿另找位置：
+// 窗顶上加一条 16pt 的透明细条（中间一颗 56x5 的白点小 pill，
+// 半透明——唯一的常驻装饰），点它展开/收起 36pt 的控制条（半透明
+// 黑底，里面红 X、黄最小化、App 名、± 缩放钮，和旧标题栏一样的
+// 布局，只是默认藏着）；细条和控制条都能拖动窗（手势和原来一样，
+// 位置夹在屏幕里）；控制条收起来时缩放滑杆条也跟着收起来（± 在
+// 控制条里，控制条藏着时滑杆条也够不着）。缩放滑杆条仍在内容区
+// 顶上（y=36，控制条下面），默认藏着。
+// 第 3 项：觸發鈕（皇上 2026-11-13 22:17 要金色「分」按钮改
+// 成可爱型觸發鈕图；22:19 不要 2D 扁平图标，要动漫那种、3D；
+// 22:22 发了搜索截图，要百度百科那只大笑的觸發鈕（张大嘴笑、
+// 眼睛笑成弯弯的、双手合在肚子前面）；22:23 皇上确认「对」）。
+// 改：金色「分」24x64 按钮**拿掉**，换成一颗 56pt 的圆觸發鈕
+//（大笑 3D 版，图已备好：prefs/Resources/flyTrigger-button.png/
+// @2x/@3x，56/112/168px，裁到脸）。24pt 的感应带放不下 56pt 的
+// 圆钮（圆钮一半会伸出窗外、点不到），所以觸發鈕单独一个
+// 56x56 的小窗（右边缘、竖直居中、层级 Alert - 4，和感应带同级），
+// 感应带仍是 24pt 全高（只留右边缘滑动手势）。图从 prefs bundle
+// 里读（NSBundle bundleWithPath: + pathForResource:ofType:，
+// 路径用运行时现做的字串——零 ObjC 字面量字串规则不变；@3x 由系统按屏
+// 幕 scale 自动挑）；读不到就退回金色圆钮 + 「分」字（不空白、
+// 不崩）。层级、主线程启动、锁屏回调、固定 sceneID、永不销毁，
+// 其余什么都不动。
+//
+// ── v37：反向耦合缩放（所有 App）+ 标题栏缩放滑杆 + 安全区规则；
+//        已在跑的 App 撞固定 ID 崩——修法太大，留给 v38（macOS 编） ──
+// v36 真机日志（ChinaFly-8.log，v36 段 183 行）：计算器
+// 贴边修好了（窗 320x736、scale 77%、presenterView frame 0,0 320x692、
+// contentState 到 2）；切计算器→时钟→备忘录都正常；切到设置时进安全
+// 模式两次，都是同一个签名——`app already running pid=3666` → 建
+// scene → `sceneID sceneID:com.apple.Preferences-default` → 下一行就
+// 是 `deferred setup ran`（SpringBoard 重启）。设置是皇上之前自己打
+// 开过、一直在后台跑的，所以 createScene 时它的进程已有同 ID 的主
+// scene，固定 ID 一撞就触发 registerHost fromRemnant 断言（和 v32/
+// v34 的销毁后重建是同一个断言、不同触发点）。计算器/时钟/备忘录/
+// 照片都是新进程所以没事。v35 段对比：设置第一次开是新进程、建
+// scene 成功，之后 12 次都是 reusing cached scene、0 崩——v35 的
+// never-destroy 修好了「销毁→重建」崩，但 v36 暴露了「已在跑 +
+// 同 ID」这个新触发点。
+// 所以 v37 的第 4 项（最高优先级）：已在跑的 App 不要 createScene，
+// 改托管它已有的主 scene（KonbanXV 的做法，MIT：_workspace →
+// _allScenesByID 找现有 scene，用 _UISceneLayerHostContainerView 挂；
+// 找不到才 createScene）。但这条路在 SpringBoard 主屏（非 Today 页）
+// 是否同样工作，未验证；且要加第二条嵌 view 的路 + presenter 为空
+// 的处理，和第 1 项（反向耦合改同一处 frame/缩放代码）互相影响。
+// 判断：v37 先做原定的三项（下面），第 4 项写成 v38 的具体设计
+//（见 BUILD_LOG §99 末尾：查表函数、layer-host 嵌法、presenter 为
+// 空的处理、不销毁已有 scene 的规则、回退 createScene、验证计划），
+// 不猜一个不稳的做法赶 v37。
+// 第 1 项：反向耦合缩放（仿照 FrontBoardAppLauncher，作者
+// khanhduytran0，Apache-2.0，https://github.com/khanhduytran0/
+// FrontBoardAppLauncher——只仿它的结构与做法，代码全部原创）：每
+// 个窗一个 scaleRatio（默认 1.0；计算器默认 0.77，窗仍是 320x737）；
+// scene frame = 内容尺寸 ÷ scale（App 在这个尺寸里排版）；内容区
+// 的 layer 加 sublayerTransform = CATransform3DMakeScale(scale,
+// scale, 1)（显示时缩回窗尺寸）。一除一乘，任意窗尺寸、任意 App
+// 都填满内容区、贴边。v36 的计算器特判全删掉（只按宽缩放的 helper、
+// 建窗的计算器分支、缩放手柄的比例锁、resize 的计算器分支），只剩
+// 每 App 的默认 scaleRatio 不同。frame 更新防抖 0.05 秒（FBAL 的
+// resizeWindowWithFrame 做法）；presentationView 的 bounds = frame
+// 尺寸、anchorPoint (0,0)、position (0,0)（FBAL 的做法，左上对齐）。
+// 第 2 项：标题栏缩放滑杆 0.5–2.0（步进 0.01，FBAL + LiveContainer
+// 原则）：标题栏右边加一个 26x26 的「±」圆钮（和红 X、黄最小化一样
+// 大），点一下在内容区顶上展开一条 36pt 的滑杆条（半透明黑底，里
+// 面一条 UISlider + 百分比），再点收起来。拖滑杆改 scaleRatio，走
+// 同一条反向耦合路径（立即改 transform、0.05 秒防抖改 frame），记
+// 日志「v37 scale changed to X%」。滑杆条默认藏着，不挡正常使用；
+// 缩放能裁掉计算器顶上约 370pt 的黑空区（放大就裁掉，v36 的遗留）。
+// 第 3 项：设置顶上切掉——按 LiveContainer 的安全区规则（AGPL，
+// 只借原则、代码原创）：我们的初始 settings 本来就 peripheryInsets
+// = 0、safeAreaInsetsPortrait = 0（窗口模式规则，已对上），所以初
+// 始 settings 不动；只在 frame 更新时（resize、滑杆）顺带把两个
+// insets 重设为 0（LC 就是把安全区 block 附在 frame 更新里的）。
+// 若切掉只是滚动位置，这改就是空操作；若是 frame 更新后 insets 被
+// 重置，这改就修了它。仍需真机验证（滚动到顶看个人资料卡）。
+// 层级、主线程启动、锁屏回调、固定 sceneID、永不销毁，其余什么都不动。
+//
+// ── v36：计算器窗改高、按宽缩放贴边；内容贴边填满、不被切掉（macOS 编） ──
+// v35 真机（2026-11-13 20:39）：皇上「我觉得这些都不够整齐，没有
+// 对方好，我觉得可以做成第三幅图片样子」。三张截图：① 我们的 v35
+// 计算器——全键盘出来了（显示 556,913,316，全部 5 排都在），但黑内
+// 容左右两边各有一条约 50pt 的白色边（53% 缩放的图层只有约 219 宽，
+// 居中放在 320 宽的窗里，两边露白——露的是内容区的白色底）；② 我
+// 们的 v35 设置——列表画出来了，但顶上第一项在内容区顶上被切掉一
+// 半；③ 对方 floatingView——一个又高又大的浮窗（几乎满屏高、约
+// 85% 屏宽、圆角），Sileo 精选页把窗填得满满的、贴边，没有白边、
+// 没有被切掉、没有标题栏。v35 的防崩修法已证实有效（皇上能打开计
+// 算器和设置两个浮窗、没进安全模式；v34 切到设置崩了两次）。
+// 所以 v36 只改窗的「整齐」：① 计算器窗改高、按宽缩放——内容区
+// 改成 320x693（屏高×320/屏宽，运行时算，不写死）、s = 内容宽/
+// 图层宽 ≈ 320/414 ≈ 0.77（只按宽算，不再取宽高最小值），图层
+// 414x896 按 0.77 缩后正好是 320x693，填满内容区、左右零白边、
+// 按键约 62pt；窗总高 693+44=737，896 高的屏上居中放得下（上下
+// 各留约 80pt）。缩放手柄拖计算器窗时按比例锁高（内容高 = 宽×
+// 屏高/屏宽），不然缩放后的图层上下会被切。② 内容贴边填满：
+// 内容区底色由白改黑（万一哪有缝，露黑不露白）；建窗时记
+// presenterView 的实际 frame（x,y WxH），日志能证明它贴边放对
+// 了。③ 设置顶上切掉的判定（从源码 + 截图）：非计算器 App 的
+// presenterView 就是 frame = 内容区 bounds（0,0,320,480），没
+// 有任何偏移、没有裁——我们的几何不可能切掉顶部；最可能就是列
+// 表被滚过（皇上测试时滑过，或缓存的 scene 留着滚动位置），其
+// 次才是 App 在零 safe-area 下的内部顶 inset。判定方法：把设置
+// 列表拉到最顶，看个人资料卡出不出现——出来就是滚动位置，没出
+// 来就是 inset 问题，v37 再试顶 safe-area。④ 默认窗尺寸不动：
+// 非计算器 App 已经贴边填满（源码 + 截图都证实），加高默认窗不
+// 修任何毛病、只会多盖屏幕；计算器改高是它的固定全屏排版逼的，
+// 不是设计偏好。层级、主线程启动、锁屏回调、固定 sceneID、永不
+// 销毁，其余什么都不动。
+//
+// ── v35：会话内永不销毁 scene + 计算器缩放到窗里（macOS 编） ──
+// v34 真机（2026-11-13 20:01）：皇上「都还在，感觉非常OK，就是计算
+// 机画面有点没对准」——计算器画出来了、切换没问题、没进安全模式、状
+// 态也留住了（截图里 556,913,3… 是按过的数字）。但日志
+//（ChinaFly-7.log，v34 段 555 行）定死 v34 还是崩两次，
+// 两次都是切到设置（com.apple.Preferences）：设置只建过一次、被切走
+// 时销毁过（切设置→照片），再建就崩在 createSceneWithDefinition 里
+//（日志在 sceneID 后直接跳到 deferred setup ran，即 SpringBoard 重
+// 启；和 v32 的 .ips 定死的 registerHost 撞残留是同一个点）；第二
+// 次更是在重启之后又崩——设置进程 pid=2521 在重启后还活着，所以残
+// 留不在 SpringBoard 里、在设置进程自己身上，重启清不掉它。计算器、
+// 时钟、备忘录、照片都被销毁重建过多次，全成功——只有设置再建会崩，
+// 是设置特有的（它的进程在 host 销毁后还留着客户端的 scene）。结论：
+// v34「切走才销毁、ID 不同不撞」的判断错了——设置证明销毁 + 再建
+// 同一固定 ID 就是会崩，不管新 ID 是哪个 App 的。所以 v35 只改一处
+// 原则：**一个 SpringBoard 会话里永远不销毁 scene**——关窗（X）和
+// 切走都只藏窗 + 推后台，每个 App 留一个 scene + presenter + 窗
+//（最多 5 个，启动器的 5 个 App），切回来直接复用；只在进程死了的
+// 时候（复用守卫判旧：pid 对不上或 presenter/view 没了）才销毁那
+// 个旧 scene 再建——死进程留不住客户端残留，建的应该是干净的。
+// 实现选型（i）：每 App 一个窗、缓存在平行静态数组里（强引用，ARC
+// 安全），一次只显示一个；活动窗仍用原来那套静态量，所有现成路径
+//（关窗、最小化、恢复、锁屏回调、重试、拖动、缩放）原样不动，只改
+// 切换路径（藏旧窗 → 存缓存 → 清活动量 → 核对 → 开新 App）与复用
+// 守卫（查缓存不查活动量）。没选（ii）单窗换 presentationView：
+// 换 view 要拆 presenter 的 view 再嵌回去，presenter 可能停掉、
+// scene 可能挂起，且各 App 的窗尺寸/缩放状态会互相串，不如每 App
+// 一个窗干净。重试块不改：它只推 foreground=YES（对已在前景的
+// scene 是空操作），切走 1.5 秒内重试打到新 scene 上也无害。
+// 计算器对不准（20:01 截图）：窗 320 宽、计算器按全屏 414 宽排版、
+// 1:1 显示，右边和底下被切掉；日志 15 次 presentationView 全是
+// w=320 h=480。v35 只改：① 计算器的 scene frame 改成屏幕尺寸
+//（运行时读 UIScreen，不写死 414/896）——frame 决定远端图层大小，
+// 这样计算器的整张 414x896 画面都在图层里，不会被 scene frame 先
+// 切掉一刀；② presentationView 按比例缩放到窗里（s = min(内容宽/
+// 图层宽，内容高/图层高)，只缩不放大；只对计算器——别的 App 按
+// scene frame 排版，s=1，不动）；触摸由 transform 自动映射；
+// safe-area insets 本来就是零，不用除以 transform。缩放手柄松手
+// 时重算一次缩放（resizeHostedSceneToContentSize 里计算器分支：
+// frame 保持屏幕尺寸，只改缩放）。别的 App 的窗尺寸、frame、缩放
+// 全不动。层级、主线程启动、锁屏回调、固定 sceneID，其余什么都不动。
+//
+// ── v34：留着固定 sceneID，关窗改藏窗不销毁（macOS 编） ──
+// v33 真机实测（2026-11-13 17:08）：开计算器就是黑屏，没进安全
+// 模式——崩是没崩，但主 App 画不出来，比 v32 还糟。元凶定死是新
+// UUID sceneID：这次测的只是全新打开计算器，没走切换逻辑；v33
+// 相对 v32 对全新打开唯一的区别就是 sceneID 从固定改成每次新
+// UUID。历史对得上：v25–v27（新 UUID）计算器黑；v28（固定 ID，
+// 高层级）黑（层级问题）；v29–v32（固定 ID，低层级）计算器能画；
+// v33（新 UUID，低层级）又黑了。结论：已在跑着的单 scene App
+//（计算器）要画出来，需要固定 sceneID `sceneID:<bundleID>-default`
+//（即 App 自己的默认 scene ID）；全新 UUID 的 scene 它认不出来、
+// 不往里画。v28「sceneID 假说已死」是错的——当时是层级问题盖住
+// 了 sceneID 的作用；两个条件（固定 ID + 低层级）都要，缺一不可。
+// v33 的「固定 ID 不是画画的必要条件」也是错的，一并纠正。
+// 但固定 ID 的残留撞 ID 崩是真的（.ips 定死：EXC_BREAKPOINT，
+// FBWorkspace registerHost:...fromRemnant: 里断言；同一固定 ID
+// 关窗重开 5 次都好、第 6、7 次崩）。v34 的修法不靠新 ID，靠改
+// 关窗的生命周期：① 关窗（X）不再销毁 scene——只藏窗、推后台、
+// 记最小化，scene 留着；重开同一个 App 直接复用旧 scene（推前
+// 景、显示窗），不再建新 scene，同一 ID 一个 SpringBoard 会话里
+// 只建一次，残留撞不到。② 切走别的 App 时才真正销毁（新方法
+// destroyHostedScene，旧关窗体；新 App 的固定 ID 不同，不撞）。
+// ③ createHostedScene 入口加复用守卫：已有同 App 的 scene 且
+// presenter/view 还活着、进程还是同一个 pid，就直接复用、不建新
+// scene；scene 旧了（进程换了或 presenter 没了）就先销毁再建。
+// 残留风险：A→B→A 切回来时，A 的 scene 在第一次切走时已销毁，
+// 重建同一固定 ID——v32 的崩要攒 ~6 次同 ID 关窗重开才触发，单
+// 次切回远不到阈值，但反复来回切可能攒够；若真机再现，v35 再做
+// 每 App 留一个 scene、会话内永不销毁。单窗切换（v33 的）原样
+// 保留；层级、主线程启动、重试、锁屏回调，其余什么都不动。
+// v35 纠正：上面 ②「切走才销毁、ID 不同不撞」也是错的——v34 日志
+// 定死，切设置→照片再切回设置就崩（设置进程在 host 销毁后还留着
+// 客户端 scene）；所以 v35 会话内永不销毁（见 v35 节）。
+//
+// ── v33：5.2 单窗切换 + 每次新 sceneID（macOS 编） ──
+// 皇上 2026-11-13 16:31：v32 锁屏密码修好了（「可以了，非常OK」）。
+// 但新问题：App 没办法来回切换——开着计算器，点启动器里的时钟没
+// 反应，必须先把计算器悬浮窗关掉（X）再点。5.2 只准开一个窗，点别
+// 的 App 时直接忽略（window busy）。皇上 16:33 确认是不同 App 之
+// 间切。v33 只改：点别的 App 时，先关当前窗（走现有关窗路径，销毁
+// scene、停 presenter、进程留着），核对状态清干净了，再开新 App
+// 的悬浮窗（单窗切换）；最小化着的窗也一样关了再开。同一个 App 再
+// 点不变（恢复/已开着）。同一天皇上又报：悬浮窗开着时点启动器里的
+// App，SpringBoard 会进安全模式——日志（ChinaFly-6.log）
+// 定死：2 次崩全是计算器关窗重开，崩在 createSceneWithDefinition 里，
+// 同一固定 sceneID、同一 pid，前面 5 次关窗重开都好、第 6、7 次崩；
+// 第 2 次崩很可能是第 1 次崩留下的半注册 scene 撞的。v28 说固定 ID
+// 复用安全的判断错了（destroyScene 不是完全同步/干净的）。v33 顺
+// 便改：sceneID 改每次新 UUID（LiveContainer 的做法；我们保留
+// bundleID 在前面、UUID 在后面，日志一眼看出是哪个 App），
+// persistenceIdentifier 仍与 sceneID 相同；关窗仍按存着的 sceneID
+// 销毁。固定 ID 不是画画的必要条件：v28 换固定 ID 时计算器还是黑
+// 的，是 v29 降层级才让它画出来。UUID 用纯 C 的 uuid_generate /
+// uuid_unparse，不用 NSUUID 类、不碰字串常量。层级、主线程启动、
+// 重试、其余什么都不动。
+//
+// ── v32：锁屏时把悬浮窗也临时藏起来（macOS 编） ──
+// v31 真机实测（2026-11-13 16:00）：密码还是按不动——等 30 秒左右
+// 密码就开始按不了了，键盘看得见（跟 15:21 的截图一样），按了没
+// 反应。锁屏时把 scene 推回后台不够，foreground-scene 理论被证伪。
+// 下一方向（V31_RESEARCH.md 写的）：锁屏时我们的窗/presenter 可能
+// 还抓着触摸。v32 只改一个变量：在 v31 的锁屏回调里，锁了除了推
+// 后台化，还把悬浮窗临时藏起来（hidden=YES）；开了再显示回来——
+// 只藏"开着"的窗，最小化着的窗本来就藏着，不碰它；没窗时什么都不
+// 做。感应带和启动器不动（只藏悬浮窗）。开了不自动推前景（等用户
+// 点恢复，恢复路径会推）。
+//
+// ── v31：修锁屏密码按不动——最小化与锁屏时把 scene 推回后台（macOS 编） ──
+// v29 把所有窗层级降到锁屏之下，只修好了第一次锁屏；v30 上源后皇上
+// 15:21 复现：锁屏密码键盘看得见（数字键全在），但按了没反应，6 个
+// 圆圈一个都没填——不是窗盖住键盘，是按了没被系统处理。首要怀疑：
+// hosted scene 从没被后台化（只推过 foreground=YES，从没推过 NO），
+// 锁屏时它还占着前景，干扰锁屏触摸。v31 只改三处：① 最小化时把
+// scene 推回后台（foreground=NO + backgrounded=YES）；② 锁屏信号用
+// libnotify 的 notify_register_dispatch（纯 C API，传 C 字串，不是被
+// 禁的 CFNotificationCenterAddObserver，不碰 CFString），锁了且有
+// hosted scene 就把它推回后台，开了只记日志、不自动推前景；③ 恢复
+// 时 v30 的 foreground 推送里补 backgrounded=NO。backgrounded 属性
+// 由 KonbanXV（MIT）的 dehost 先例证实存在，另加 respondsToSelector
+// 兜底；presenter 不动（只在关窗销毁时才 deactivate）。层级、sceneID、
+// 主线程启动、重试、其余什么都不动。
+//
+// ── v30：5.2 修恢复后黑窗——恢复时再推一遍 foreground（macOS 编） ──
+// v29 真机实测（2026-11-13 15:12–15:14）：锁屏修好了——开悬浮窗锁
+// 屏，再开屏密码能输；计算器也能画了（截图为证：数字键全画出来了）。
+// 但新 bug：最小化悬浮窗 → 锁屏 → 解锁 → 再点同一个 App 恢复窗，
+// 内容是黑的（截图为证：标题栏和按钮都在，内容区全黑）；点 X 关窗
+// 再打开就正常（新 scene、建窗时推了 foreground）。原因是锁屏把
+// scene 的 foreground 状态弄丢了，恢复时只取消 hidden、没再推
+// foreground，scene 就一直黑着。v30 只改一个变量：restoreHostedWindow
+// 里，取消 hidden 之后，用建窗时同一个已证明能用的
+// updateSettingsWithBlock: 把 foreground=YES 再推一遍，并记一行
+// 日志（foreground pushed on restore）；单独包 @try/@catch，出错
+// 只记日志。锁屏层级（v29 的 Alert - 4/-3/-2/-1）、sceneID（v28 的
+// 固定格式）、其余什么都不动。
+//
+// ── v29：修锁屏密码输不进去——所有窗层级降到锁屏之下（macOS 编） ──
+// 皇上 2026-11-13 14:51 复现并确认：锁屏再开屏，锁屏密码输不进去，
+// 只能关机。原因在代码里看得一清二楚：我们所有窗的层级都在锁屏之上
+// ——悬浮窗 UIWindowLevelAlert + 2.0（2002）、启动器最高 + 3.0
+// （2003）、感应带就是 Alert（2000），而锁屏约在 Alert=2000。
+// 手机一锁屏，我们的窗还盖在锁屏上面，密码键盘点不到。
+// v29 只改一个变量：所有 windowLevel 整体下移 4，相对顺序不变——
+// 感应带 Alert - 4（1996）、启动器基准 Alert - 3（1997）、悬浮窗
+// Alert - 2（1998）、有悬浮窗时启动器 Alert - 1（1999）。全部在
+// 锁屏（2000）之下，仍在状态栏（1000）与 App（0）之上，平时用不
+// 受影响。sceneID 仍是 v28 的固定格式，其余什么都不动。
+//
+// ── v28：5.2 修计算器还是黑——sceneID 改固定格式（macOS 编） ──
+// 计算器的诊断到此定死了（2026-11-13 14:16–14:27）：v26 的 foreground
+// 显式推修好了 4/5 个 App 的黑窗（设置、时钟、照片、备忘录全能在悬浮
+// 窗里画出来，截图为证）；只有计算器还是黑的。已排除的：时机（等 10
+// 秒还是黑，不是连得慢）；全新启动 vs 已在跑（新启动和已在跑都黑，
+// 别的 App 画出来之前和之后都黑）；**第一个进程被「毒化」也排除了**——
+// 皇上 14:27 重新越狱（全部进程全新、新 SpringBoard），计算器在悬浮
+// 窗里还是黑的。所以是计算器这个 App 本身不吃我们现在的 scene 设置。
+// v27 是诊断版（1.5 秒 + 4 秒重试、无条件记日志、记 presenterView），
+// 重试修不了计算器（10 秒等待已证明不是时机问题）。
+// v28 只改一个变量：sceneID 从每次新 UUID，改成参考项目
+// FrontBoardAppLauncher 的固定格式 `sceneID:<bundleID>-default`
+//（persistenceIdentifier 也用同一个固定值），和参考项目完全一样。
+// 关窗时 scene 本来就会销毁，所以固定 ID 重用是安全的（参考项目就
+// 是这么做的）。如果 v28 计算器画出来了，就是 sceneID 的问题；如果
+// 还是黑，下一步走 KonbanXV 的路——宿主 App 已有的主 scene。
+// v34 纠正：固定 ID 重用并不安全——v32 日志 + .ips 定死，多次关窗
+// 重开后 createScene 在 registerHost 断言崩（残留撞 ID）；但固定
+// ID 是计算器画画的必要条件（v33 新 UUID 黑屏定死），所以 v34
+// 不换 ID，改关窗生命周期：关窗藏窗不销毁，重开复用（见
+// closeHostedWindow），同一 ID 一个会话只建一次。
+//
+// ── v27：5.2 修 v26 的重试没留日志 + 计算器还是黑（macOS 编） ──
+// v26（1.0.26）皇上真机实测（2026-11-13 14:16–14:17）：foreground
+// 显式推，修好了 4/5 个 App 的黑窗——设置、时钟、照片、备忘录全
+// 能在悬浮窗里画出来（截图为证：设置 > 通用、世界时钟都显示了）。
+// 只有计算器还是黑的，3 次全黑（全新启动 pid=5642 + 已在跑重开
+// 两次，别的 App 画出来之前和之后都黑）——所以是计算器自己的问题，
+// 不是启动时机、不是顺序、不是全新还是已在跑。日志
+//（ChinaFly-4.log）20 次 contentState 全是 1、一次
+// 都不是 2，连能画出来的 App 也是 1——contentState 不能当画没画
+// 的信号（继续记，但不拿它当通过标准）。1.5 秒的 foreground 重试
+// 在整份日志里一次都没出现：要么皇上每次都在 1.5 秒内关窗/最小化
+// 了（守卫条件直接 return、没留日志），要么重试块根本没跑。
+// 所以 v27 只改两处：① 1.5 秒重试之外再加 4 秒重试一次，两次
+// 重试的块一跑就先无条件记一行 retry check（窗关了也记，
+// contentState=0、minimized=0），再按老条件决定推不推；推了记
+// retry / retry2。② presenter activate 之后，记 presenterView
+// 的尺寸（w/h）与有没有 layer，排除 view 本身没尺寸、没嵌进去的
+// 可能。其余与 v26 相同：sceneID 还是每次新 UUID（一个变量一个
+// 变量地改）。
+//
+// ── v26：5.2 修 v25 的黑窗（macOS 编） ──────────────
+// v25（1.0.25）皇上真机实测（2026-11-13 11:50）：悬浮窗出来了（圆角、
+// 标题栏「计算器」、红 X、黄最小化、金色「分」按钮），没进安全模式、
+// 没卡住、手机没重启——v24 的崩修好了。但窗里的内容全黑，计算器的
+// 界面画不出来，没法用。日志（ChinaFly-3.log）证明整条
+// 链全走通了两遍：identity ok → handle pid=0 → manager ok →
+// transaction created → provider called → begin called → transaction
+// begun → scene start → process launched pid=5254 → scene created →
+// presenter ready → window shown；关窗后重开（进程已在跑 pid=5254）
+// 也一样走到 window shown、也一样黑——所以不是启动时机问题。
+// scene、presenter、窗都在，就是计算器进程没往 scene 里画东西。
+// 首要怀疑：建完 scene 后，从没把 foreground 显式推给客户端。
+// 证据是 KonbanXV（MIT，同样在 SpringBoard 里托管 App 的 scene）：
+// 它建完 scene 就调 [sceneSettings setForeground:YES] 再
+// [scene updateSettings:sceneSettings withTransitionContext:nil]，
+// 注释写着 "This is important for the view to be interactable."，
+// 还记 scene.contentState（0 没就绪、1 准备中、2 就绪）。我们只在
+// 建 scene 的参数里写了 foreground=YES，从没事后推过。所以 v26
+// 只改这一处：presenter activate 之后，记一次 contentState，再用
+// 已经证明能用的 updateSettingsWithBlock: 把 foreground=YES 推一
+// 遍、再记一次 contentState；窗出来 1.5 秒后再推一遍（重试，只在窗
+// 还在、没最小化、contentState 还不是 2 时推）。sceneID 还是每次
+// 新 UUID（一个变量一个变量地改）。
+//
+// ── v25：5.2 修 v24 的安全模式（macOS 编） ──────────────
+// v24（1.0.24）皇上真机实测（2026-11-13 11:09）：点启动器里的计算器，
+// 手机直接进安全模式。崩溃日志（SpringBoard-2026-11-13-110826.ips）
+// 定死了原因：EXC_BREAKPOINT，崩在 -[BSTransaction begin] 里，
+// 后台队列（com.apple.root.default-qos）。FBApplicationProcessLaunch-
+// Transaction 是 BSTransaction 的子类，begin 里面断言当前队列必须是
+// 主队列（BSDispatchQueueAssert）——v24 把启动放后台队列，begin 一调
+// 就触发断言，把 SpringBoard 杀进安全模式。RBS 那些调用在后台队列都
+// 成功了，只有 begin 崩。所以 v25 只改一件事：启动放回主线程做
+// （和参考实现 FrontBoardAppLauncher 一模一样——它就是在主线程点按
+// 回调里拉起进程）。FB 事务本身是异步的：begin 立刻返回、完成走回调，
+// 主线程不会被堵（v23 那种 5 秒卡死是同步打开调用造成的，那条路已
+// 经删了，不会重演）。先收启动器不变；每一步都记日志，下次再崩直接
+// 定位到具体调用。
+// v25 还是 5.2：点启动器里的 App，不再全屏打开，而是按 V5_DESIGN.md
+// §2.2 把它的 live scene 嵌进一个 FV 风格的悬浮窗（圆角 35、有阴影、
+// 离屏幕边缘有距离、44pt 标题栏可拖动、红关闭钮、黄最小化钮、右下角
+// 缩放手柄）。先只支持一个悬浮窗；计算器先测（测前先把计算器彻底
+// 关掉——目标 App 不能已经在跑）。键盘不做（计算器不用键盘；
+// iOS 16.5 上没有干净修法，见 V5_DESIGN.md §3.3）。
+// 场景托管的结构与私有接口声明，仿照 FrontBoardAppLauncher
+//（作者 khanhduytran0，Apache-2.0，https://github.com/khanhduytran0/
+// FrontBoardAppLauncher）的 DecoratedAppSceneView.m、
+// AppSceneViewController.m 与 UIKitPrivate+MultitaskSupport.h；
+// 代码全部原创，只借结构与接口名（接口名是事实，不是表达）。
+// LiveContainer 的窗外形与场景生命周期只学原理（AGPL-3.0，不能抄）。
+// 关键约束（v13 的教训）：**这个文件里一个写死的字串都不能有**——
+// 不用硬编码的 CoreFoundation 字串常量，也不用 ObjC 字面量字串。
+// 所有 NSString/CFString 都在运行时现做
+//（CFStringCreateWithCString / stringWithCString:）；普通的 C
+// 字串（"..."）没问题；@selector(...) 没问题（selector 不是
+// 字串常量）。编译完要验 dylib 里没有 __cfstring 段，也没有通知中心的
+// 登记调用。不要用任何已废弃 API（v23 首编的教训：取主窗口的旧 API 在
+// iOS 13 起已废弃，Theos 默认 -Werror 会把它当编译错误）。
+// 感应带与启动器不看开关：v25 永远建带，只测功能；开关的门以后再加。
+// 横屏不处理：只按竖屏算位置。
+// v1–v24 的完整历史与诊断见 BUILD_LOG.md。5.2 的完整设计见
+// V5_DESIGN.md §2、§4.4、§5.2 与附录 D。开源学习见
+// OPEN_SOURCE_RESEARCH_2.md。
+
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#import <objc/runtime.h>
+#import <objc/message.h>
+#import <stdio.h>
+#import <string.h>
+#import <stdlib.h>
+#import <unistd.h>
+#import <signal.h>
+#import <notify.h>
+#import <dlfcn.h>
+#import "GHCFUpdateCheck.h"
+#import <AudioToolbox/AudioServices.h>
+
+#define GHCF_LOG_PATH "/var/mobile/Library/Logs/ChinaFly.log"
+
+// 纯 C 写日志（一行）：日志只用来证明延后步骤跑了、窗建了没有、
+// 启动走到哪一步了。
+static void GHCFLogLine(const char *line) {
+FILE *f = fopen(GHCF_LOG_PATH, "a");
+if (f) {
+fputs(line, f);
+fputc('\n', f);
+fclose(f);
+}
+}
+
+// 5.1 启动器里的 App（bundle ID 与显示名，都是普通 C 字串）。
+// v41：上限提到 12 個——前 5 個是測過的固定 App（計算器、時鐘、備忘錄、
+// 設置、照片），後 7 個是自選槽位（customApp1–7，bundle ID 存在 prefs
+// v43.24：第 6 件——加入 App 無上限：定長陣列改動態串列。
+// 固定 5 個（計算器／時鐘／備忘錄／設置／照片）照舊是啟動器的前 5 個；
+// 自選 App 存在 prefs 鍵 customAppBundleIDs（逗號串起來的 bundle ID 串列），
+// 啟動時從 prefs 讀進來（見 GHCFLoadCustomApps）；舊版 customAppNBundleID
+// 槽位第一次讀到就遷移過來。啟動器／ARC 同時開的窗數不再定死 25。
+// v43.6：上限提到 15 个——自选槽位 7 个→10 个；v43.8：上限提到 25 个——
+// 自选槽位 10 个→20 个；v43.24：上限拿掉，改動態串列。
+static int GHCFAppCount = 0; // 現在的 App 總數（固定 5 個＋自選串列）。
+static int GHCFAppCapacity = 0; // 動態陣列現在的容量（>= GHCFAppCount）。
+typedef char GHCFChar128[128];
+static GHCFChar128 *GHCFAppBundleIDs = NULL;
+static GHCFChar128 *GHCFAppNames = NULL;
+// 固定 5 個的開關 key（自選走 sel-<bundleID>，見 GHCFAppEnabledKeyForIndex）。
+static const char *GHCFAppEnabledKeysFixed[5] = {
+"appCalculatorEnabled",
+"appClockEnabled",
+"appNotesEnabled",
+"appSettingsEnabled",
+"appPhotosEnabled"
+};
+// v40：记位置/大小的键前缀——固定 5 个（idx<5 用这张表；idx>=5 走 geoCustom%d，
+// 見 GHCFGeoKeyForIndex）。键 = "geo" + 前缀 + 字段（例：geoCalculatorX）。
+static const char *GHCFGeoAppKeys[5] = {
+"Calculator",
+"Clock",
+"Notes",
+"Settings",
+"Photos"
+};
+// v43.24：第 6 件——@class 前向宣告（FBScene／_UIScenePresenter 的完整
+// @interface 在下面 v41 區才出現；動態陣列宣告在這裡，指標型別要先認得）。
+@class FBScene;
+@class _UIScenePresenter;
+// 每窗一個的動態陣列（跟著 GHCFAppCount 走；初始化前是 NULL＋count 0，
+// 迴圈跳過、越界檢查擋掉，本來就安全）。
+static BOOL *GHCFRestoreGaveUp = NULL; // v43.7：这扇窗重建一次还是卡 0、门控已停手（占位留着；下次手动恢复再试）。
+static UIView * __strong *GHCFGatePlaceholders = NULL; // v72：每窗一个载入占位（深灰底＋转圈＋App 名）。
+static UIView * __strong *GHCFGateFrozenSnaps = NULL; // v43.22：每窗一个凍結快照（門控等待期間顯示最後一幀活內容，不換深灰佔位；點不動，帶細微載入提示）。
+static UIView * __strong *GHCFPeekDockSnaps = NULL; // v43.23：第 7 件——每窗一个 dock 快照（收成小卡當下抓的活幀；scene 掉 0 時小卡顯示它，平時藏著；不能跟門控凍結幀共用一個槽位——看門狗每 2 秒清一次凍結幀）。
+static UIWindow * __strong *GHCFCacheWindows = NULL;
+static FBScene * __strong *GHCFCacheScenes = NULL;
+static _UIScenePresenter * __strong *GHCFCachePresenters = NULL;
+static UIView * __strong *GHCFCacheLayerHostViews = NULL;
+static UIView * __strong *GHCFCacheTopStrips = NULL;
+static UIButton * __strong *GHCFPeekTapOverlays = NULL;
+static UIButton * __strong *GHCFHangTapOverlays = NULL;
+static BOOL *GHCFCacheHung = NULL;
+static CGRect *GHCFHangSavedFrames = NULL;
+static UIView * __strong *GHCFCacheContainers = NULL;
+static UIView * __strong *GHCFCacheContentViews = NULL;
+static UIView * __strong *GHCFCacheResizeHandles = NULL;
+static NSString * __strong *GHCFCacheSceneIDs = NULL;
+static GHCFChar128 *GHCFCacheBundleIDs = NULL;
+static int *GHCFCachePids = NULL;
+static BOOL *GHCFCacheMinimized = NULL;
+static BOOL *GHCFCacheHiddenByLock = NULL;
+static BOOL *GHCFCacheHiddenByDisable = NULL; // v53：啟用開關關掉時藏起來的窗（再開時恢復）。
+static CGFloat *GHCFCacheScaleRatios = NULL;
+static UIView * __strong *GHCFCacheScaleSliderBars = NULL;
+static UISlider * __strong *GHCFCacheScaleSliders = NULL;
+static UILabel * __strong *GHCFCacheScaleLabels = NULL;
+static int *GHCFFrontOrder = NULL;
+static GHCFChar128 *GHCFLowBatteryDockedBids = NULL;
+// 動態陣列擴容（容量翻倍，32 起；所有按 App 槽位索引的陣列一起長；
+// 擴容失敗回 NO，容量不動——呼叫處看到 NO 就停在舊容量裡，不寫越界）。
+// 注意：物件指標陣列是 `Type * __strong *`（ARC 不准裸 `Type **`）；arr[i]
+// 賦值是強引用語義；memcpy 只搬指標、不動引用計數（所有權跟著新 buffer
+// 走，舊 buffer 直接 free、不碰元素）。
+static BOOL GHCFEnsureAppCapacity(int needed) {
+if (needed <= GHCFAppCapacity) return YES;
+int cap = (GHCFAppCapacity > 0) ? GHCFAppCapacity : 32;
+while (cap < needed) cap *= 2;
+#define GHCF_GROW(arr, type) do { type *n = (type *)calloc((size_t)cap, sizeof(type)); if (!n) return NO; if (arr) { memcpy(n, arr, (size_t)GHCFAppCapacity * sizeof(type)); free(arr); } arr = n; } while (0)
+#define GHCF_GROW_OBJ(arr, type) do { type __strong *n = (type __strong *)calloc((size_t)cap, sizeof(type)); if (!n) return NO; if (arr) { memcpy((void *)n, (const void *)arr, (size_t)GHCFAppCapacity * sizeof(type)); free((void *)arr); } arr = n; } while (0)
+GHCF_GROW(GHCFAppBundleIDs, GHCFChar128);
+GHCF_GROW(GHCFAppNames, GHCFChar128);
+GHCF_GROW(GHCFRestoreGaveUp, BOOL);
+GHCF_GROW_OBJ(GHCFGatePlaceholders, UIView *);
+GHCF_GROW_OBJ(GHCFGateFrozenSnaps, UIView *);
+GHCF_GROW_OBJ(GHCFPeekDockSnaps, UIView *);
+GHCF_GROW_OBJ(GHCFCacheWindows, UIWindow *);
+GHCF_GROW_OBJ(GHCFCacheScenes, FBScene *);
+GHCF_GROW_OBJ(GHCFCachePresenters, _UIScenePresenter *);
+GHCF_GROW_OBJ(GHCFCacheLayerHostViews, UIView *);
+GHCF_GROW_OBJ(GHCFCacheTopStrips, UIView *);
+GHCF_GROW_OBJ(GHCFPeekTapOverlays, UIButton *);
+GHCF_GROW_OBJ(GHCFHangTapOverlays, UIButton *);
+GHCF_GROW(GHCFCacheHung, BOOL);
+GHCF_GROW(GHCFHangSavedFrames, CGRect);
+GHCF_GROW_OBJ(GHCFCacheContainers, UIView *);
+GHCF_GROW_OBJ(GHCFCacheContentViews, UIView *);
+GHCF_GROW_OBJ(GHCFCacheResizeHandles, UIView *);
+GHCF_GROW_OBJ(GHCFCacheSceneIDs, NSString *);
+GHCF_GROW(GHCFCacheBundleIDs, GHCFChar128);
+GHCF_GROW(GHCFCachePids, int);
+GHCF_GROW(GHCFCacheMinimized, BOOL);
+GHCF_GROW(GHCFCacheHiddenByLock, BOOL);
+GHCF_GROW(GHCFCacheHiddenByDisable, BOOL);
+GHCF_GROW(GHCFCacheScaleRatios, CGFloat);
+GHCF_GROW_OBJ(GHCFCacheScaleSliderBars, UIView *);
+GHCF_GROW_OBJ(GHCFCacheScaleSliders, UISlider *);
+GHCF_GROW_OBJ(GHCFCacheScaleLabels, UILabel *);
+GHCF_GROW(GHCFFrontOrder, int);
+GHCF_GROW(GHCFLowBatteryDockedBids, GHCFChar128);
+#undef GHCF_GROW
+#undef GHCF_GROW_OBJ
+GHCFAppCapacity = cap;
+return YES;
+}
+// 動態表初始化（只跑一次）：配好容量、填固定 5 個、FrontOrder = 0..4。
+static BOOL GHCFInitAppTablesDone = NO;
+static void GHCFInitAppTables(void) {
+if (GHCFInitAppTablesDone) return;
+GHCFInitAppTablesDone = YES;
+if (!GHCFEnsureAppCapacity(5)) return;
+static const char *fixedBids[5] = {"com.apple.calculator", "com.apple.mobiletimer", "com.apple.mobilenotes", "com.apple.Preferences", "com.apple.mobileslideshow"};
+static const char *fixedNames[5] = {"計算器", "時鐘", "備忘錄", "設置", "照片"};
+for (int i = 0; i < 5; i++) {
+strncpy(GHCFAppBundleIDs[i], fixedBids[i], 127);
+GHCFAppBundleIDs[i][127] = '\0';
+strncpy(GHCFAppNames[i], fixedNames[i], 127);
+GHCFAppNames[i][127] = '\0';
+}
+GHCFAppCount = 5;
+for (int i = 0; i < 5; i++) GHCFFrontOrder[i] = i;
+}
+// FrontOrder 跟著 App 總數走：保留原有順序、去掉越界／重複的、沒進表的按原順序補到後面。
+static void GHCFSyncFrontOrderToAppCount(void) {
+GHCFInitAppTables();
+if (!GHCFEnsureAppCapacity(GHCFAppCount)) return;
+int write = 0;
+for (int i = 0; i < GHCFAppCount; i++) {
+int v = GHCFFrontOrder[i];
+if (v < 0 || v >= GHCFAppCount) continue;
+BOOL dup = NO;
+for (int j = 0; j < write; j++) if (GHCFFrontOrder[j] == v) { dup = YES; break; }
+if (!dup) GHCFFrontOrder[write++] = v;
+}
+for (int idx = 0; idx < GHCFAppCount; idx++) {
+BOOL inTable = NO;
+for (int j = 0; j < write; j++) if (GHCFFrontOrder[j] == idx) { inTable = YES; break; }
+if (!inTable) GHCFFrontOrder[write++] = idx;
+}
+}
+
+// 取 App 图标：UIImage 的私有方法
+// _applicationIconImageForBundleIdentifier:format:scale:
+// 用运行时查找（objc_getClass + objc_msgSend），不链接私有框架。
+// 方法不存在或取不到就返回 nil（调用处用灰色方块代替，不崩）。
+static UIImage *GHCFAppIcon(const char *bundleID) {
+NSString *bid = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+if (!bid) return nil;
+Class UIImageClass = objc_getClass("UIImage");
+if (!UIImageClass) return nil;
+SEL sel = sel_registerName("_applicationIconImageForBundleIdentifier:format:scale:");
+if (!sel) return nil;
+if (![UIImageClass respondsToSelector:sel]) return nil;
+@try {
+CGFloat scale = [UIScreen mainScreen].scale;
+UIImage *icon = ((UIImage *(*)(id, SEL, id, long, double))objc_msgSend)(UIImageClass, sel, bid, 0, (double)scale);
+return icon;
+} @catch (NSException *e) {
+(void)e;
+return nil;
+}
+}
+
+// ── 私有接口最小声明 ─────────────────────────────────────
+// 结构与接口名仿照 FrontBoardAppLauncher 的
+// UIKitPrivate+MultitaskSupport.h（作者 khanhduytran0，
+// Apache-2.0）。只声明类名与方法名，代码全部原创。
+// 注意：audit_token_t 是 32 字节的结构（8 个 uint32_t），这里用
+// 自己的同布局类型名，避免去找 bsm 头文件；传参布局完全一致。
+typedef struct { uint32_t val[8]; } GHCFAuditToken;
+
+@interface BSTransaction : NSObject
+- (void)begin;
+- (void)setCompletionBlock:(dispatch_block_t)block;
+@end
+
+@interface FBApplicationProcessLaunchTransaction : BSTransaction
+- (instancetype)initWithProcessIdentity:(id)identity executionContextProvider:(id)providerBlock;
+@end
+
+@interface FBProcessExecutionContext : NSObject
+@end
+
+@interface FBMutableProcessExecutionContext : FBProcessExecutionContext
+@property (nonatomic, copy) id identity;
+@property (nonatomic, copy) NSDictionary *environment;
+@property (nonatomic, assign) long long launchIntent;
+@end
+
+@interface FBProcessManager : NSObject
++ (instancetype)sharedInstance;
+- (FBProcessExecutionContext *)launchProcessWithContext:(FBMutableProcessExecutionContext *)context;
+- (void)registerProcessForAuditToken:(GHCFAuditToken)token;
+@end
+
+@interface RBSProcessIdentity : NSObject
++ (instancetype)identityForEmbeddedApplicationIdentifier:(NSString *)identifier;
+@end
+
+@interface RBSProcessPredicate : NSObject
++ (instancetype)predicateMatchingIdentity:(RBSProcessIdentity *)identity;
+@end
+
+@interface RBSProcessHandle : NSObject
+@property (nonatomic, copy, readonly) RBSProcessIdentity *identity;
++ (instancetype)handleForPredicate:(RBSProcessPredicate *)predicate error:(NSError **)error;
+- (GHCFAuditToken)auditToken;
+- (int)pid;
+@end
+
+@interface FBSSceneIdentity : NSObject
++ (instancetype)identityForIdentifier:(NSString *)identifier;
+@end
+
+@interface FBSSceneClientIdentity : NSObject
++ (instancetype)identityForProcessIdentity:(RBSProcessIdentity *)identity;
+@end
+
+@interface FBSSceneSpecification : NSObject
++ (instancetype)specification;
+@end
+
+@interface UIApplicationSceneSpecification : FBSSceneSpecification
+@end
+
+@interface FBSMutableSceneDefinition : NSObject
+@property (nonatomic, copy) FBSSceneClientIdentity *clientIdentity;
+@property (nonatomic, copy) FBSSceneIdentity *identity;
+@property (nonatomic, copy) FBSSceneSpecification *specification;
++ (instancetype)definition;
+@end
+
+@interface UIApplicationSceneSettings : NSObject
+@end
+
+// BSCornerRadiusConfiguration 在 BaseBoard 里，完整声明在下面；
+// 这里先前置声明（UIMutableApplicationSceneSettings 的
+// cornerRadiusConfiguration 属性要用到它）。
+@class BSCornerRadiusConfiguration;
+
+@interface UIMutableApplicationSceneSettings : UIApplicationSceneSettings
+@property (nonatomic, assign) BOOL canShowAlerts;
+@property (nonatomic, assign) NSInteger interruptionPolicy;
+@property (nonatomic, strong) NSString *persistenceIdentifier;
+@property (nonatomic, assign) UIEdgeInsets peripheryInsets;
+@property (nonatomic, assign) UIEdgeInsets safeAreaInsetsPortrait;
+@property (nonatomic, assign) UIDeviceOrientation deviceOrientation;
+@property (nonatomic, strong) BSCornerRadiusConfiguration *cornerRadiusConfiguration;
+@property (nonatomic, assign, getter=isForeground) BOOL foreground;
+// v31：backgrounded 由 KonbanXV（MIT）的 dehost 先例证实存在
+//（iOS 15–16 的 FBSMutableSceneSettings）；只用 setter，另加
+// respondsToSelector 兜底。
+@property (nonatomic, assign) BOOL backgrounded;
+@property (nonatomic, assign) CGRect frame;
+@property (nonatomic, assign) NSInteger level;
+@property (nonatomic, assign) BOOL statusBarDisabled;
+@property (nonatomic, assign) NSInteger interfaceOrientation;
+@property (nonatomic, strong) id displayConfiguration;
+@end
+
+@interface UIApplicationSceneClientSettings : NSObject
+@end
+
+@interface UIMutableApplicationSceneClientSettings : UIApplicationSceneClientSettings
+@property (nonatomic, assign) UIDeviceOrientation deviceOrientation;
+@property (nonatomic, assign) NSInteger interfaceOrientation;
+@property (nonatomic, assign) NSInteger statusBarStyle;
+@end
+
+@interface FBSSceneParameters : NSObject
+@property (nonatomic, copy) UIApplicationSceneSettings *settings;
+@property (nonatomic, copy) UIApplicationSceneClientSettings *clientSettings;
+@end
+
+@interface FBSMutableSceneParameters : FBSSceneParameters
+@property (nonatomic, copy) UIMutableApplicationSceneSettings *settings;
++ (instancetype)parametersForSpecification:(FBSSceneSpecification *)spec;
+@end
+
+@interface BSCornerRadiusConfiguration : NSObject
+- (instancetype)initWithTopLeft:(CGFloat)topLeft bottomLeft:(CGFloat)bottomLeft bottomRight:(CGFloat)bottomRight topRight:(CGFloat)topRight;
+@end
+
+@interface FBScene : NSObject
+- (id)uiPresentationManager;
+- (void)updateSettingsWithBlock:(void (^)(UIMutableApplicationSceneSettings *settings))block;
+@property (nonatomic, readonly) NSUInteger contentState;
+@end
+
+@interface FBSceneManager : NSObject
++ (instancetype)sharedInstance;
+- (FBScene *)createSceneWithDefinition:(id)definition initialParameters:(id)params;
+- (void)destroyScene:(id)arg1 withTransitionContext:(id)arg2;
+@end
+
+@interface _UIScenePresentationView : UIView
+@end
+
+@interface UIMutableScenePresentationContext : NSObject
+@property (nonatomic, assign) NSUInteger appearanceStyle;
+@end
+
+@interface _UIScenePresenter : NSObject
+@property (nonatomic, assign, readonly) _UIScenePresentationView *presentationView;
+@property (nonatomic, assign, readonly) FBScene *scene;
+- (void)modifyPresentationContext:(void (^)(UIMutableScenePresentationContext *context))block;
+- (void)activate;
+- (void)deactivate;
+- (void)invalidate;
+@end
+
+// v38：托管已有主 scene 用的 layer host（KonbanXV，MIT，只仿结构、
+// 代码原创）。_UISceneLayerHostContainerView 是显示 scene 图层的
+// UIView（不是 _UIScenePresenter——FBAL 的 presenter 是从新建 scene
+// 的 uiPresentationManager 建的，没有现成例子证明它能挂一个已有主
+// scene；KonbanXV 的 layer host 是唯一有代码可循的做法）。
+// context 用 UIScenePresentationContext 的 _initWithDefaultValues。
+@interface UIScenePresentationContext : NSObject
+- (instancetype)_initWithDefaultValues;
+@end
+
+@interface _UISceneLayerHostContainerView : UIView
+- (instancetype)initWithScene:(FBScene *)scene debugDescription:(NSString *)debugDescription;
+- (void)_setPresentationContext:(UIScenePresentationContext *)context;
+@end
+
+@interface UIScenePresentationManager : NSObject
+- (_UIScenePresenter *)createPresenterWithIdentifier:(NSString *)identifier;
+@end
+
+@interface UIScreen (GHCFScenePrivate)
+- (id)displayConfiguration;
+@end
+
+// 感应带的视图：自己写的普通 UIView 子类，里面什么方法都没有
+//（v18/v21 已证明它在 macOS 编的包里是安全的）。
+@interface GHCFPlainStripView : UIView
+@end
+@implementation GHCFPlainStripView
+@end
+
+// 5.1 唯一的自定义处理类：手势与按钮的目标、启动器的主人、
+// 5.2 托管悬浮窗的主人。视图全部用苹果的类，不再加自定义视图子类。
+// v42：它同时是浮窗設定卡片的 UITableView 資料源/代理（卡片的表
+// 格、開關、滑桿、分段控制都走它，不另加自訂類）。
+@interface GHCFLauncher : NSObject <UIGestureRecognizerDelegate, UIScrollViewDelegate>
+- (void)handleEdgeSwipe:(UIScreenEdgePanGestureRecognizer *)recognizer;
+- (void)handleFlyTriggerButtonDrag:(UIPanGestureRecognizer *)recognizer;
+- (void)handleFlyTriggerButtonLongPress:(UILongPressGestureRecognizer *)recognizer;
+- (void)handleAppButton:(UIButton *)sender;
+- (void)handleBackgroundTap:(UITapGestureRecognizer *)recognizer;
+- (void)handleLauncherOverlayTap:(UITapGestureRecognizer *)recognizer;
+- (void)showLauncher;
+- (void)dismissLauncher;
+- (void)buildLauncherWindow;
+- (void)launchHostedApp:(const char *)bundleID name:(const char *)name;
+- (void)createHostedSceneForBundleID:(const char *)bundleID name:(const char *)name;
+- (void)buildHostedWindowForBundleID:(const char *)bundleID name:(const char *)name scene:(FBScene *)scene presenter:(_UIScenePresenter *)presenter layerHostView:(UIView *)layerHostView sceneID:(NSString *)sceneID pid:(int)pid;
+- (void)closeHostedWindow;
+- (void)closeHostedWindowWithShatter:(UIWindow *)closingWin startFrame:(CGRect)startFrame startAlpha:(CGFloat)startAlpha completion:(void (^)(void))completion;
+- (void)minimizeHostedWindow;
+- (void)minimizeHostedWindowWithExitAnimation:(int)exitAnim fromFrame:(CGRect)startFrame startAlpha:(CGFloat)startAlpha;
+- (void)restoreHostedWindow;
+- (void)showGatedRestoredWindowTick;
+// v72：门控 v2——不要有任何 App 闪黑边：卡 0 重建、占位盖黑、快照播动画。
+- (void)rebuildStuckHostedScene;
+- (void)animateRestoreSnapshotFromFrame:(CGRect)fromFrame toFrame:(CGRect)toFrame ready:(BOOL)ready completion:(void (^)(void))completion;
+- (void)runRestoreGateDecision;
+// v73：拖調尺寸鬆手後的尺寸門（見門控 tick 前面的實作）。
+- (void)armSizeGateForResize;
+- (void)handleScaleSlider:(UISlider *)sender;
+- (void)handleScaleSliderEnded:(UISlider *)sender;
+- (void)handleTitleDrag:(UIPanGestureRecognizer *)recognizer;
+- (void)handleTopStripTap:(UITapGestureRecognizer *)recognizer;
+- (void)handleResizeDrag:(UIPanGestureRecognizer *)recognizer;
+// v42.3：小窗（peek）右下角手柄拖調尺寸（見下面 handleResizeDrag 的分支）。
+- (void)handlePeekResizeDrag:(UIPanGestureRecognizer *)recognizer;
+- (void)resizeHostedSceneToContentSize:(CGSize)size;
+// v41：贴边 peek 的点按（恢复窗）与往下滑（彻底关掉，v64；打叉已拿掉）、阴影背景的点按。
+- (void)handleDockPeekTap:(UIButton *)sender;
+- (void)handleHangTap:(UIButton *)sender;
+- (void)handleDockPeekPan:(UIPanGestureRecognizer *)recognizer;
+- (void)handleDimOverlayTap:(UITapGestureRecognizer *)recognizer;
+// v41：觸發鈕單擊（開 ARC）/雙擊（輪切主窗）、升主窗、輪切主窗。
+- (void)handleFlyTriggerButtonSingleTap:(UITapGestureRecognizer *)recognizer;
+- (void)handleFlyTriggerButtonDoubleTap:(UITapGestureRecognizer *)recognizer;
+- (void)promoteWindowToMainIndex:(int)idx;
+- (void)cycleMainWindow;
+// v41：ARC 的「＋」選 App、選 App 頁的開關與完成。
+- (void)showAppPicker;
+- (void)dismissAppPicker;
+- (void)handleAppPickerToggle:(UISwitch *)sender;
+- (void)handleAppPickerDone:(id)sender;
+// v41：ARC 內容重建（三段）、
+// 圖標長按置頂、通知橫幅、全屏打開探針、
+// 截圖錄屏隱藏 ARC。
+- (void)rebuildARCContent;
+- (CGFloat)addARCIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
+- (CGFloat)addRadialARCIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
+// v43.19：啟動器新樣式——側邊欄／抽屜／橫向輪盤／磁貼（grid 已刪，不再調
+// addARCIconsForBids，那個函數留著不動）。
+- (CGFloat)addSidebarLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
+- (CGFloat)addDrawerLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
+- (CGFloat)addCarouselLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
+- (CGFloat)addTileLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
+- (void)handleSidebarCollapseButton:(UIButton *)sender;
+- (void)handleDrawerPan:(UIPanGestureRecognizer *)recognizer;
+- (void)carouselUpdateForScrollView:(UIScrollView *)scrollView;
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView;
+// v43.23：輪盤 Cover Flow 按鍵反饋——點下縮＋震、鬆手才開；點左右卡先滑到中間再開。
+- (void)handleCarouselCardTouchDown:(UIButton *)sender;
+- (void)handleLauncherIconTouchDown:(UIButton *)sender;
+- (void)handleLauncherIconTouchCancel:(UIButton *)sender;
+- (void)handleCarouselCardTouchUpInside:(UIButton *)sender;
+- (void)handleCarouselCardTouchCancelled:(UIButton *)sender;
+- (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView;
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView;
+- (UIButton *)arcIconButtonForBundleID:(const char *)bid name:(const char *)name tag:(NSInteger)tag action:(SEL)action atCenter:(CGPoint)center size:(CGFloat)size withName:(BOOL)withName;
+// v43.2：圓環中央大設定齒輪。
+- (UIButton *)arcRadialGearButtonAtCenter:(CGPoint)center size:(CGFloat)size;
+- (void)handleARCRadialGearButton:(UIButton *)sender;
+// v43.37（1.0.110，扇形轉盤，第 6 檔 trollfan）：轉盤拖動手勢（見 handleDialPan:）。
+// 1.0.107 e4af0c0 拿回來，門從 radial（0）改成 trollfan（5）。
+- (void)handleDialPan:(UIPanGestureRecognizer *)recognizer;
+// v43.42（1.0.115，表盘启动器，第 7 档 dial）：照 TrollOpen 参考图／影片
+// 的排布，中心钮点一下收起启动器。
+- (CGFloat)addDialLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
+- (void)handleDialCenterButton:(UIButton *)sender;
+- (void)handleARCIconLongPress:(UILongPressGestureRecognizer *)recognizer;
+- (void)showNotificationBannerWithText:(const char *)text;
+// v72：showNotificationBannerForName 整个拿掉（皇上：浮窗已打开提示取消）——
+// 新窗建好不再弹「已打開 <App>」横幅；低电量那两条走 showNotificationBannerWithText，不动。
+- (void)handleBannerTap:(UITapGestureRecognizer *)recognizer;
+- (void)openAppFullscreen:(const char *)bundleID;
+// v43.23：第 6 件——全屏開了，同 App 的小浮窗自己退出（關掉，scene 留著）。
+- (void)closeDockedPeekForFullscreenBid:(const char *)bundleID;
+- (void)handleScreenCaptureChanged:(NSNotification *)note;
+// v42：尺寸預設 + 手勢自定義（綁細條）；v60：控制條整個拿掉，
+// 釘選鈕（handlePinButton）跟著刪——釘選只剩手勢動作 "pin"（三擊預設）。
+// v47：「透」拿掉，下面三個方法一起刪（handleOpacityButton／
+// handleOpacitySlider／handleOpacitySliderEnded）。
+- (void)handleSizePresetButton:(UIButton *)sender;
+- (void)handleGestureTripleTap:(UITapGestureRecognizer *)recognizer;
+- (void)handleGestureSwipeVertical:(UISwipeGestureRecognizer *)recognizer;
+- (void)handleGestureSwipeHorizontal:(UISwipeGestureRecognizer *)recognizer;
+- (void)handleGestureTwoFingerTap:(UITapGestureRecognizer *)recognizer;
+- (void)performGestureAction:(const char *)action;
+- (void)takeScreenshotOfHostedWindowOrScreen;
+- (void)resizeActiveWindowToFrame:(CGRect)frame;
+// v42：底部任務欄、ARC 設置入口、
+// 鍵盤上移、設定卡片（見下面卡片段；v53：懸浮球已拿掉）。
+- (void)handleTaskbarButton:(UIButton *)sender;
+// v43.20：任務欄芯片長按直接關窗（v43.22：紅 × 已拿掉）。
+- (void)handleTaskbarChipLongPress:(UILongPressGestureRecognizer *)recognizer;
+- (void)handleKeyboardWillShow:(NSNotification *)note;
+- (void)handleKeyboardWillHide:(NSNotification *)note;
+- (void)ghcfHandleKeyboardShowHeight:(CGFloat)kbHeight bundleID:(const char *)bid;
+- (void)ghcfHandleKeyboardHideBundleID:(const char *)bid;
+- (void)ghcfEnlargeWindowForKeyboardHeight:(CGFloat)kbHeight;
+- (void)ghcfRestoreEnlargedWindowForKeyboard;
+@end
+
+// 窗与状态要一直留着（静态变量拿着，不会被释放）。
+static UIWindow *GHCFStripWindow = nil;
+static UIWindow *GHCFStripWindowLeft = nil; // v43.32：左边缘感应带（触发侧左／双侧时用，右带不动）。
+static UIWindow *GHCFDebugTriggerWindow = nil; // v43.32：调试模式画触发区的窗（平时藏着，不接手势）。
+static UIView *GHCFDebugTriggerView = nil; // v43.32：调试画布（普通 UIView，红框／扇形／竖条都画在这里）。
+static int GHCFFlashZoneSide = -1; // v43.39：被挡闪框（-1＝没有闪，0＝闪左区，1＝闪右区）。
+static int GHCFFlashZoneGen = 0; // v43.39：闪框世代号（1.5 秒内再被挡就重开一轮，旧的收尾不盖新的）。
+static UIWindow *GHCFLauncherWindow = nil;
+static UIView *GHCFLauncherContentView = nil; // v55：ARC 啟動器透明覆蓋層（只有 App 圖標，沒有面板）。
+// v43.19：抽屜下滑關閉記面板起點 Y；橫向輪盤記 scroll view／卡片／
+// 圓點／頁寬（scrollViewDidScroll 時按中心卡片縮放＋改圓點）。
+static CGFloat GHCFDrawerPanelBaseY = 0;
+static UIScrollView *GHCFCarouselScrollView = nil;
+static NSArray *GHCFCarouselCards = nil;
+static UIPageControl *GHCFCarouselPageControl = nil;
+static CGFloat GHCFCarouselPageWidth = 0;
+static int GHCFCarouselPendingOpenIdx = -1; // v43.23：輪盤點左右卡後待打開的下標（滑到中間才開）。
+static CGFloat GHCFLauncherAnchorY = -1; // v55：啟動器弧心 Y（觸發鈕中心或邊緣滑動手指位置）。
+static CGFloat GHCFLauncherAnchorX = -1; // v43.23：啟動器弧心 X（底部出時圓心跟觸發位置的 X 走）。
+static UIWindow *GHCFLauncherBackdropWindow = nil;
+static char GHCFAppPickerBids[256][128]; // v41：選 App 頁每一行的 bundleID（開關 tag = 行號）。
+static int GHCFAppPickerCount = 0;
+static UIScreenEdgePanGestureRecognizer *GHCFLauncherEdgePan = nil; // v40：感应带上的右/左边缘滑动手势（跟小窗位置设定走，见 GHCFUpdateStripPosition）。
+static UIScreenEdgePanGestureRecognizer *GHCFLauncherEdgePanLeft = nil; // v43.32：左感应带上的左边缘滑动手势（触发侧左／双侧时用）。
+static GHCFLauncher *GHCFLauncherShared = nil;
+static BOOL GHCFLauncherVisible = NO;
+// v43.37（1.0.110，扇形轉盤，第 6 檔 trollfan 才用；1.0.107 e4af0c0 拿回來，
+// 門從 radial（0）改成 trollfan（5））：每顆圖標的半徑／基準角（弧度，
+// 螢幕座標系）／中心點＋當前轉角。重建啟動器時清空、轉角歸零；
+// slideBottom 扇形不轉，不記。
+static NSMutableArray *GHCFDialButtons = nil;
+static NSMutableArray *GHCFDialRadii = nil;
+static NSMutableArray *GHCFDialAngles = nil;
+static CGPoint GHCFDialCenter = {0, 0};
+static double GHCFDialRotation = 0;
+static double GHCFDialLastTouchAngle = 0;
+static double GHCFDialLastTickRotation = 0;
+static int GHCFDialTotal = 0;
+static double GHCFDialSlot = 0; // v43.32：轉盤一格的角度（全圓 2π/總數；ARC 扇形時是扇角/(總數-1)，吸附＋tick 都走它）。
+// v43.42（1.0.115，表盘启动器）：整个圆弧上移量（皇上 15:46 定 60pt，
+// 相对参考图：中心钮 y 424→364，最低图标底边 y≈942→≈882，离屏底 50pt）。
+static const CGFloat GHCFDialUpShift = 60.0;
+// v43.42：表盘打开时藏了悬浮钮（关掉时放回；只记这一个布尔，不动钮位）。
+static BOOL GHCFDialHidFlyTriggerButton = NO;
+// 轉盤手勢裝在哪個 contentView 上（弱引用——窗每次打開都重建，
+// 視圖釋放後自動歸 nil，不留懸空指標）。
+static __weak UIView *GHCFDialPanView = nil;
+// 轉盤按當前轉角重排圖標（基準角＋轉角，繞中心轉）。
+static void GHCFDialApplyRotation(void) {
+if (!GHCFDialButtons || !GHCFDialRadii || !GHCFDialAngles) return;
+NSUInteger n = [GHCFDialButtons count];
+for (NSUInteger i = 0; i < n; i++) {
+UIButton *btn = (UIButton *)[GHCFDialButtons objectAtIndex:i];
+NSNumber *rNum = (NSNumber *)[GHCFDialRadii objectAtIndex:i];
+NSNumber *aNum = (NSNumber *)[GHCFDialAngles objectAtIndex:i];
+if (!btn || !rNum || !aNum) continue;
+double r = [rNum doubleValue];
+double a = [aNum doubleValue] + GHCFDialRotation;
+btn.center = CGPointMake(GHCFDialCenter.x + r * cos(a), GHCFDialCenter.y + r * sin(a));
+}
+}
+// 上一次边缘滑动的时间（CFAbsoluteTime），用来做"滑两次才开"。
+static double GHCFLastSwipeTime = 0;
+static CGFloat GHCFLastSwipeStartY = -1; // v43.3：这次边缘滑动起手的 Y（屏幕坐标，触发区判定用；没起手过是 -1）。
+
+// 5.2 托管悬浮窗的状态（一个窗，见 V5_DESIGN.md §5.2）。
+static UIWindow *GHCFHostedWindow = nil;
+static FBScene *GHCFHostedScene = nil;
+static _UIScenePresenter *GHCFHostedPresenter = nil;
+// v38：托管已有主 scene 的 layer host view（没有 presenter 时用它；
+// 见文件头 v38 节第 1 项）。presenter 与 layerHostView 有且只有一个
+// 非空——presenter!=nil 走新建 scene 的老路，layerHostView!=nil 走
+// 托管已有主 scene 的新路。
+static UIView *GHCFHostedLayerHostView = nil;
+// v38：窗顶上的 16pt 透明细条（拖动窗 + 点它展开/收起控制条，见
+// 文件头 v38 节第 2 项）。它是 container 的子视图，跟着窗走。
+static UIView *GHCFHostedTopStrip = nil;
+// v38：觸發鈕单独的小窗（56x56，右边缘、竖直居中，见文件头
+// v38 节第 3 项）。感应带仍是 24pt 全高，只留右边缘滑动手势。
+static UIWindow *GHCFFlyTriggerButtonWindow = nil;
+static UIButton *GHCFFlyTriggerButton = nil;
+static UIView *GHCFHostedContainer = nil;
+static UIView *GHCFHostedContentView = nil;
+static UIView *GHCFHostedResizeHandle = nil;
+static NSString *GHCFHostedSceneID = nil;
+static char GHCFHostedBundleID[128] = {0};
+static int GHCFHostedPid = 0;
+static BOOL GHCFHostedMinimized = NO;
+static BOOL GHCFHostedLaunching = NO;
+static BOOL GHCFRestoreGateActive = NO; // v71：恢复门控进行中（窗藏着等 scene 就绪）。
+// v72：门控 v2——不要有任何 App 闪黑边。超时不再直接显示黑窗：
+// 窗继续盖占位等、每 0.5 秒重看一次；卡在 contentState==0 熔斷約 2 秒就重建 scene
+//（v43.22：37.log 證明微信卡 0 兩次、0 次在門控內自己恢復，5 秒是純黑時間；
+// 尺寸門仍是 5 秒，只針對 cs==0 縮短；v35「session 内永不销毁」只对卡死 case 开例外）；
+// 占位是深灰底＋转圈＋App 名，绝不是全黑。
+static NSTimeInterval GHCFRestoreGateStart = 0; // v72：这次门控开始时间。
+static NSTimeInterval GHCFRestoreGateDeadline = 0; // v72：重建时间点（开始＋5 秒；不是显示时间——尺寸門用；卡 0 另有 2 秒熔斷）。
+static const NSTimeInterval GHCFRestoreGateStuckZeroTimeout = 2.0; // v43.22：卡 0 熔斷（開始＋2 秒，約 4 個 tick，只針對 contentState==0；尺寸門維持 5 秒）。
+static NSTimeInterval GHCFMinimizeTime = 0; // v43.17：这次收起的时间（点小卡 0.8 秒内不恢复，防误触）。
+static FBScene *GHCFRestoreGateScene = nil; // v71：门控盯着的 scene（换了就取消门控）。
+static CGFloat GHCFRestoreGateTargetAlpha = 1.0; // v71：淡入要回到的 alpha。
+static BOOL GHCFRestoreGateRebuilt = NO; // v72：这次门控已经重建过一次（只重建一次，不循环）。
+static BOOL GHCFRestoreGateStuckLogged = NO; // v72：重建后还是卡 0 只记一行（不每 0.5 秒刷日志）。
+static BOOL GHCFRestoreGateTimeoutDeferredLogged = NO; // v43.7：锁屏时门控超时延后只记一行（不每 0.5 秒刷日志）。
+static int GHCFRestoreGateTimeoutDeferCount = 0; // v43.12：这次门控超时延后次数（满 6 次约 3 秒还卡 0 就直接重建，不再无限 defer；门控开始时清零）。
+// v43.12：lockToken 原本是 setup 函数里的局部变量（约 L9640），门控函数在前面
+// 用不到——提到文件级 static，setup 里直接用它注册，门控超时直接读它。
+static int lockToken = 0;
+// v43.13：設定變更通知令牌（設定頁 PostNotification 發
+// com.guhailong.fly.prefschanged 時用）。
+static int prefsChangedToken = 0;
+static int GHCFRestoreGateMode = 0; // v72：门控模式——0 恢复（窗藏着，等就绪淡入显示）；1 已显示窗（promote／新窗，只盖占位、就绪淡出占位）。
+static BOOL GHCFSuppressSlideInOnce = NO; // v72：重建 scene 时下一次建窗不滑入（直接出现在原位）。
+static UIWindow *GHCFSnapshotAnimWindow = nil; // v72：快照动画的临时窗（播完就收掉）.
+static UIView *GHCFRestorePreSnap = nil; // v43.6：恢复前预抓的快照（改尺寸之前抓，layer 里还是小卡最后一帧活内容；动画用完就清）。
+
+// v73：尺寸門——scene 內容尺寸對上窗 frame 才算就緒（黑半邊修復）。
+// 1.0.72 影片：設定從小卡恢復成大窗，內容只佔左邊約 55%，右邊全黑約 2 秒——
+// 門控只看 contentState==2，但 scene 是在舊尺寸（小卡寬）下就緒的，窗放大後
+// scene 還沒重畫到新尺寸。追蹤最後一次推給 scene 的 frame 尺寸（下面三處推
+// frame 的地方都更新它：建窗初始 settings、GHCFApplyScaleToHostedWindow
+// 的防抖推、GHCFPushPeekScaleForIndex 的推），跟現在窗該有的尺寸比（誤差 3pt），
+// 再比內容區 sublayerTransform 的縮放（誤差 0.03）——恢復時 transform 還停在
+// 小卡縮放（0.27）就是黑半邊的樣子。
+static CGSize GHCFHostedSceneFrameSize = {0, 0}; // v73：最後一次推給 scene 的 frame 尺寸。
+static BOOL GHCFHostedSceneFrameSizeValid = NO; // v73：上面那個尺寸有沒有推過。
+static BOOL GHCFSizeGatePreMatched = NO; // v73：門控決策時尺寸已經對上（resize 在快照動畫前就推了）。
+static BOOL GHCFSizeGateMatchedOnce = NO; // v73：尺寸在上一個 tick 已經對上一次（給 scene 半秒把新尺寸畫出來）。
+static BOOL GHCFSizeGateWaitingLogged = NO; // v73：尺寸等候只記一行（不每 0.5 秒刷日誌）。
+
+// v72：载入占位 helper（定义在门控 tick 前面；看门狗／建窗路在它前面就呼叫，
+// 这里先给原型）。
+static void GHCFShowPlaceholderForIndex(int idx);
+static void GHCFHidePlaceholderForIndex(int idx);
+static BOOL GHCFHostedSceneSizeMatchesWindow(void); // v73：尺寸門判斷（定義在門控 tick 前面）。
+static CGFloat GHCFScreenSafeTopInset(void); // v43：前向宣告（定义在下面 v54 处，分屏几何要用）。
+
+// v38：每窗一个 scaleRatio（反向耦合缩放，见文件头 v38 节）。
+// 活动窗的 scale 存在这里；切走时存缓存、切回来时读缓存。
+// 计算器默认 0.77（窗 320x737），别的 App 默认 1.0。
+static CGFloat GHCFHostedScaleRatio = 1.0;
+// v60：标题栏拿掉，± 钮跟着没了；缩放滑杆条（UISlider + 百分比）
+// 还在，见 buildHostedWindow，点细条展开／收起。
+static UIView *GHCFHostedScaleSliderBar = nil;
+static UISlider *GHCFHostedScaleSlider = nil;
+static UILabel *GHCFHostedScaleLabel = nil;
+// v38：frame 更新防抖的令牌（FBAL 的 resizeWindowWithFrame 做法）。
+// 每次调缩放就 +1、0.05 秒后只跑最新的一次。
+static int GHCFScaleDebounceToken = 0;
+
+// v32：锁屏时临时藏窗——悬浮窗是不是被锁屏藏起来的（不是被最小化）。
+// 只在"开着"时锁屏才设 YES；解锁时只有它是 YES 才把窗重新显示出来。
+// 最小化着的窗本来就藏着，解锁时不碰它（等用户点恢复）。
+static BOOL GHCFHostedHiddenByLock = NO;
+
+// v35：每 App 一个悬浮窗的缓存——一个 SpringBoard 会话里永远不销毁
+// scene（见文件头 v35 节）。关窗（X）与切走都只藏窗（不推后台），不
+// 销毁；切回来直接复用缓存里的 scene + presenter + 窗。
+// v40：一次可以显示多个窗（5.3 多窗）。活动窗仍用原来那套静态量
+//（GHCFHostedWindow 等），是「最近互动的窗」；所有现成路径（关窗、
+// 最小化、恢复、锁屏回调、重试、拖动、缩放）都先把活动量切到「手势
+// 所属的窗」再做事（GHCFSetActiveToWindow），原样不动；新窗创建时
+// 不再藏旧窗，旧窗留在原地、层级降回基础。
+// 平行静态数组（强引用，ARC 安全）：不用 struct 存对象指针（ARC 不
+// 准 struct 里放强引用对象，__unsafe_unretained 又怕对象被系统释放
+// 后成野指针——SpringBoard 里野指针就是安全模式）；数组是静态量，
+// 可以强引用，缓存里的对象在会话里一直活着。sceneID 也放数组里
+//（NSString*，强引用），bundleID 放 char 数组（和原来一样）。
+// v38：layer host view 与顶条的缓存（和 presenter 数组平行；
+// layer-host 的项 presenter 是 nil，presenter 的项 layerHostView
+// 是 nil——复用守卫与销毁函数靠这个分叉）。
+// v41：貼邊 peek 的點按層（收起時蓋在宿主窗上：點整截恢復窗，往下滑
+// 徹底關掉（v64，往下滑手勢掛在點按層上；打叉已拿掉）；恢復/關窗時藏
+// 起來，不另建小卡窗——peek 就是宿主窗本身縮到邊緣）。
+// v70：懸掛（點窗外「懸掛」）：窗掛到最近的邊、只露 30pt，點那截恢復。
+// 跟 peek 點按層同一套做法：每 App 一個點按層＋記住掛起前的 frame。
+// v41：選 App 頁的窗（ARC 裡「＋」開的已安裝 App 清單；層級 Alert - 1）。
+static UIWindow *GHCFAppPickerWindow = nil;
+// v41：通知橫幅的窗（新窗建好時短暫顯示「已打開 <App>」，自動藏）。
+static UIWindow *GHCFNotificationBannerWindow = nil;
+static UIWindow *GHCFDimOverlayWindow; // v40：点窗外事件的阴影背景窗（Alert - 4.5，主屏之上、感应带/觸發鈕之下、宿主窗之下；开关开着、且有浮窗看得见时显示）
+static BOOL GHCFDragDockLeft = NO; // v40：这次拖动贴边收起往哪边（Began 时读一次位置设定，拖动中不变——每动一下都读 prefs 太费）。
+static CGFloat GHCFDragSafeDistance = 50.0; // v40：这次拖动的安全距离（Began 时读一次，同上）。
+static BOOL GHCFDragDisabled = NO; // v41：這次拖動被調度設定關掉了（Began 時讀一次浮窗拖動手勢開關）。
+static CGFloat GHCFDragFlickUpThreshold = 1000.0; // v43.3：这次拖动的上甩速度门槛 pt/s（Began 时读一次，同上）。
+static BOOL GHCFFlyTriggerLongPressed = NO; // v40：觸發鈕刚被长按过（长按关全部窗；点按处理里看到它就 suppress 启动器、清掉；拖动钮时也清掉——长按后拖出按钮外、TouchUpInside 不触发时的兜底）。
+// v38：每 App 的 scaleRatio + 缩放 UI（和上面那套平行数组同一做法）。
+// v42：底部任務欄、設定卡片（見下面宣告；v53：懸浮球已整個拿掉）。
+// v54：系統橫幅探針（見 showNotificationBannerWithText 下面，先聲明）。
+static void GHCFCheckSystemBanner(void);
+static UIWindow *GHCFSettingsTaskbarWindow = nil;
+static BOOL GHCFLowBatteryDocked = NO;
+static int GHCFPeriodicTickCount = 0;
+static BOOL GHCFScreenLocked = NO; // v64：鎖屏旗標（看門狗用：鎖著時不推前景，不跟鎖屏回調打架）。
+// v54：任務欄快照已拿掉（v43.21 起芯片只顯示 App 圖標，不抓快照）。
+static BOOL GHCFKeyboardShifted = NO;
+static CGRect GHCFKeyboardSavedFrame = {{0, 0}, {0, 0}};
+static BOOL GHCFKeyboardEnlarged = NO; // v43.5：橫屏放大中（鍵盤彈出時放大、收起恢復原尺寸）。
+static CGRect GHCFKeyboardEnlargedSavedFrame = {{0, 0}, {0, 0}}; // v43.5：放大前原尺寸。
+static NSTimeInterval GHCFKeyboardHideLastTime = 0; // v43.22：上次 hide 的時間（1 秒內同一 bundle 第二次 hide 忽略）。
+static char GHCFKeyboardHideLastBid[128] = {0}; // v43.22：上次 hide 的 bundle。
+// 当前活动的是缓存里的第几个 App（-1 = 没有活动窗）。
+static int GHCFActiveAppIndex = -1;
+
+// v38：默认 scaleRatio（下面定义；GHCFLoadCacheToActive 要用，先声明）。
+static CGFloat GHCFDefaultScaleRatioForBundleID(const char *bundleID);
+// v41：先声明（下面定义；GHCFIsWindowPositionLeft 等讀值 helper 要用，先声明）。
+static BOOL GHCFIsWindowPositionLeft(void);
+// v42：先声明（下面定义；%ctor 与各处要用，先声明）。
+static void GHCFUpdateTaskbar(void);
+static void GHCFPushForegroundCachedSceneAtIndex(int idx, const char *logLine);
+static void GHCFCheckLowBattery(void);
+static void GHCFSchedulePeriodicTick(void);
+static void GHCFPeekWatchdogTick(void);
+static void GHCFSaveRestoreList(void);
+static BOOL GHCFIsWindowPinned(const char *bundleID);
+static NSArray *GHCFReadIDList(const char *key);
+static void GHCFWriteIDList(const char *key, NSArray *ids);
+// v70：先声明（下面定义；各处要用，先声明）。
+static int GHCFReadExitAnimation(void);
+static int GHCFReadLauncherStyle(void);
+static BOOL GHCFReadLauncherStyleRadial(void);
+static CGFloat GHCFReadWindowSizePercent(void);
+static void GHCFHangWindowForIndex(int idx);
+static void GHCFRestoreHungWindowForIndex(int idx);
+static void GHCFClearHungStateForIndex(int idx);
+static BOOL GHCFListContainsBid(NSArray *ids, const char *bundleID);
+// v43.3：先声明（下面定义；GHCFBringWindowToFront 要调，先声明）。
+static void GHLSEnforceWindowCap(UIWindow *window);
+// v53：先声明（下面定义；GHCFPresetSizeForBundleID 与
+// GHCFRefreshFlyTriggerButtonImageIfNeeded 要用，先声明）。
+static int GHCFReadWindowSizePreset(void);
+static UIImage *GHCFLoadFlyTriggerImage(void);
+static BOOL GHCFReadFlyTriggerIconCustom(void);
+static NSString *GHCFCustomFlyTriggerImagePath(void);
+
+// bundleID → 启动器下标（動態串列），找不到返回 -1。
+static int GHCFAppIndexForBundleID(const char *bundleID) {
+if (!bundleID) return -1;
+GHCFInitAppTables();
+for (int i = 0; i < GHCFAppCount; i++) {
+if (strcmp(GHCFAppBundleIDs[i], bundleID) == 0) return i;
+}
+return -1;
+}
+
+// 把活动量存进缓存（切走 / 新窗建成后调；调用前活动量必须是那个 App 的）。
+static void GHCFSaveActiveToCache(void) {
+if (GHCFActiveAppIndex < 0 || GHCFActiveAppIndex >= GHCFAppCount) return;
+int i = GHCFActiveAppIndex;
+GHCFCacheWindows[i] = GHCFHostedWindow;
+GHCFCacheScenes[i] = GHCFHostedScene;
+GHCFCachePresenters[i] = GHCFHostedPresenter;
+GHCFCacheLayerHostViews[i] = GHCFHostedLayerHostView;
+GHCFCacheTopStrips[i] = GHCFHostedTopStrip;
+GHCFCacheContainers[i] = GHCFHostedContainer;
+GHCFCacheContentViews[i] = GHCFHostedContentView;
+GHCFCacheResizeHandles[i] = GHCFHostedResizeHandle;
+GHCFCacheSceneIDs[i] = GHCFHostedSceneID;
+strncpy(GHCFCacheBundleIDs[i], GHCFHostedBundleID, sizeof(GHCFCacheBundleIDs[i]) - 1);
+GHCFCacheBundleIDs[i][sizeof(GHCFCacheBundleIDs[i]) - 1] = '\0';
+GHCFCachePids[i] = GHCFHostedPid;
+GHCFCacheMinimized[i] = GHCFHostedMinimized;
+GHCFCacheHiddenByLock[i] = GHCFHostedHiddenByLock;
+GHCFCacheScaleRatios[i] = GHCFHostedScaleRatio;
+GHCFCacheScaleSliderBars[i] = GHCFHostedScaleSliderBar;
+GHCFCacheScaleSliders[i] = GHCFHostedScaleSlider;
+GHCFCacheScaleLabels[i] = GHCFHostedScaleLabel;
+}
+
+// 把缓存第 idx 项装回活动量（切回来复用时调）。
+static void GHCFLoadCacheToActive(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+GHCFHostedWindow = GHCFCacheWindows[idx];
+GHCFHostedScene = GHCFCacheScenes[idx];
+GHCFHostedPresenter = GHCFCachePresenters[idx];
+GHCFHostedLayerHostView = GHCFCacheLayerHostViews[idx];
+GHCFHostedTopStrip = GHCFCacheTopStrips[idx];
+GHCFHostedContainer = GHCFCacheContainers[idx];
+GHCFHostedContentView = GHCFCacheContentViews[idx];
+GHCFHostedResizeHandle = GHCFCacheResizeHandles[idx];
+GHCFHostedSceneID = GHCFCacheSceneIDs[idx];
+strncpy(GHCFHostedBundleID, GHCFCacheBundleIDs[idx], sizeof(GHCFHostedBundleID) - 1);
+GHCFHostedBundleID[sizeof(GHCFHostedBundleID) - 1] = '\0';
+GHCFHostedPid = GHCFCachePids[idx];
+GHCFHostedMinimized = GHCFCacheMinimized[idx];
+GHCFHostedHiddenByLock = GHCFCacheHiddenByLock[idx];
+GHCFHostedScaleRatio = GHCFCacheScaleRatios[idx];
+if (GHCFHostedScaleRatio <= 0) GHCFHostedScaleRatio = GHCFDefaultScaleRatioForBundleID(GHCFCacheBundleIDs[idx]);
+GHCFHostedScaleSliderBar = GHCFCacheScaleSliderBars[idx];
+GHCFHostedScaleSlider = GHCFCacheScaleSliders[idx];
+GHCFHostedScaleLabel = GHCFCacheScaleLabels[idx];
+GHCFActiveAppIndex = idx;
+}
+
+// 清活动量（切走时存完缓存后调；缓存里的指针不受影响）。
+static void GHCFClearActive(void) {
+GHCFHostedWindow = nil;
+GHCFHostedScene = nil;
+GHCFHostedPresenter = nil;
+GHCFHostedLayerHostView = nil;
+GHCFHostedTopStrip = nil;
+GHCFHostedContainer = nil;
+GHCFHostedContentView = nil;
+GHCFHostedResizeHandle = nil;
+GHCFHostedSceneID = nil;
+GHCFHostedBundleID[0] = '\0';
+GHCFHostedPid = 0;
+GHCFHostedMinimized = NO;
+GHCFHostedHiddenByLock = NO;
+GHCFHostedScaleRatio = 1.0;
+GHCFHostedScaleSliderBar = nil;
+GHCFHostedScaleSlider = nil;
+GHCFHostedScaleLabel = nil;
+GHCFActiveAppIndex = -1;
+}
+
+// v35：销毁缓存里第 idx 项的 scene + presenter。只在复用守卫判旧时
+// 调（进程死了：pid 对不上或 presenter/view 没了）。死进程留不住
+// 客户端残留，销毁后重建同一固定 ID 应该是干净的。切走与关窗永远
+// 不调这里（只藏窗）。若那项正好是活动窗，也顺手清活动量。
+// v38：layer-host 的项分叉——它的 scene 是 App 自己的主 scene，
+// **永远不调 destroyScene**（销毁会杀掉 App 的界面），也没有
+// presenter 可 deactivate/invalidate；只清缓存引用（窗藏起来、
+// 指针全清），App 自己留着跑。复用守卫判旧时才调这里（进程换了
+// 或 view 没了，旧主 scene 已死，清引用是安全的）。
+// v41 前向声明：貼邊 peek 收掉（定义在后面工具函数区；销毁缓存项时也要
+// 收掉对应的 peek，不然死进程的舊窗會一直貼在邊緣）。
+// v42.3 前向声明：貼邊 peek 收成（自動縮窗時調，定義在後面，跟收掉同一區）。
+static void GHCFHideDockPeekForIndex(int idx);
+static void GHCFShowDockPeekForIndex(int idx);
+
+static void GHCFDestroyCachedEntryAtIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheScenes[idx] && !GHCFCacheWindows[idx]) return;
+if (GHCFCacheWindows[idx]) GHCFCacheWindows[idx].hidden = YES;
+// v38：layer-host 的项（有 layerHostView、没有 presenter）只清引用。
+if (GHCFCacheLayerHostViews[idx] && !GHCFCachePresenters[idx]) {
+GHCFLogLine("v57 layer host entry cleared (scene kept)");
+} else {
+@try {
+if (GHCFCacheSceneIDs[idx]) {
+char dbuf[256];
+snprintf(dbuf, sizeof(dbuf), "v57 destroying scene %s", [GHCFCacheSceneIDs[idx] UTF8String]);
+GHCFLogLine(dbuf);
+[[FBSceneManager sharedInstance] destroyScene:GHCFCacheSceneIDs[idx] withTransitionContext:nil];
+}
+if (GHCFCachePresenters[idx]) {
+[GHCFCachePresenters[idx] deactivate];
+[GHCFCachePresenters[idx] invalidate];
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 destroy failed");
+}
+}
+GHCFCacheWindows[idx] = nil;
+GHCFCacheScenes[idx] = nil;
+GHCFCachePresenters[idx] = nil;
+GHCFCacheLayerHostViews[idx] = nil;
+GHCFCacheTopStrips[idx] = nil;
+GHCFCacheContainers[idx] = nil;
+GHCFCacheContentViews[idx] = nil;
+// v72：占位跟着 container 一起丢掉——指针清掉，不留野指针。
+// v43.22：凍結快照同理（container 丟了它也跟著丟，指標不清會變野指標）。
+GHCFGatePlaceholders[idx] = nil;
+GHCFGateFrozenSnaps[idx] = nil;
+GHCFPeekDockSnaps[idx] = nil; // v43.23：第 7 件——dock 快照指標同清。
+GHCFCacheResizeHandles[idx] = nil;
+GHCFPeekTapOverlays[idx] = nil;
+GHCFCacheSceneIDs[idx] = nil;
+GHCFCacheBundleIDs[idx][0] = '\0';
+GHCFCachePids[idx] = 0;
+GHCFCacheMinimized[idx] = NO;
+GHCFCacheHiddenByLock[idx] = NO;
+GHCFCacheScaleRatios[idx] = 1.0;
+GHCFCacheScaleSliderBars[idx] = nil;
+GHCFCacheScaleSliders[idx] = nil;
+GHCFCacheScaleLabels[idx] = nil;
+// v41：销毁缓存项时收掉对应的貼邊 peek（死进程的舊窗不能留着）。
+GHCFHideDockPeekForIndex(idx);
+if (idx == GHCFActiveAppIndex) {
+GHCFClearActive();
+}
+GHCFLogLine("v57 scene destroyed");
+}
+
+// v43.20: drop a cached entry WITHOUT destroying its scene (long-press direct
+// close). Unlike GHCFDestroyCachedEntryAtIndex, never calls destroyScene and
+// never invalidates the presenter — the app process keeps running and the
+// scene stays alive in the system; reopening re-hosts the existing scene via
+// GHCFExistingMainSceneForBundleID. Dropping the window pointer is what makes
+// the taskbar chip disappear (GHCFUpdateTaskbar draws a chip for every
+// non-nil cache window). The window itself is already hidden by
+// closeHostedWindow's exit-animation completion.
+static void GHCFDropCachedEntryKeepingScene(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheScenes[idx] && !GHCFCacheWindows[idx]) return;
+if (GHCFCacheWindows[idx]) GHCFCacheWindows[idx].hidden = YES;
+GHCFCacheWindows[idx] = nil;
+GHCFCacheScenes[idx] = nil;
+GHCFCachePresenters[idx] = nil;
+GHCFCacheLayerHostViews[idx] = nil;
+GHCFCacheTopStrips[idx] = nil;
+GHCFCacheContainers[idx] = nil;
+GHCFCacheContentViews[idx] = nil;
+GHCFGatePlaceholders[idx] = nil;
+GHCFGateFrozenSnaps[idx] = nil; // v43.22：凍結快照指標同清（窗藏了，凍結幀不留）。
+GHCFPeekDockSnaps[idx] = nil; // v43.23：第 7 件——dock 快照指標同清。
+GHCFCacheResizeHandles[idx] = nil;
+GHCFPeekTapOverlays[idx] = nil;
+GHCFCacheSceneIDs[idx] = nil;
+GHCFCacheBundleIDs[idx][0] = '\0';
+GHCFCachePids[idx] = 0;
+GHCFCacheMinimized[idx] = NO;
+GHCFCacheHiddenByLock[idx] = NO;
+GHCFCacheScaleRatios[idx] = 1.0;
+GHCFCacheScaleSliderBars[idx] = nil;
+GHCFCacheScaleSliders[idx] = nil;
+GHCFCacheScaleLabels[idx] = nil;
+GHCFHideDockPeekForIndex(idx);
+if (idx == GHCFActiveAppIndex) {
+GHCFClearActive();
+}
+}
+
+// v53：GHCFBackgroundHostedScene 已刪（關窗後不再把 scene 推後台，
+// 唯一呼叫處是 closeHostedWindow）。v66：鎖屏推後台的
+// GHCFBackgroundCachedSceneAtIndex 也刪了（全程不黑屏，鎖屏不再推後台）。
+
+// v38：悬浮窗的尺寸——没有标题栏了，内容区就是整个窗；圆角 35。
+// 一般 App 内容 350x757（85% 宽，757 是按屏高宽比算的：350/414×
+// 896≈757，和屏幕同宽高比——已有主 scene（414x896）按宽缩放正好
+// 贴边填满；新建 scene 的 App 按 350x757 重排版）。计算器内容仍
+// 是 320x693（窗 320x693，之前 320x737 是含 44pt 标题栏的总高，
+// 内容几何不变、scale 仍是 0.77），宽用下面的 CALC_W。顶条 24pt
+// （透明细条；v40 从 16 加宽到 24——皇上 11:34：v39 的 16pt 细条
+// 太细、太透明，找不到地方抓；建窗与 resize 都用这个常量，会自动
+// 一起改；pill 36x5、alpha 0.7，细条保持透明——App 内容透出来；
+// v60：标题栏整个拿掉，滑杆条改贴细条（y=24）。
+#define GHCF_HOSTED_CONTENT_W 350.0
+#define GHCF_HOSTED_CONTENT_H 757.0
+#define GHCF_HOSTED_CALC_W 320.0
+#define GHCF_HOSTED_STRIP_H 24.0
+// v63：浮窗固定尺寸——皇上 2026-11-16 照片裡百度貼吧浮窗量到約 346×769pt
+//（窗寬佔屏寬 0.836、窗高佔屏高 0.858，iPhone 11 邏輯尺寸 414×896；
+// 透視誤差 ±10pt）。一律開這個尺寸，拉大拉小後續再做。
+// v67：窗高改 749（皇上 2026-11-16 挑 A：346×769 的寬高比和屏幕
+// 414×896 對不上，內容按寬等比縮後高只剩 749，底部露 20pt 黑底；
+// 改成 346×749，寬高佔屏都是 0.836，內容正好填滿）。
+#define GHCF_FIXED_WINDOW_W 346.0
+#define GHCF_FIXED_WINDOW_H 749.0
+// v41：圓角改走設定（cornerRadius，預設 30，v43.3 照 S2 值改；上面三處已改讀設定）。
+
+// v40：多窗层级（锁屏 2000 之下）：宿主窗基础 Alert - 2（1998）、
+// 带到最前 Alert - 1.75（1998.25）、贴边小卡 Alert - 1.5（1998.5）、
+// 阴影背景 Alert - 4.5（1995.5，在主屏之上、感应带/觸發鈕 1996 之下、
+// 宿主窗之下——点浮窗本身、点觸發鈕、滑感应带都不受影响）。
+#define GHCF_HOSTED_BASE_LEVEL (UIWindowLevelAlert - 2.0)
+#define GHCF_HOSTED_FRONT_LEVEL (UIWindowLevelAlert - 1.75)
+#define GHCF_DOCK_LEVEL (UIWindowLevelAlert - 1.5)
+#define GHCF_DIM_OVERLAY_LEVEL (UIWindowLevelAlert - 4.5)
+// v43.30：釘選窗的層級（Alert - 1.25，高於主窗與貼邊小卡，低於啟動器與鎖屏）。
+#define GHCF_PINNED_LEVEL (UIWindowLevelAlert - 1.25)
+// v41：貼邊 peek 的尺寸（圖 1 的樣子：縮到邊緣、露出一截活內容）。
+// 寬 112、高 242，上下疊著排，間距 8。
+#define GHCF_DOCK_PEEK_W 112.0
+#define GHCF_DOCK_PEEK_H 242.0
+#define GHCF_DOCK_PEEK_GAP 8.0
+// v41：貼邊 peek 的尺寸在上面（GHCF_DOCK_PEEK_W/H/GAP）；v40 的
+// 68x76 小卡窗已刪（peek 就是宿主窗本身縮到邊緣，不另建卡窗）。
+// v40：新窗错位放的步进（每多一个看得见的窗错开 44pt，横竖交错、夹在屏幕里）。
+#define GHCF_NEW_WINDOW_OFFSET 44.0
+// v40：拖到右邊緣贴边收起的门槛——放手时窗中心进了右缘 60pt 内才收。
+#define GHCF_DOCK_DRAG_THRESHOLD 60.0
+
+// 取一个可用的 UIWindowScene（iOS 13+ 的窗必须挂 scene 才会显示）：
+// 从 connectedScenes 里找第一个 UIWindowScene，没有就返回 nil
+//（调用处记日志）。全部是公开 API 的方法调用，不用字串常量。
+// 注意：不能用已废弃的取主窗口 API 做退路——它在 iOS 13 起已废弃，Theos
+// 默认 -Werror 会把它当编译错误（v23 首编就是这么失败的）。
+static UIWindowScene *GHCFActiveWindowScene(void) {
+UIApplication *app = [UIApplication sharedApplication];
+if (!app) return nil;
+NSSet *scenes = [app connectedScenes];
+for (id s in scenes) {
+if ([s isKindOfClass:[UIWindowScene class]]) return (UIWindowScene *)s;
+}
+return nil;
+}
+
+// v38：一个 App 的默认 scaleRatio（反向耦合缩放，见文件头 v38 节）。
+// 计算器默认 320/屏宽 ≈ 0.77（窗 320x737 的那个缩放，v36 证实过）；
+// 别的 App 默认 1.0（scene frame 就是内容尺寸，不缩放）。屏幕尺寸
+// 运行时读，不写死 414/896。
+static CGFloat GHCFDefaultScaleRatioForBundleID(const char *bundleID) {
+if (bundleID && strcmp(bundleID, "com.apple.calculator") == 0) {
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+if (screenSize.width > 0) {
+return GHCF_HOSTED_CALC_W / screenSize.width;
+}
+}
+return 1.0;
+}
+
+// v54 B：固定佈局 App（不會按尺寸重排版：佈局是按固定寬畫的，推小 frame
+// 就切壞——計算器 145x279 塞不下四欄鍵盤，文件也一樣，見 §134 B）。
+// 這些 App 的 peek 走整體縮放：scene 保持自然佈局尺寸（計算器 320x693、
+// 文件 320x480），整窗等比縮進 peek 並置中。會重排版的 App（設置、
+// 時鐘類標準 UIKit）不在這裡，走老路推 frame。
+static BOOL GHCFIsFixedLayoutBundleID(const char *bundleID) {
+if (!bundleID) return NO;
+return strcmp(bundleID, "com.apple.calculator") == 0 || strcmp(bundleID, "com.apple.DocumentsApp") == 0;
+}
+
+// v38：scene frame 尺寸 = 内容尺寸 ÷ scale（反向耦合的一半：App 在
+// 这个尺寸里排版；另一半是内容区 layer 的 sublayerTransform 缩回）。
+// scale<=0 当 1.0 用。计算器：内容 320x693 ÷ 0.77 ≈ 414x896（屏
+// 幕尺寸，和 v36 一样）；别的 App：320x480 ÷ 1.0 = 320x480。
+static CGSize GHCFSceneFrameSizeForContentSizeAndScale(CGSize contentSize, CGFloat scale) {
+if (scale <= 0) scale = 1.0;
+return CGSizeMake(contentSize.width / scale, contentSize.height / scale);
+}
+
+// v36：一个 App 的悬浮窗内容区尺寸——计算器拿 (320, 屏高×320/屏宽)
+//（按宽缩放 s=320/屏宽≈0.77 时，图层高 896×s≈693，正好放进内容区，
+// 左右零白边、按键约 62pt；窗总高 693+44=737，896 高的屏上居中放得
+// 下，上下各留约 80pt；运行时算，不写死 414/896）。别的 App 拿
+// 320x480（它们按 scene frame 排版，内容区就是 scene frame，已经
+// 贴边填满，不用改）。
+static CGSize GHCFHostedContentSizeForBundleID(const char *bundleID) {
+if (bundleID && strcmp(bundleID, "com.apple.calculator") == 0) {
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+if (screenSize.width > 0) {
+return CGSizeMake(GHCF_HOSTED_CALC_W, screenSize.height * (GHCF_HOSTED_CALC_W / screenSize.width));
+}
+}
+return CGSizeMake(GHCF_HOSTED_CONTENT_W, GHCF_HOSTED_CONTENT_H);
+}
+
+// v38：一个 App 的 scene frame 尺寸（默认 scale 下）——计算器拿屏幕
+// 尺寸（内容 320x693 ÷ 0.77 ≈ 414x896），别的 App 拿 320x480 内
+// 容尺寸。建 scene 时用（初始 settings.frame）。
+static CGSize GHCFSceneFrameSizeForBundleID(const char *bundleID) {
+CGSize contentSize = GHCFHostedContentSizeForBundleID(bundleID);
+CGFloat scale = GHCFDefaultScaleRatioForBundleID(bundleID);
+return GHCFSceneFrameSizeForContentSizeAndScale(contentSize, scale);
+}
+
+
+// v63：某 App 的預設浮窗尺寸——固定尺寸（皇上 2026-11-16：照片量到約
+// 346×769pt，透視誤差 ±10pt；拉大拉小後續再做；v67 改 346×749，見上面）。
+// 一律開這個尺寸，不再
+// 讀 windowSizePreset（設定頁那行已藏起來）。例外：計算器永遠自己的
+// 320×693（內容就是窗）。橫屏：寬高對調
+// 再夾進屏幕（橫屏時寬高對調）。
+// v70：浮窗大小滑桿——100% 就是 346×749，調小等比縮（寬高比鎖住）。
+static void GHCFPresetSizeForBundleID(const char *bundleID, CGFloat *outW, CGFloat *outH) {
+CGFloat w = GHCF_FIXED_WINDOW_W;
+CGFloat h = GHCF_FIXED_WINDOW_H;
+if (bundleID && strcmp(bundleID, "com.apple.calculator") == 0) {
+CGSize content = GHCFHostedContentSizeForBundleID(bundleID);
+w = content.width;
+h = content.height;
+} else {
+// v70：浮窗大小滑桿（50–100%）：寬高一起縮、寬高比鎖住，黑邊不會回來。
+CGFloat pct = GHCFReadWindowSizePercent() / 100.0;
+w *= pct;
+h *= pct;
+}
+CGSize screen = [UIScreen mainScreen].bounds.size;
+if (screen.width > screen.height && h > w) {
+CGFloat tw = w; w = h; h = tw;
+CGFloat maxW = screen.width - 16.0;
+CGFloat maxH = screen.height - 16.0;
+if (w > maxW) { h = h * maxW / w; w = maxW; }
+if (h > maxH) { w = w * maxH / h; h = maxH; }
+}
+if (outW) *outW = w;
+if (outH) *outH = h;
+}
+
+// v38：找一个 App 已有的主 scene（KonbanXV，MIT，只仿结构、代码
+// 原创）。FBSceneManager sharedInstance → object_getIvar 读
+// _workspace → object_getIvar 读 _allScenesByID（NSDictionary）→
+// 找 identifier 等于固定 sceneID `sceneID:<bundleID>-default` 或含
+// bundleID 的那一项，返回 FBScene。找不到返回 nil。每一步都判 nil，
+// 任何一步失败就返回 nil（调用处走老路 createScene，不崩、不拦）。
+// ivar 名用 class_getInstanceVariable 拿（不用 MSHookIvar 宏——我们
+// 不用 Logos hook，改用 <objc/runtime.h> 的 object_getIvar，已在用）。
+static FBScene *GHCFExistingMainSceneForBundleID(const char *bundleID) {
+if (!bundleID) return nil;
+FBSceneManager *manager = [FBSceneManager sharedInstance];
+if (!manager) return nil;
+Ivar workspaceIvar = class_getInstanceVariable([FBSceneManager class], "_workspace");
+if (!workspaceIvar) return nil;
+id workspace = object_getIvar(manager, workspaceIvar);
+if (!workspace) return nil;
+Ivar scenesIvar = class_getInstanceVariable(object_getClass(workspace), "_allScenesByID");
+if (!scenesIvar) return nil;
+id scenesDict = object_getIvar(workspace, scenesIvar);
+if (!scenesDict || ![scenesDict isKindOfClass:[NSDictionary class]]) return nil;
+char idbuf[256];
+snprintf(idbuf, sizeof(idbuf), "sceneID:%s-default", bundleID);
+NSString *fixedID = [NSString stringWithCString:idbuf encoding:NSUTF8StringEncoding];
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+if (!fixedID || !bidStr) return nil;
+NSDictionary *scenes = (NSDictionary *)scenesDict;
+for (id key in [scenes allKeys]) {
+if (![key isKindOfClass:[NSString class]]) continue;
+NSString *keyStr = (NSString *)key;
+if ([keyStr isEqualToString:fixedID] || [keyStr rangeOfString:bidStr].location != NSNotFound) {
+id scene = [scenes objectForKey:key];
+if (scene && [scene isKindOfClass:[FBScene class]]) return (FBScene *)scene;
+}
+}
+return nil;
+}
+
+// v38：layer-host 路的显示 scale（见文件头 v38 节第 1 项）。已有主
+// scene 的 frame 是全屏尺寸（运行时读屏幕，不写死 414/896），不能
+// 改；要贴边填满，显示 scale = 内容宽 ÷ 屏宽，再乘以用户缩放相对
+// 默认的倍数（scaleRatio ÷ 默认 scaleRatio）。一般 App：内容 350
+// ÷ 屏宽 414 ≈ 0.845，scaleRatio 默认 1.0，显示 0.845（贴边）；
+// 计算器：内容 320 ÷ 414 ≈ 0.77，scaleRatio 默认 0.77，显示 0.77
+//（贴边，和 v36/v38 一样）。滑杆把 scaleRatio 拖到 1.5，显示就
+// 是 0.845×1.5（放大、裁掉边缘）；拖到 0.5，显示就是 0.845×0.5
+//（缩小、留黑边）。和新建 scene 的路（scene frame = 内容 ÷ scale，
+// 显示永远是内容尺寸）不一样——layer-host 的 scene frame 改不了，
+// 只能靠显示 scale 缩放。
+// v53：displayScale 帶指定 ratio 的變體（peek 用：收起的窗不是活動窗，
+// 不能讀活動量的 GHCFHostedScaleRatio，要用自己的快取 ratio）。
+static CGFloat GHCFLayerHostDisplayScaleForContentSizeAndBundleIDAndRatio(CGSize contentSize, const char *bundleID, CGFloat ratio) {
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+if (screenSize.width <= 0 || contentSize.width <= 0) return 1.0;
+CGFloat fitScale = contentSize.width / screenSize.width;
+CGFloat defaultScale = GHCFDefaultScaleRatioForBundleID(bundleID);
+if (defaultScale <= 0) defaultScale = 1.0;
+if (ratio < 0.5) ratio = 0.5;
+if (ratio > 2.0) ratio = 2.0;
+return fitScale * (ratio / defaultScale);
+}
+static CGFloat GHCFLayerHostDisplayScaleForContentSizeAndBundleID(CGSize contentSize, const char *bundleID) {
+return GHCFLayerHostDisplayScaleForContentSizeAndBundleIDAndRatio(contentSize, bundleID, GHCFHostedScaleRatio);
+}
+
+// v38：反向耦合缩放（仿照 FrontBoardAppLauncher 的做法，见文件头
+// v38 节——只仿结构，代码原创）：scene frame = 内容尺寸 ÷ scale，
+// 内容区 layer 的 sublayerTransform = CATransform3DMakeScale(scale,
+// scale, 1) 把图层缩回窗尺寸。一除一乘，任意 App、任意窗尺寸都填
+// 满内容区、贴边；不再有计算器特判。presentationView 的 bounds =
+// frame 尺寸、anchorPoint (0,0)、position (0,0)（FBAL 的左上对齐
+// 做法）。注意：sublayerTransform 是繞內容區 layer 的 anchorPoint
+// 縮，不是繞左上——v38 只設了 presenterView/layerHostView 的錨點，
+// 沒設內容區 layer 的錨點（預設中心），scale<1.0 的 App 往右下偏
+// 了（見 BUILD_LOG §108）；v39 在建 contentView 時把錨點改 (0,0)。
+// pushFrame=YES 时，0.05 秒防抖后把新 frame 推给 scene（FBAL 的
+// resizeWindowWithFrame 做法）；建窗时 pushFrame=NO（初始 settings
+// 里已经是这个 frame，不用再推一次）。frame 更新时顺带把两个安全
+// 区 insets 重设为 0（第 3 项：LiveContainer 窗口模式规则，frame 更
+// 新时附带安全区 block）。立即改 bounds + transform（视觉立即跟
+// 手），frame 只防抖推一次。触摸由 transform 自动映射。
+static void GHCFApplyScaleToHostedWindow(BOOL pushFrame) {
+if (!GHCFHostedContentView || !GHCFHostedScene) return;
+// v38：layer-host 路（没有 presenter，有 layerHostView）——只改
+// view 的 bounds + sublayerTransform，**不推 scene frame**（已有主
+// scene 的 frame 就是屏幕尺寸，不能改）。显示 scale 用
+// GHCFLayerHostDisplayScaleForContentSize（内容宽 ÷ 屏宽 × 用户
+// 缩放相对默认的倍数）。layer host view 的 bounds = 屏幕尺寸
+//（scene 的 frame 尺寸），anchorPoint (0,0)、position (0,0)。
+if (GHCFHostedLayerHostView && !GHCFHostedPresenter) {
+CGSize contentSize = GHCFHostedContentView.bounds.size;
+if (contentSize.width <= 0 || contentSize.height <= 0) return;
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+if (screenSize.width <= 0 || screenSize.height <= 0) return;
+CGFloat displayScale = GHCFLayerHostDisplayScaleForContentSizeAndBundleID(contentSize, GHCFHostedBundleID);
+UIView *layerHostView = GHCFHostedLayerHostView;
+layerHostView.bounds = CGRectMake(0, 0, screenSize.width, screenSize.height);
+layerHostView.layer.anchorPoint = CGPointMake(0, 0);
+layerHostView.layer.position = CGPointMake(0, 0);
+// v39：錨點重申為左上（建窗時已設，這裡防萬一被 layout 改回中心）。
+GHCFHostedContentView.layer.anchorPoint = CGPointMake(0, 0);
+GHCFHostedContentView.layer.position = CGPointMake(0, 0);
+GHCFHostedContentView.layer.sublayerTransform = CATransform3DMakeScale(displayScale, displayScale, 1.0);
+GHCFHostedSceneFrameSize = screenSize; // v73：layer-host 路 scene frame 恆為屏幕尺寸（尺寸門用）。
+GHCFHostedSceneFrameSizeValid = YES;
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 layer host scaled %d%%", (int)(displayScale * 100.0));
+GHCFLogLine(buf);
+// pushFrame 对 layer-host 没有意义（scene frame 不能推），直接返回。
+return;
+}
+if (!GHCFHostedPresenter || !GHCFHostedPresenter.presentationView) return;
+CGFloat scale = GHCFHostedScaleRatio;
+if (scale < 0.5) scale = 0.5;
+if (scale > 2.0) scale = 2.0;
+GHCFHostedScaleRatio = scale;
+CGSize contentSize = GHCFHostedContentView.bounds.size;
+if (contentSize.width <= 0 || contentSize.height <= 0) return;
+CGSize frameSize = GHCFSceneFrameSizeForContentSizeAndScale(contentSize, scale);
+UIView *presenterView = GHCFHostedPresenter.presentationView;
+presenterView.bounds = CGRectMake(0, 0, frameSize.width, frameSize.height);
+presenterView.layer.anchorPoint = CGPointMake(0, 0);
+presenterView.layer.position = CGPointMake(0, 0);
+// v39：錨點重申為左上（建窗時已設，這裡防萬一被 layout 改回中心）。
+GHCFHostedContentView.layer.anchorPoint = CGPointMake(0, 0);
+GHCFHostedContentView.layer.position = CGPointMake(0, 0);
+GHCFHostedContentView.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0);
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 scene scaled %d%%", (int)(scale * 100.0));
+GHCFLogLine(buf);
+if (!pushFrame) return;
+int token = ++GHCFScaleDebounceToken;
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+if (token != GHCFScaleDebounceToken) return;
+if (!GHCFHostedScene || !GHCFHostedContentView) return;
+CGSize curContentSize = GHCFHostedContentView.bounds.size;
+CGFloat curScale = GHCFHostedScaleRatio;
+if (curScale <= 0) curScale = 1.0;
+CGSize curFrameSize = GHCFSceneFrameSizeForContentSizeAndScale(curContentSize, curScale);
+@try {
+[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.frame = CGRectMake(0, 0, curFrameSize.width, curFrameSize.height);
+settings.interfaceOrientation = UIInterfaceOrientationPortrait;
+settings.deviceOrientation = UIDeviceOrientationPortrait;
+settings.peripheryInsets = UIEdgeInsetsZero;
+settings.safeAreaInsetsPortrait = UIEdgeInsetsZero;
+}];
+GHCFHostedSceneFrameSize = curFrameSize; // v73：追蹤推給 scene 的 frame 尺寸（尺寸門用）。
+GHCFHostedSceneFrameSizeValid = YES;
+char fbuf[128];
+snprintf(fbuf, sizeof(fbuf), "v57 scene frame updated %dx%d scale %d%%", (int)curFrameSize.width, (int)curFrameSize.height, (int)(curScale * 100.0));
+GHCFLogLine(fbuf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 scene frame update failed");
+}
+});
+}
+
+// ── v40：多窗 + 贴边小卡 + 点窗外事件 + 安全距离 的工具函数 ──
+
+// v40：读一个 prefs BOOL（没有就回默认值）。CFPreferencesAppSynchronize
+// 先同步（设置页改完立刻生效，不用等）；零字面量规则：key 与 domain
+// 都用 CFStringCreateWithCString 现做；不用通知中心（那个被禁）。
+static BOOL GHCFReadPrefsBool(const char *key, BOOL defaultValue) {
+if (!key) return defaultValue;
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+BOOL result = defaultValue;
+if (domain && keyRef) {
+CFPreferencesAppSynchronize(domain);
+CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+if (v) {
+if (CFGetTypeID(v) == CFBooleanGetTypeID()) {
+result = CFBooleanGetValue((CFBooleanRef)v);
+}
+CFRelease(v);
+}
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+return result;
+}
+
+// v40：读一个 prefs 数字（没有/不是数字就回默认值；滑杆存的是 NSNumber）。
+static double GHCFReadPrefsDouble(const char *key, double defaultValue) {
+if (!key) return defaultValue;
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+double result = defaultValue;
+if (domain && keyRef) {
+CFPreferencesAppSynchronize(domain);
+CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+if (v) {
+if (CFGetTypeID(v) == CFNumberGetTypeID()) {
+double d = 0;
+if (CFNumberGetValue((CFNumberRef)v, kCFNumberDoubleType, &d)) result = d;
+}
+CFRelease(v);
+}
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+return result;
+}
+
+// v40：读一个 prefs 字串（返回 malloc 的 C 字串，调用处 free；
+// 没有/不是字串就返回 NULL）。
+static char *GHCFReadPrefsCString(const char *key) {
+if (!key) return NULL;
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+char *out = NULL;
+if (domain && keyRef) {
+CFPreferencesAppSynchronize(domain);
+CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+if (v) {
+if (CFGetTypeID(v) == CFStringGetTypeID()) {
+CFIndex len = CFStringGetLength((CFStringRef)v);
+CFIndex maxBytes = CFStringGetMaximumSizeForEncoding(len, kCFStringEncodingUTF8) + 1;
+out = (char *)malloc(maxBytes);
+if (out && !CFStringGetCString((CFStringRef)v, out, maxBytes, kCFStringEncodingUTF8)) {
+free(out);
+out = NULL;
+}
+}
+CFRelease(v);
+}
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+return out;
+}
+
+// v40：刘海安全距离（prefs 里的 safeDistance，0–100，默认 50；
+// 超出范围就夹到 0–100）。
+static CGFloat GHCFReadSafeDistance(void) {
+double v = GHCFReadPrefsDouble("safeDistance", 50.0);
+if (v < 0) v = 0;
+if (v > 100) v = 100;
+return (CGFloat)v;
+}
+
+// ── v41：新設定鍵的讀法（全部走上面三個現成 helper；鍵名都是普通
+// C 字串，運行時現做，零字面量規則不動） ──
+// 浮窗設置：陰影開關（預設開）、圓角滑桿（0–50，預設 35）、豎屏開窗
+// 固定中心（預設關——開了新窗一律居中開，不恢復記住的位置；關了才
+// 恢復上次位置，保住 v40 第 6 項）、通知橫幅（預設開）。
+static BOOL GHCFReadShadowEnabled(void) {
+return GHCFReadPrefsBool("shadowEnabled", YES);
+}
+static CGFloat GHCFReadCornerRadius(void) {
+double v = GHCFReadPrefsDouble("cornerRadius", 30.0);
+if (v < 0) v = 0;
+if (v > 50) v = 50;
+return (CGFloat)v;
+}
+static BOOL GHCFReadCenterOnOpen(void) {
+return GHCFReadPrefsBool("centerOnOpen", NO);
+}
+static BOOL GHCFReadNotificationBanner(void) {
+return GHCFReadPrefsBool("notificationBanner", YES);
+}
+// v54：通知橫幅打開浮窗（bannerOpensFloatingWindow，Banner.plist）：
+// (a) 點插件自己的橫幅叫回浮窗；(b) 系統橫幅出現時為那個 App 開浮窗（探針）。
+// 預設關——(b) 沒有可靠 hook 點（這套代碼不用 Logos hook，SpringBoard
+// 橫幅呈現也沒有通知可聽），等真機探針結果再定預設。
+static BOOL GHCFReadBannerOpensFloatingWindow(void) {
+return GHCFReadPrefsBool("bannerOpensFloatingWindow", NO);
+}
+// 調度窗口設置：邊緣滑幾次開 ARC（1 或 2，預設 2）、滑哪邊（沒設就跟
+// 小窗顯示位置走）、浮窗拖動手勢開關（預設開）、觸發鈕雙擊輪切開關
+// （預設開）、長按多久關全部（0.3–1.0 秒，預設 0.5）。
+static int GHCFReadEdgeSwipeCount(void) {
+double v = GHCFReadPrefsDouble("edgeSwipeCount", 2.0);
+return (v <= 1.0) ? 1 : 2;
+}
+// v43.32：觸發方式三選（Trigger.plist，triggerMode：arc／edge／bar，
+// 預設 edge——以前一直是邊緣滑動叫出啟動器，預設不變才不改行為）。
+// 0＝ARC（扇形轉盤角度那套），1＝邊緣（左右矩形那套），2＝懸浮條
+// （位置＋大小兩行是假設值，觸發本身還沒接行為）。
+static int GHCFReadTriggerMode(void) {
+char *v = GHCFReadPrefsCString("triggerMode");
+int m = 1;
+if (v) {
+if (strcmp(v, "arc") == 0) m = 0;
+else if (strcmp(v, "bar") == 0) m = 2;
+free(v);
+}
+return m;
+}
+static BOOL GHCFReadTriggerModeIsARC(void) {
+return GHCFReadTriggerMode() == 0;
+}
+// v43.32：觸發側三段（Trigger.plist，沿用 edgeSwipeSide 鍵，皇上存過的
+// left／right 直接帶過來；新加 both，預設雙側）。0＝左，1＝右，2＝雙側。
+static int GHCFReadTriggerSide(void) {
+char *side = GHCFReadPrefsCString("edgeSwipeSide");
+int s = 2;
+if (side) {
+if (strcmp(side, "left") == 0) s = 0;
+else if (strcmp(side, "right") == 0) s = 1;
+free(side);
+}
+return s;
+}
+// v43.32：調試模式（triggerDebugMode，預設關）——開起來屏幕上直接
+// 畫出當前方式的觸發區（ARC 畫扇形、邊緣畫左右矩形、懸浮條畫那條）。
+static BOOL GHCFReadTriggerDebugMode(void) {
+return GHCFReadPrefsBool("triggerDebugMode", NO);
+}
+// v43.32：ARC 扇形角度（Trigger.plist，TrollOpen 照片上的數就是預設）：
+// 起始角度 0–360（從右側基準逆時針算，90＝正上方），扇形大小 30–360。
+static double GHCFReadARCStartAngle(void) {
+double v = GHCFReadPrefsDouble("arcStartAngle", 90.0);
+if (v < 0) v = 0;
+if (v > 360) v = 360;
+return v;
+}
+static double GHCFReadARCFanAngle(void) {
+double v = GHCFReadPrefsDouble("arcFanAngle", 180.0);
+if (v < 30) v = 30;
+if (v > 360) v = 360;
+return v;
+}
+// v43.32：懸浮條位置／大小（Trigger.plist，假設值——影片和照片裡都沒
+// 拍到懸浮條那頁，等皇上看過再定；觸發本身還沒接行為）。
+static double GHCFReadFloatingBarY(void) {
+double v = GHCFReadPrefsDouble("floatingBarY", 0.5);
+if (v < 0.05) v = 0.05;
+if (v > 0.95) v = 0.95;
+return v;
+}
+static double GHCFReadFloatingBarSize(void) {
+double v = GHCFReadPrefsDouble("floatingBarSize", 60.0);
+if (v < 20) v = 20;
+if (v > 200) v = 200;
+return v;
+}
+// v43.32：邊緣觸發區矩形（Trigger.plist 邊緣那套，每邊一個矩形）：
+// 寬＝距邊寬度（5–100，預設 20），高＝矩形高度（50–800；左預設 300、
+// 右預設 171.73），位置＝矩形中心的 Y%（0.05–0.95；左預設 0.77、
+// 右預設 0.84）。橫屏那組預設先跟豎屏同一組數（照片上沒拍到橫屏那頁）。
+// 取代舊的上／下觸發高度（topTriggerHeight／bottomTriggerHeight 已刪）。
+static CGRect GHCFReadTriggerZoneRect(BOOL left, BOOL landscape) {
+char key[64];
+const char *side = left ? "Left" : "Right";
+const char *orient = landscape ? "Landscape" : "Portrait";
+snprintf(key, sizeof(key), "trigger%sWidth%s", side, orient);
+double w = GHCFReadPrefsDouble(key, 20.0);
+if (w < 5) w = 5;
+if (w > 100) w = 100;
+snprintf(key, sizeof(key), "trigger%sHeight%s", side, orient);
+double h = GHCFReadPrefsDouble(key, left ? 300.0 : 171.73);
+if (h < 50) h = 50;
+if (h > 800) h = 800;
+snprintf(key, sizeof(key), "trigger%sY%s", side, orient);
+double y = GHCFReadPrefsDouble(key, left ? 0.77 : 0.84);
+if (y < 0.05) y = 0.05;
+if (y > 0.95) y = 0.95;
+CGRect sb = [UIScreen mainScreen].bounds;
+CGFloat cy = (CGFloat)(y * (double)sb.size.height);
+CGFloat x = left ? 0 : sb.size.width - (CGFloat)w;
+return CGRectMake(x, cy - (CGFloat)h / 2.0, (CGFloat)w, (CGFloat)h);
+}
+static BOOL GHCFReadWindowDragEnabled(void) {
+return GHCFReadPrefsBool("windowDragEnabled", YES);
+}
+static BOOL GHCFReadFlyTriggerDoubleTapEnabled(void) {
+return GHCFReadPrefsBool("flyTriggerDoubleTapEnabled", YES);
+}
+// v43.43（1.0.115，觸發鈕開關）：顯示開關（預設開；關了鈕藏起來）。
+static BOOL GHCFReadFlyTriggerButtonEnabled(void) {
+return GHCFReadPrefsBool("flyTriggerButtonEnabled", YES);
+}
+static double GHCFReadLongPressDuration(void) {
+double v = GHCFReadPrefsDouble("longPressDuration", 0.5);
+if (v < 0.3) v = 0.3;
+if (v > 1.0) v = 1.0;
+return v;
+}
+// v41：觸發鈕上次拖到的中心高度（沒設 = -1，%ctor 用居中）。
+static double GHCFReadFlyTriggerButtonY(void) {
+return GHCFReadPrefsDouble("flyTriggerButtonY", -1.0);
+}
+// v51：觸發鈕上次拖到的中心 x（沒設 = -1，沒拖過時落回邊緣邏輯）。
+static double GHCFReadFlyTriggerButtonX(void) {
+return GHCFReadPrefsDouble("flyTriggerButtonX", -1.0);
+}
+// ── v42：新設定鍵的讀法（全部走上面三個現成 helper） ──
+// C1 浮窗大小預設（small 280x600 / medium 350x757 / large 414x800，預設 medium；
+// 計算器在 medium 時仍用自己的 320x693，見 buildHostedWindow）。
+static int GHCFReadWindowSizePreset(void) {
+char *v = GHCFReadPrefsCString("windowSizePreset");
+int p = 1;
+if (v) {
+if (strcmp(v, "small") == 0) p = 0;
+else if (strcmp(v, "large") == 0) p = 2;
+free(v);
+}
+return p;
+}
+// C2 某 App 的窗是不是釘選（pinnedWindowIDs 清單裡有它就算；
+// 釘住的窗層級提到遊戲最前、別的窗蓋不住）。
+static BOOL GHCFIsWindowPinned(const char *bundleID) {
+if (!bundleID || bundleID[0] == '\0') return NO;
+return GHCFListContainsBid(GHCFReadIDList("pinnedWindowIDs"), bundleID);
+}
+// C4 重啟後自動恢復浮窗（預設開；scene 撐不過重啟，恢復是重建 scene 重新開 App）。
+static BOOL GHCFReadRestoreWindowsAfterRespring(void) {
+return GHCFReadPrefsBool("restoreWindowsAfterRespring", YES);
+}
+// v53：啟用分屏開關（預設關，跟設定頁預設一致；關了要真的停用——
+// v57：開關加回來（§144-1：還原 1.0.55 寫法，讀 enabled 鍵；
+// 1.0.56 取消開關時改成永遠回 YES 的寫法作廢）。
+static BOOL GHCFReadEnabled(void) {
+return GHCFReadPrefsBool("enabled", NO);
+}
+// v53：C5 全屏時觸發鈕自動藏已取消（功能＋設定行都拿掉；鈕永遠顯示）。
+// C6 鍵盤彈出時浮窗自動上移（Keyboard.plist 的 keyboardAvoidEnabled，預設開；
+// 探針：通知可能到不了 SpringBoard，見 §115）。
+static BOOL GHCFReadKeyboardAvoidEnabled(void) {
+return GHCFReadPrefsBool("keyboardAvoidEnabled", YES);
+}
+// v43.33（1.0.108，路線 A 探針）：鍵盤圖層樹探針開關（Keyboard.plist 的
+// kbProbeEnabled，預設開；關了鍵盤彈出時不打圖層樹。只記日誌，不改行為）。
+static BOOL GHCFReadKbProbeEnabled(void) {
+return GHCFReadPrefsBool("kbProbeEnabled", YES);
+}
+// v43.18：鍵盤模式合一——先讀單鍵 keyboardMode；沒有讀分向舊鍵
+// keyboardPopupModePortrait／keyboardPopupModeLandscape；再讀舊單鍵
+// keyboardPopupMode；最後預設豎屏內彈出／橫屏外彈出照舊。0＝浮窗內彈出
+//（鍵盤出現在浮窗內／浮窗為鍵盤上移）；1＝外彈出（鍵盤出現在浮窗外、
+// 浮窗不為它上移；真出浮窗外要開真外置鍵盤實驗開關，見鍵盤助手）。
+static int GHCFReadKeyboardPopupModeForOrientation(BOOL landscape) {
+char *mode = GHCFReadPrefsCString("keyboardMode");
+if (!mode) mode = GHCFReadPrefsCString(landscape ? "keyboardPopupModeLandscape" : "keyboardPopupModePortrait");
+if (!mode) mode = GHCFReadPrefsCString("keyboardPopupMode");
+int m = landscape ? 1 : 0;
+if (mode) {
+m = (strcmp(mode, "outer") == 0) ? 1 : 0;
+free(mode);
+}
+return m;
+}
+// v43.5：橫屏鍵盤彈起放大浮窗（landscapeEnlargeOnKeyboard，預設開，照 S2）。
+static BOOL GHCFReadLandscapeEnlargeOnKeyboard(void) {
+return GHCFReadPrefsBool("landscapeEnlargeOnKeyboard", YES);
+}
+// v43.18：內置模式豎屏放大開關（enlargeOnKeyboardPortrait，預設開）。
+static BOOL GHCFReadEnlargeOnKeyboardPortrait(void) {
+return GHCFReadPrefsBool("enlargeOnKeyboardPortrait", YES);
+}
+// v43.18：外置模式放大開關（enlargeOnExternalKeyboard，預設關）。
+static BOOL GHCFReadEnlargeOnExternalKeyboard(void) {
+return GHCFReadPrefsBool("enlargeOnExternalKeyboard", NO);
+}
+// C7 底部任務欄（預設關；開了 2 秒內建欄，不用 respring）。
+static BOOL GHCFReadTaskbarEnabled(void) {
+return GHCFReadPrefsBool("taskbarEnabled", NO);
+}
+// v43.16 C：任務欄位置（bottom/top，預設 bottom）、透明度（0–1 乘子，
+// 預設 1.0＝現在樣子，套在 0.85 黑底上）、大小（0.7–1.3 倍，預設 1.0＝現在尺寸）。
+static BOOL GHCFReadTaskbarIsTop(void) {
+char *v = GHCFReadPrefsCString("taskbarPosition");
+BOOL top = (v && strcmp(v, "top") == 0);
+if (v) free(v);
+return top;
+}
+static CGFloat GHCFReadTaskbarOpacity(void) {
+double v = GHCFReadPrefsDouble("taskbarOpacity", 1.0);
+if (v < 0.0) v = 0.0;
+if (v > 1.0) v = 1.0;
+return (CGFloat)v;
+}
+static CGFloat GHCFReadTaskbarScale(void) {
+double v = GHCFReadPrefsDouble("taskbarScale", 1.0);
+if (v < 0.7) v = 0.7;
+if (v > 1.3) v = 1.3;
+return (CGFloat)v;
+}
+// v43.21：任務欄樣式（taskbarStyle 字串）：nobar 無底條（預設，B：
+// 圖標直接浮著，沒底沒框）／gold 金邊膠囊（C：黑底細金邊膠囊）。
+// 未知值當預設；切換走 prefschanged → GHCFUpdateTaskbar 立刻生效。
+static int GHCFReadTaskbarStyle(void) {
+char *v = GHCFReadPrefsCString("taskbarStyle");
+int s = 0;
+if (v) {
+if (strcmp(v, "gold") == 0) s = 1;
+free(v);
+}
+return s;
+}
+// C8 浮窗透明度：全域預設（0.5–1.0，預設 1.0）與每窗值（winOpacity_<bid>，
+// 沒設就走全域；調的是窗的 alpha）。
+static CGFloat GHCFReadWindowOpacityGlobal(void) {
+double v = GHCFReadPrefsDouble("windowOpacityGlobal", 1.0);
+if (v < 0.5) v = 0.5;
+if (v > 1.0) v = 1.0;
+return (CGFloat)v;
+}
+static CGFloat GHCFReadWindowOpacityForBundleID(const char *bundleID) {
+if (!bundleID || bundleID[0] == '\0') return GHCFReadWindowOpacityGlobal();
+char key[192];
+snprintf(key, sizeof(key), "winOpacity_%s", bundleID);
+double v = GHCFReadPrefsDouble(key, -1.0);
+if (v < 0) return GHCFReadWindowOpacityGlobal();
+if (v < 0.5) v = 0.5;
+if (v > 1.0) v = 1.0;
+return (CGFloat)v;
+}
+// v53：G4 懸浮球已整個拿掉（只留一個觸發鈕按鈕）。
+// G6 低電量自動收窗（預設開）與閾值（10–30%，預設 20%）。
+static BOOL GHCFReadLowBatteryAutoDock(void) {
+return GHCFReadPrefsBool("lowBatteryAutoDock", YES);
+}
+static double GHCFReadLowBatteryThreshold(void) {
+double v = GHCFReadPrefsDouble("lowBatteryThreshold", 20.0);
+if (v < 10) v = 10;
+if (v > 30) v = 30;
+return v;
+}
+// v41：ARC 打開方式（arcOpenMode，字串：fullscreen / floating，
+// 預設 floating；橫屏下強制 floating）、ARC 圖標大小
+// （arcIconSize 40–72，預設 56）、啟動器滑出方向（arcSlideSide，左／右／
+// 從底部出，預設右）、
+// 顯示已開綠點（arcShowOpenDots，預設開）、顯示 App 名（arcShowNames，
+// 預設開）、截圖錄屏隱藏 ARC（arcHideOnScreenshot，預設開）、震動反饋
+// （arcHaptics，預設開）、觸控音效（arcTouchSound，預設開）。
+// v56：arcEdgeDistance 已刪（死設定，沒人讀）；arcColumnSide 也已刪。
+static int GHCFReadARCMenuOpenMode(void) {
+char *mode = GHCFReadPrefsCString("arcOpenMode");
+int m = 1;
+if (mode) {
+if (strcmp(mode, "fullscreen") == 0) m = 0;
+free(mode);
+}
+return m;
+}
+static CGFloat GHCFReadARCIconSize(void) {
+double v = GHCFReadPrefsDouble("arcIconSize", 56.0);
+if (v < 40) v = 40;
+if (v > 72) v = 72;
+return (CGFloat)v;
+}
+// v55：啟動器滑出方向（arcSlideSide，ARCButtons.plist）：左邊出就從左緣
+// 往裡扇、右邊出就從右緣往裡扇；沒設預設右（現有行為）。跟浮窗滑出方向
+//（floatingWindowSlideSide）是兩個設定，各管各的。
+// v43.23：第 3 件——加第三檔「從底部出」（bottom）：圓環版從底部往上展開、
+// 圓心跟觸發位置走；左／右兩檔行為不動（圓心仍是屏幕中心）。
+static int GHCFReadARCSlideSide(void) {
+char *side = GHCFReadPrefsCString("arcSlideSide");
+int s = 1;
+if (side) {
+if (strcmp(side, "left") == 0) s = 0;
+else if (strcmp(side, "bottom") == 0) s = 2;
+free(side);
+}
+return s;
+}
+static BOOL GHCFIsARCSlideLeft(void) {
+return GHCFReadARCSlideSide() == 0;
+}
+static BOOL GHCFIsARCSlideBottom(void) {
+return GHCFReadARCSlideSide() == 2;
+}
+// v54 M：ARC 層數（arcLayerCount，ARCButtons.plist）：ARC 浮窗裡 App 圖標
+// 的弧圈層數（同心弧），1–5 層，預設 2 層。改了下次開 ARC 生效
+//（rebuildARCContent 按層數排圖標，見 addARCIconsForBids）。
+// 注意：LinkList 存的是字串（"1".."5"），走字串讀法（跟 windowSizePreset
+// 同款）；GHCFReadPrefsDouble 只認 CFNumber，讀字串會永遠回預設。
+// v63：讀到的值夾到 1–5（防舊值／髒值超範圍）；陣列見 addARCIconsForBids
+//（weights／counts／rems／radii 全是 [5]，L=5 時不越界）。
+static int GHCFReadARCLayerCount(void) {
+char *v = GHCFReadPrefsCString("arcLayerCount");
+int n = 2;
+if (v) {
+if (strcmp(v, "1") == 0) n = 1;
+else if (strcmp(v, "3") == 0) n = 3;
+else if (strcmp(v, "4") == 0) n = 4;
+else if (strcmp(v, "5") == 0) n = 5;
+free(v);
+}
+if (n < 1) n = 1;
+if (n > 5) n = 5;
+return n;
+}
+// v70：浮窗退出動畫（exitAnimation 字串：island／shrink／slide／sink／
+// shatter，預設 island＝現有的彈簧滑出＋淡出）。
+static int GHCFReadExitAnimation(void) {
+char *v = GHCFReadPrefsCString("exitAnimation");
+int a = 0;
+if (v) {
+if (strcmp(v, "shrink") == 0) a = 1;
+else if (strcmp(v, "slide") == 0) a = 2;
+else if (strcmp(v, "sink") == 0) a = 3;
+else if (strcmp(v, "shatter") == 0) a = 4;
+free(v);
+}
+return a;
+}
+// v43.19：啟動器樣式七檔（launcherStyle 字串）：radial 圓環（預設）、
+// sidebar 側邊欄、drawer 抽屜、carousel 橫向輪盤、tile 磁貼、trollfan 扇形轉盤
+//（1.0.110，v43.37：撥動轉盤切頁，見 handleDialPan:）、dial 表盘启动器
+//（1.0.115，v43.42：照 TrollOpen 参考图／影片的排布，见 addDialLauncherIconsForBids）。
+// grid 已刪——存過的 "grid" 和未知值都當 radial（舊格狀用戶遷回圓環）。
+static int GHCFReadLauncherStyle(void) {
+char *v = GHCFReadPrefsCString("launcherStyle");
+int s = 0;
+if (v) {
+if (strcmp(v, "sidebar") == 0) s = 1;
+else if (strcmp(v, "drawer") == 0) s = 2;
+else if (strcmp(v, "carousel") == 0) s = 3;
+else if (strcmp(v, "tile") == 0) s = 4;
+else if (strcmp(v, "trollfan") == 0) s = 5;
+else if (strcmp(v, "dial") == 0) s = 6;
+free(v);
+}
+return s;
+}
+static BOOL GHCFReadLauncherStyleRadial(void) {
+return GHCFReadLauncherStyle() == 0;
+}
+// v43.37（1.0.110，扇形轉盤）：trollfan 樣式才走轉盤（1.0.107 e4af0c0 拿回來）。
+static BOOL GHCFReadLauncherStyleTrollFan(void) {
+return GHCFReadLauncherStyle() == 5;
+}
+// v43.42（1.0.115，表盘启动器）：第 7 档 dial 才走表盘排布。
+static BOOL GHCFReadLauncherStyleDial(void) {
+return GHCFReadLauncherStyle() == 6;
+}
+// 扇形轉盤開關（trollfan 樣式才用；預設開）。
+static BOOL GHCFReadCarouselEnabled(void) {
+return GHCFReadPrefsBool("dialEnabled", YES);
+}
+// 轉盤專用震動／音效（跟 1.0.99 的 arcHaptics／arcTouchSound 分開，
+// 只管轉盤轉動與選中；音效走 dialSoundChoice 12 選一，預設水滴 1057）。
+static BOOL GHCFReadDialHapticEnabled(void) {
+return GHCFReadPrefsBool("dialHapticEnabled", YES);
+}
+// 轉盤震動強度：字串 "heavy"/"medium"/"light"，預設 "medium"；
+// 回 2 重／1 中／0 輕（UIImpactFeedbackStyle 對應值）。
+static int GHCFReadDialHapticStyle(void) {
+char *s = GHCFReadPrefsCString("dialHapticStrength");
+int style = 1;
+if (s) {
+if (strcmp(s, "heavy") == 0) style = 2;
+else if (strcmp(s, "light") == 0) style = 0;
+free(s);
+}
+return style;
+}
+static BOOL GHCFReadDialSoundEnabled(void) {
+return GHCFReadPrefsBool("dialSoundEnabled", YES);
+}
+// v43.42（1.0.115，轉盤音效 12 選一）：dialSoundChoice 字串 → 系統音效 ID。
+// 預設 drop（1057 Tink，清脆高亮的水滴聲，比舊 1104 Tock 響得多）；
+// 沒設／不認識的值也回 1057，保證預設音一定響。映射是最佳推測，
+// 皇上在真機上按耳朵挑。
+static SystemSoundID GHCFReadDialSoundID(void) {
+char *s = GHCFReadPrefsCString("dialSoundChoice");
+SystemSoundID sid = 1057;
+if (s) {
+if (strcmp(s, "drop") == 0) sid = 1057;
+else if (strcmp(s, "bucket") == 0) sid = 1111;
+else if (strcmp(s, "default") == 0) sid = 1104;
+else if (strcmp(s, "sent") == 0) sid = 1004;
+else if (strcmp(s, "received") == 0) sid = 1003;
+else if (strcmp(s, "touch") == 0) sid = 1156;
+else if (strcmp(s, "gear") == 0) sid = 1107;
+else if (strcmp(s, "tick") == 0) sid = 1155;
+else if (strcmp(s, "bubble") == 0) sid = 1106;
+else if (strcmp(s, "glass") == 0) sid = 1000;
+else if (strcmp(s, "woodblock") == 0) sid = 1110;
+else if (strcmp(s, "crisp") == 0) sid = 1108;
+free(s);
+}
+return sid;
+}
+// v43.42（1.0.115，表盘启动器，导航台设置）：只定义这版用到的读值器；
+// 指针加速（dialPointerAccel，默认 2.00）、圆形中心裁剪
+//（dialCircleCenterCrop，默认 0.04）、首行应用（dialFirstRowApps，
+// 默认 4）三项只存设定值，含义待真机对照 TrollOpen 再定，这版不驱动排布
+//（首行 4 若硬塞进最内圈会跟参考图冲突——参考最内圈只有 1 颗）。
+static BOOL GHCFReadDialModeEnabled(void) {
+return GHCFReadPrefsBool("dialMode", YES);
+}
+static BOOL GHCFReadDialCentered(void) {
+return GHCFReadPrefsBool("dialCentered", YES);
+}
+static BOOL GHCFReadDialHidePointer(void) {
+return GHCFReadPrefsBool("dialHidePointer", NO);
+}
+static BOOL GHCFReadDialGradientBg(void) {
+return GHCFReadPrefsBool("dialGradientBg", YES);
+}
+static BOOL GHCFReadDialCircleBg(void) {
+return GHCFReadPrefsBool("dialCircleBg", YES);
+}
+static double GHCFReadDialCircleBgOpacity(void) {
+double v = GHCFReadPrefsDouble("dialCircleBgOpacity", 0.40);
+if (v < 0.05) v = 0.05;
+if (v > 1.0) v = 1.0;
+return v;
+}
+static double GHCFReadDialIconSize(void) {
+double v = GHCFReadPrefsDouble("dialIconSize", 36.0);
+if (v < 28.0) v = 28.0;
+if (v > 64.0) v = 64.0;
+return v;
+}
+static double GHCFReadDialElementSpacing(void) {
+double v = GHCFReadPrefsDouble("dialElementSpacing", 8.0);
+if (v < 0.0) v = 0.0;
+if (v > 24.0) v = 24.0;
+return v;
+}
+// v43.37（1.0.110，扇形轉盤）：轉盤專用 tick 反饋——震動強度走
+// dialHapticStrength（重／中／輕），音效走 dialSoundChoice 12 選一
+//（GHCFReadDialSoundID，預設水滴 1057 Tink）。
+// v43.42（1.0.115）：舊 1104 是鍵盤 Tock，又短又輕，皇上在真機上聽不見
+//（只感到震動）；預設改成 1057 Tink，響亮得多，另加 12 選一讓皇上按耳朵挑。
+// 放 readers 後面（它讀 prefs，定義要在 readers 之後）。
+static void GHCFDialTickFeedback(void) {
+if (GHCFReadDialHapticEnabled()) {
+@try {
+UIImpactFeedbackStyle style = UIImpactFeedbackStyleMedium;
+int s = GHCFReadDialHapticStyle();
+if (s == 2) style = UIImpactFeedbackStyleHeavy;
+else if (s == 0) style = UIImpactFeedbackStyleLight;
+UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:style];
+[haptic impactOccurred];
+} @catch (NSException *e) {
+(void)e;
+}
+}
+if (GHCFReadDialSoundEnabled()) {
+AudioServicesPlaySystemSound(GHCFReadDialSoundID());
+}
+}
+// v70：浮窗大小百分比（windowSizePercent 50–100，預設 100（1.0.80 改回：
+// 55 太小，Lee 要上一版的尺寸；v43.3 曾照 S2 值改成 55）；夾住）。
+static CGFloat GHCFReadWindowSizePercent(void) {
+double v = GHCFReadPrefsDouble("windowSizePercent", 100.0);
+if (v < 50.0) v = 50.0;
+if (v > 100.0) v = 100.0;
+return (CGFloat)v;
+}
+// v43.32：上／下触发高度已删——触发区改走 Trigger.plist 边缘那套
+// 每边一个矩形（GHCFReadTriggerZoneRect），见上面触发读值那组。
+// v43.3：上甩速度阈值（flickUpThreshold，0–100 S2 刻度，预设 40）：
+// 浮窗往上甩的速度门槛，换算成 pt/s 是设定值 ×25（40 → 1000 pt/s，
+// 一次干脆利落的上甩）；行为在 handleTitleDrag。
+static CGFloat GHCFReadFlickUpVelocityThreshold(void) {
+double v = GHCFReadPrefsDouble("flickUpThreshold", 40.0);
+if (v < 0) v = 0;
+if (v > 100) v = 100;
+return (CGFloat)(v * 25.0);
+}
+// v43.3：浮窗数量上限（windowCap，1–12，预设 8）：同时活著的浮窗
+// 最多几个；超了最久没动的自动收成小卡（GHLSEnforceWindowCap）。
+static int GHCFReadWindowCap(void) {
+double v = GHCFReadPrefsDouble("windowCap", 8.0);
+if (v < 1) v = 1;
+if (v > 12) v = 12;
+return (int)lround(v);
+}
+static BOOL GHCFReadARCShowOpenDots(void) {
+return GHCFReadPrefsBool("arcShowOpenDots", YES);
+}
+static BOOL GHCFReadARCShowNames(void) {
+return GHCFReadPrefsBool("arcShowNames", YES);
+}
+static BOOL GHCFReadARCHideOnScreenshot(void) {
+return GHCFReadPrefsBool("arcHideOnScreenshot", YES);
+}
+static BOOL GHCFReadARCHaptics(void) {
+return GHCFReadPrefsBool("arcHaptics", YES);
+}
+static BOOL GHCFReadARCTouchSound(void) {
+return GHCFReadPrefsBool("arcTouchSound", YES);
+}
+// v43.24：第 5 件——啟動器點按回饋（輕震＋系統點按音），六檔共用：震動走現成
+// arcHaptics 開關（不新開關、不動 Lee 的開關值），音效走現成 arcTouchSound 開關。
+static void GHCFLauncherTapFeedback(void) {
+if (GHCFReadARCHaptics()) {
+@try {
+UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+[haptic impactOccurred];
+} @catch (NSException *e) {
+(void)e;
+}
+}
+if (GHCFReadARCTouchSound()) {
+AudioServicesPlaySystemSound(1104);
+}
+}
+// v41：陰影細項（透明度 0–1 預設 0.5、半徑 0–30 預設 12）、通知橫幅
+// 顯示時長（1–3 秒，預設 1.5）、
+// 觸發鈕大小（44–72 預設 56）、左右邊（flyTriggerSide，沒設就跟小窗
+// 位置）；鈕顯示開關（flyTriggerButtonEnabled，預設開，v43.43 加回——v52
+// 拿掉過，皇上 17:27 要加進 1.0.115）。鍵盤/相機兩個開關只存偏好
+// （見 BUILD_LOG §113：鍵盤在浮窗內的表現、相機授權都不是這個開關能直接改的，誠實記為待真機驗證/未實作）。
+static CGFloat GHCFReadShadowOpacity(void) {
+double v = GHCFReadPrefsDouble("shadowOpacity", 0.5);
+if (v < 0) v = 0;
+if (v > 1) v = 1;
+return (CGFloat)v;
+}
+static CGFloat GHCFReadShadowRadius(void) {
+double v = GHCFReadPrefsDouble("shadowRadius", 12.0);
+if (v < 0) v = 0;
+if (v > 30) v = 30;
+return (CGFloat)v;
+}
+static double GHCFReadBannerDuration(void) {
+double v = GHCFReadPrefsDouble("bannerDuration", 1.5);
+if (v < 1.0) v = 1.0;
+if (v > 3.0) v = 3.0;
+return v;
+}
+static CGFloat GHCFReadFlyTriggerIconSize(void) {
+double v = GHCFReadPrefsDouble("flyTriggerIconSize", 56.0);
+if (v < 44) v = 44;
+if (v > 72) v = 72;
+return (CGFloat)v;
+}
+static BOOL GHCFIsFlyTriggerSideLeft(void) {
+char *side = GHCFReadPrefsCString("flyTriggerSide");
+BOOL isLeft = NO;
+if (side) {
+isLeft = (strcmp(side, "left") == 0);
+free(side);
+} else {
+isLeft = GHCFIsWindowPositionLeft();
+}
+return isLeft;
+}
+// v46：cameraPermissionEnabled 只存偏好（設定頁讀寫），主插件裡沒有
+// 地方用它——這裡不寫讀值 helper，免得 -Wunused-function 報錯；
+// 鍵照樣在 Other.plist 裡，設定頁照常讀寫，頁腳老實寫明它修不好相機。
+// keyboardAvoidEnabled 有讀值 helper（上面 C6），鍵盤處理裡有讀，是探針。
+
+// v40：写一个 prefs 数字（CFPreferencesSetAppValue + 同步，立刻落盘；
+// 零字面量规则：key 与 domain 都用 CFStringCreateWithCString 现做）。
+static void GHCFWritePrefsDouble(const char *key, double value) {
+if (!key) return;
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+if (domain && keyRef) {
+CFNumberRef num = CFNumberCreate(NULL, kCFNumberDoubleType, &value);
+if (num) {
+CFPreferencesSetAppValue(keyRef, num, domain);
+CFRelease(num);
+}
+CFPreferencesAppSynchronize(domain);
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+}
+
+// v40：记位置/大小的键——"geo" + App 前缀 + 字段（例："geoCalculatorX"、
+// "geoCalculatorScale"）。字段：X、Y（窗中心）、W、H（窗尺寸）、Scale（缩放）。
+// v41：前 5 個固定 App 用上面那張前綴表；自選槽位（idx>=5）用
+// "geoCustom<槽號>" 當前綴（例："geoCustom5X"），不依賴 bundle ID，
+// 換了 App 也認得回來。
+static void GHCFGeoKeyForIndex(int idx, const char *field, char *buf, size_t bufSize) {
+if (idx < 0 || idx >= GHCFAppCount || !field || !buf || bufSize == 0) {
+if (buf && bufSize > 0) buf[0] = '\0';
+return;
+}
+if (idx < 5) {
+snprintf(buf, bufSize, "geo%s%s", GHCFGeoAppKeys[idx], field);
+} else {
+snprintf(buf, bufSize, "geoCustom%d%s", idx - 5, field);
+}
+}
+
+// v40：把第 idx 个 App 的窗口位置/大小/缩放存进 prefs（拖动结束、
+// 缩放改变、收起/关窗、调尺寸结束时调）。存的是窗中心 (x,y) + 窗尺寸
+// (w,h) + scale；没有窗就不存。活动窗的 scale 用活动量（缓存里的
+// scaleRatio 可能还没同步滑杆的最新值）。
+static void GHCFSaveGeometryForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+UIWindow *w = GHCFCacheWindows[idx];
+if (!w) return;
+char key[64];
+CGPoint c = w.center;
+CGSize s = w.bounds.size;
+CGFloat scale = GHCFCacheScaleRatios[idx];
+if (idx == GHCFActiveAppIndex && GHCFHostedScaleRatio > 0) scale = GHCFHostedScaleRatio;
+if (scale <= 0) scale = 1.0;
+// v53：豎屏固定中心開著時也記尺寸（只記 W/H/Scale，不記 X/Y）——
+// 主窗拖調尺寸後要記住（皇上 23:45）；位置照舊不記，開窗仍居中。
+// 以前整條不記（16.log／17.log 共 70 次 geometry not saved），
+// 拖完的尺寸、恢復的尺寸全丟了。
+if (GHCFReadCenterOnOpen()) {
+GHCFGeoKeyForIndex(idx, "W", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)s.width);
+GHCFGeoKeyForIndex(idx, "H", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)s.height);
+GHCFGeoKeyForIndex(idx, "Scale", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)scale);
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 geometry saved size only %s %dx%d scale %d%%", GHCFCacheBundleIDs[idx], (int)s.width, (int)s.height, (int)(scale * 100.0));
+GHCFLogLine(buf);
+return;
+}
+GHCFGeoKeyForIndex(idx, "X", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)c.x);
+GHCFGeoKeyForIndex(idx, "Y", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)c.y);
+GHCFGeoKeyForIndex(idx, "W", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)s.width);
+GHCFGeoKeyForIndex(idx, "H", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)s.height);
+GHCFGeoKeyForIndex(idx, "Scale", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)scale);
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 geometry saved %s %dx%d scale %d%%", GHCFCacheBundleIDs[idx], (int)s.width, (int)s.height, (int)(scale * 100.0));
+GHCFLogLine(buf);
+}
+
+// v40：读第 idx 个 App 存过的位置/大小/缩放（有存过就回 YES，输出
+// 中心/尺寸/缩放；没存过、或尺寸不合法就回 NO，走默认+错位）。
+// W、H 没存过时读到 0（默认 0），尺寸下限 200x300（调尺寸的下限），
+// 小于它就是没存过。中心没存过时读到 0，恢复处会夹到屏幕内。
+static BOOL GHCFRestoreGeometryForIndex(int idx, CGFloat *outCX, CGFloat *outCY, CGFloat *outW, CGFloat *outH, CGFloat *outScale) {
+if (idx < 0 || idx >= GHCFAppCount) return NO;
+char key[64];
+double w = 0, h = 0;
+GHCFGeoKeyForIndex(idx, "W", key, sizeof(key));
+w = GHCFReadPrefsDouble(key, 0);
+GHCFGeoKeyForIndex(idx, "H", key, sizeof(key));
+h = GHCFReadPrefsDouble(key, 0);
+if (w < 200.0 || h < 300.0) return NO;
+double cx = 0, cy = 0, scale = 1.0;
+GHCFGeoKeyForIndex(idx, "X", key, sizeof(key));
+cx = GHCFReadPrefsDouble(key, 0);
+GHCFGeoKeyForIndex(idx, "Y", key, sizeof(key));
+cy = GHCFReadPrefsDouble(key, 0);
+GHCFGeoKeyForIndex(idx, "Scale", key, sizeof(key));
+scale = GHCFReadPrefsDouble(key, 1.0);
+if (scale < 0.5) scale = 0.5;
+if (scale > 2.0) scale = 2.0;
+if (outCX) *outCX = (CGFloat)cx;
+if (outCY) *outCY = (CGFloat)cy;
+if (outW) *outW = (CGFloat)w;
+if (outH) *outH = (CGFloat)h;
+if (outScale) *outScale = (CGFloat)scale;
+return YES;
+}
+
+
+// v42.3：每 App 的小窗（peek）尺寸——存 prefs（鍵 geo<前綴>PeekW/PeekH，
+// 跟記位置一樣 per-App，GHCFGeoKeyForIndex 同一個做法）。沒存過就回預設
+// 112x242；夾在 [112, 屏寬-4] x [242, 屏高-4]（收成 peek 時讀，拖完記）。
+static void GHCFPeekSizeForIndex(int idx, CGFloat *outW, CGFloat *outH) {
+CGFloat w = GHCF_DOCK_PEEK_W;
+CGFloat h = GHCF_DOCK_PEEK_H;
+if (idx >= 0 && idx < GHCFAppCount) {
+char key[64];
+double v = 0;
+GHCFGeoKeyForIndex(idx, "PeekW", key, sizeof(key));
+v = GHCFReadPrefsDouble(key, 0);
+if (v >= GHCF_DOCK_PEEK_W) w = (CGFloat)v;
+GHCFGeoKeyForIndex(idx, "PeekH", key, sizeof(key));
+v = GHCFReadPrefsDouble(key, 0);
+if (v >= GHCF_DOCK_PEEK_H) h = (CGFloat)v;
+}
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+if (w > screenSize.width - 4.0) w = screenSize.width - 4.0;
+if (h > screenSize.height - 4.0) h = screenSize.height - 4.0;
+if (outW) *outW = w;
+if (outH) *outH = h;
+}
+static void GHCFSavePeekSizeForIndex(int idx, CGFloat w, CGFloat h) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+char key[64];
+GHCFGeoKeyForIndex(idx, "PeekW", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)w);
+GHCFGeoKeyForIndex(idx, "PeekH", key, sizeof(key));
+GHCFWritePrefsDouble(key, (double)h);
+}
+
+// v42.3：滿窗尺寸（小窗拖調尺寸的上限 + 升大窗的 80% 門檻）——存過的
+// 位置/大小優先，沒存過走預設內容尺寸（計算器 320x693，其他 350x757）。
+static void GHCFFullSizeForIndex(int idx, CGFloat *outW, CGFloat *outH) {
+CGFloat w = GHCF_HOSTED_CONTENT_W;
+CGFloat h = GHCF_HOSTED_CONTENT_H;
+if (idx >= 0 && idx < GHCFAppCount) {
+CGFloat geoCX, geoCY, geoW, geoH, geoScale;
+if (GHCFRestoreGeometryForIndex(idx, &geoCX, &geoCY, &geoW, &geoH, &geoScale)) {
+w = geoW;
+h = geoH;
+} else {
+CGSize def = GHCFHostedContentSizeForBundleID(GHCFCacheBundleIDs[idx]);
+w = def.width;
+h = def.height;
+}
+}
+if (outW) *outW = w;
+if (outH) *outH = h;
+}
+
+
+// v69：啟動時自愈一次——清掉已存的小窗（peek）尺寸（皇上 2026-11-16 20:47：
+// 已經開大過的 App 也要取消）。預設改 112×242 後，沒存過的直接走新預設，
+// 存的高 < 242 的讀時也會回 242；但存過且寬高都 ≥ 新下限的（拖大過的）
+// 讀時會保留、寬高比不對就還有黑條，所以一次清掉全部已存的 PeekW/PeekH
+// （寫 0＝沒存過），全部回到 112×242；以後想改大再拖。照 v53 自愈的寫法。
+static void GHCFResetStoredPeekSizesOnce(void) {
+static BOOL reset = NO;
+if (reset) return;
+reset = YES;
+int cleared = 0;
+for (int i = 0; i < GHCFAppCount; i++) {
+char key[64];
+double w = 0, h = 0;
+GHCFGeoKeyForIndex(i, "PeekW", key, sizeof(key));
+w = GHCFReadPrefsDouble(key, 0);
+GHCFGeoKeyForIndex(i, "PeekH", key, sizeof(key));
+h = GHCFReadPrefsDouble(key, 0);
+if (w > 0 || h > 0) {
+GHCFGeoKeyForIndex(i, "PeekW", key, sizeof(key));
+GHCFWritePrefsDouble(key, 0);
+GHCFGeoKeyForIndex(i, "PeekH", key, sizeof(key));
+GHCFWritePrefsDouble(key, 0);
+cleared++;
+}
+}
+if (cleared > 0) {
+char buf[128];
+snprintf(buf, sizeof(buf), "v69 stored peek sizes reset, cleared %d", cleared);
+GHCFLogLine(buf);
+}
+}
+
+// v40：点窗外事件开关（prefs 里的 tapOutsideEnabled，默认开）。
+static BOOL GHCFReadTapOutsideEnabled(void) {
+return GHCFReadPrefsBool("tapOutsideEnabled", YES);
+}
+
+// v43.24：第 6 件——取第 idx 個 App 的開關 key：固定 5 個走 app*Enabled，
+// 自選走 sel-<bundleID>（串列裡的順序換了，key 跟著 bundleID 走，不跟槽位）。
+static void GHCFAppEnabledKeyForIndex(int idx, char *buf, size_t bufSize) {
+if (!buf || bufSize == 0) return;
+buf[0] = '\0';
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (idx < 5) {
+strncpy(buf, GHCFAppEnabledKeysFixed[idx], bufSize - 1);
+buf[bufSize - 1] = '\0';
+} else {
+snprintf(buf, bufSize, "sel-%s", GHCFAppBundleIDs[idx]);
+}
+}
+// v40：这个 App 在设定页里开着没有（默认开；键不存在就回 YES）。
+static BOOL GHCFIsAppEnabled(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return NO;
+char key[160];
+GHCFAppEnabledKeyForIndex(idx, key, sizeof(key));
+if (key[0] == '\0') return NO;
+return GHCFReadPrefsBool(key, YES);
+}
+
+// ── v41：寫 prefs（BOOL / 字串） ──
+// 字串傳 NULL 或空字串 = 清掉那個鍵（CFPreferencesSetAppValue 傳 NULL
+// 就是刪除）。立刻落盤。
+static void GHCFWritePrefsBool(const char *key, BOOL value) {
+if (!key) return;
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+if (domain && keyRef) {
+CFPreferencesSetAppValue(keyRef, value ? kCFBooleanTrue : kCFBooleanFalse, domain);
+CFPreferencesAppSynchronize(domain);
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+}
+static void GHCFWritePrefsCString(const char *key, const char *value) {
+if (!key) return;
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+if (domain && keyRef) {
+if (value && value[0] != '\0') {
+CFStringRef valRef = CFStringCreateWithCString(NULL, value, kCFStringEncodingUTF8);
+if (valRef) {
+CFPreferencesSetAppValue(keyRef, valRef, domain);
+CFRelease(valRef);
+}
+} else {
+CFPreferencesSetAppValue(keyRef, NULL, domain);
+}
+CFPreferencesAppSynchronize(domain);
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+}
+
+// v43.18：這個 prefs 鍵有沒有存過值（BOOL 鍵用 CString 讀不到，用這個判）。
+static BOOL GHCFPrefsHasKey(const char *key) {
+if (!key) return NO;
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+BOOL has = NO;
+if (domain && keyRef) {
+CFPreferencesAppSynchronize(domain);
+CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+if (v) { has = YES; CFRelease(v); }
+}
+if (domain) CFRelease(domain);
+if (keyRef) CFRelease(keyRef);
+return has;
+}
+
+// v43.18：鍵盤模式合一，一次性遷移——keyboardMode 沒設過時按舊值寫：
+// 豎屏或橫屏任一是 outer 就寫 outer，否則寫 inner。皇上現在兩檔都
+// 是 outer，遷移後還是 outer，不許悄悄翻回內置（外彈鍵盤出不來的
+// 毛病還在查，蓋住不算修好）。設過就不再動（用戶之後自己改的優先）。
+static void GHCFMigrateKeyboardModeOnce(void) {
+static BOOL migrated = NO;
+if (migrated) return;
+migrated = YES;
+char *existing = GHCFReadPrefsCString("keyboardMode");
+if (existing) {
+free(existing);
+return;
+}
+BOOL outer = NO;
+char *portrait = GHCFReadPrefsCString("keyboardPopupModePortrait");
+if (portrait) {
+if (strcmp(portrait, "outer") == 0) outer = YES;
+free(portrait);
+}
+char *landscape = GHCFReadPrefsCString("keyboardPopupModeLandscape");
+if (landscape) {
+if (strcmp(landscape, "outer") == 0) outer = YES;
+free(landscape);
+}
+if (!outer) {
+char *legacy = GHCFReadPrefsCString("keyboardPopupMode");
+if (legacy) {
+if (strcmp(legacy, "outer") == 0) outer = YES;
+free(legacy);
+}
+}
+GHCFWritePrefsCString("keyboardMode", outer ? "outer" : "inner");
+// v43.18（父代理補）：遷到外置時，外置放大開關跟舊橫屏放大走——
+// 皇上現在橫屏放大是開的，遷移後外置放大也開著（新開關預設關，只管
+// 全新安裝；已經設過新開關的不動）。
+if (outer && !GHCFPrefsHasKey("enlargeOnExternalKeyboard")) {
+GHCFWritePrefsBool("enlargeOnExternalKeyboard", GHCFReadLandscapeEnlargeOnKeyboard());
+}
+char buf[128];
+snprintf(buf, sizeof(buf), "v43.18 keyboard mode migrated to %s", outer ? "outer" : "inner");
+GHCFLogLine(buf);
+}
+
+// ── v41：已安裝 App 清單（ARC 的「＋」與設定頁選擇器共用） ──
+// 緩存檔：/var/mobile/Library/Preferences/ChinaFly-apps.plist，
+// 內容是 NSArray<NSDictionary{bundleID, name}>。列舉在後台做（見下面
+// GHCFRefreshInstalledAppListInBackground），讀緩存只讀檔、很快，
+// 主線程讀沒問題。緩存不存在/空時，選擇器只列 5 個固定 App。
+// v52：列舉改走 LSApplicationWorkspace allApplications（只讀列舉；
+// openApplicationWithBundleID 仍是禁區——同步調用會堵主線程 ≥5 秒）。
+static NSString *GHCFAppListCachePath(void) {
+return [NSString stringWithCString:"/var/mobile/Library/Preferences/ChinaFly-apps.plist" encoding:NSUTF8StringEncoding];
+}
+static NSArray *GHCFCachedInstalledAppList(void) {
+NSString *path = GHCFAppListCachePath();
+if (!path) return nil;
+NSArray *list = [NSArray arrayWithContentsOfFile:path];
+if (![list isKindOfClass:[NSArray class]]) return nil;
+return list;
+}
+// 從緩存檔查一個 bundle ID 的顯示名（回傳 malloc 的 C 字串，調用處 free；
+// 查不到回 NULL）。
+static char *GHCFCachedAppNameForBundleID(const char *bundleID) {
+if (!bundleID || bundleID[0] == '\0') return NULL;
+NSArray *list = GHCFCachedInstalledAppList();
+if (!list) return NULL;
+NSString *bidKey = [NSString stringWithCString:"bundleID" encoding:NSUTF8StringEncoding];
+NSString *nameKey = [NSString stringWithCString:"name" encoding:NSUTF8StringEncoding];
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+for (id item in list) {
+if (![item isKindOfClass:[NSDictionary class]]) continue;
+NSString *itemBid = [(NSDictionary *)item objectForKey:bidKey];
+if (itemBid && [itemBid isEqualToString:bidStr]) {
+NSString *name = [(NSDictionary *)item objectForKey:nameKey];
+if (name && [name length] > 0) {
+const char *utf8 = [name UTF8String];
+if (!utf8) return NULL;
+char *out = (char *)malloc(strlen(utf8) + 1);
+if (!out) return NULL;
+strcpy(out, utf8);
+return out;
+}
+return NULL;
+}
+}
+return NULL;
+}
+// 自選 App 存在 prefs 鍵 customAppBundleIDs（逗號串起來的 bundle ID 串列，
+// 跟 pinnedAppIDs／recentAppIDs 同一套 GHCFReadIDList／GHCFWriteIDList 做法）。
+// 啟動時讀進動態串列（固定 5 個後面接自選）；舊版 customAppNBundleID 槽位
+// 第一次讀到就遷移過來（開關也一起遷成 sel-<bundleID>），遷完清掉舊鍵。
+// 啟動時調一次，ARC 打開與選完 App 後也調（立刻生效）。
+static void GHCFLoadCustomApps(void) {
+GHCFInitAppTables();
+GHCFAppCount = 5;
+BOOL migrated = NO;
+NSMutableArray *list = [NSMutableArray arrayWithArray:GHCFReadIDList("customAppBundleIDs")];
+for (int s = 0; s < 20; s++) {
+char key[32];
+snprintf(key, sizeof(key), "customApp%dBundleID", s + 1);
+char *bid = GHCFReadPrefsCString(key);
+if (bid && bid[0] != '\0') {
+NSString *bidStr = [NSString stringWithCString:bid encoding:NSUTF8StringEncoding];
+if (bidStr && ![list containsObject:bidStr]) [list addObject:bidStr];
+char selKey[160];
+snprintf(selKey, sizeof(selKey), "sel-%s", bid);
+char oldKey[32];
+snprintf(oldKey, sizeof(oldKey), "customApp%dEnabled", s + 1);
+GHCFWritePrefsBool(selKey, GHCFReadPrefsBool(oldKey, YES));
+GHCFWritePrefsCString(oldKey, NULL);
+migrated = YES;
+}
+GHCFWritePrefsCString(key, NULL);
+if (bid) free(bid);
+}
+if (migrated) GHCFWriteIDList("customAppBundleIDs", list);
+for (id item in list) {
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+if (!GHCFEnsureAppCapacity(GHCFAppCount + 1)) break;
+strncpy(GHCFAppBundleIDs[GHCFAppCount], bid, 127);
+GHCFAppBundleIDs[GHCFAppCount][127] = '\0';
+char *name = GHCFCachedAppNameForBundleID(bid);
+if (name && name[0] != '\0') {
+strncpy(GHCFAppNames[GHCFAppCount], name, 127);
+GHCFAppNames[GHCFAppCount][127] = '\0';
+free(name);
+} else {
+const char *lastDot = strrchr(bid, '.');
+const char *shortName = lastDot ? lastDot + 1 : bid;
+strncpy(GHCFAppNames[GHCFAppCount], shortName, 127);
+GHCFAppNames[GHCFAppCount][127] = '\0';
+}
+GHCFAppCount++;
+}
+GHCFSyncFrontOrderToAppCount();
+}
+// 這個 bundle ID 現在在不在啟動器裡（固定槽看 app*Enabled，自選槽看
+// customAppNEnabled；空槽不算）。
+static BOOL GHCFIsAppInLauncher(const char *bundleID) {
+if (!bundleID || bundleID[0] == '\0') return NO;
+int idx = GHCFAppIndexForBundleID(bundleID);
+if (idx < 0) return NO;
+return GHCFIsAppEnabled(idx);
+}
+// 把一個 App 加進/移出啟動器（ARC 的「＋」與設定頁選擇器共用同一份鍵，
+// 兩邊改了都同步）。固定 App 只改它的開關；自選 App：開時加進串列＋
+// sel-<bid> 開，關時從串列拿掉＋ sel-<bid> 關；沒有數量上限。
+static BOOL GHCFSetAppInLauncher(const char *bundleID, BOOL inLauncher) {
+if (!bundleID || bundleID[0] == '\0') return NO;
+GHCFInitAppTables();
+int idx = GHCFAppIndexForBundleID(bundleID);
+char buf[256];
+if (idx >= 0 && idx < 5) {
+char key[64];
+GHCFAppEnabledKeyForIndex(idx, key, sizeof(key));
+GHCFWritePrefsBool(key, inLauncher);
+snprintf(buf, sizeof(buf), "v57 app selector %s %s", bundleID, inLauncher ? "on" : "off");
+GHCFLogLine(buf);
+return YES;
+}
+if (idx >= 5) {
+char key[160];
+GHCFAppEnabledKeyForIndex(idx, key, sizeof(key));
+if (inLauncher) {
+GHCFWritePrefsBool(key, YES);
+} else {
+NSMutableArray *list = [NSMutableArray arrayWithArray:GHCFReadIDList("customAppBundleIDs")];
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+[list removeObject:bidStr];
+GHCFWriteIDList("customAppBundleIDs", list);
+GHCFWritePrefsBool(key, NO);
+GHCFLoadCustomApps();
+}
+snprintf(buf, sizeof(buf), "v57 app selector %s %s", bundleID, inLauncher ? "on" : "off");
+GHCFLogLine(buf);
+return YES;
+}
+if (!inLauncher) return YES;
+NSMutableArray *list = [NSMutableArray arrayWithArray:GHCFReadIDList("customAppBundleIDs")];
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+if (![list containsObject:bidStr]) {
+[list addObject:bidStr];
+GHCFWriteIDList("customAppBundleIDs", list);
+}
+char key[160];
+snprintf(key, sizeof(key), "sel-%s", bundleID);
+GHCFWritePrefsBool(key, YES);
+GHCFLoadCustomApps();
+snprintf(buf, sizeof(buf), "v57 app selector %s on", bundleID);
+GHCFLogLine(buf);
+return YES;
+}
+// v41：取一個 bundleID 的顯示名（啟動器槽位優先，其次緩存清單，
+// 都沒有就用 bundle ID 最後一段）。輸出寫進 out（呼叫處備好 buffer）。
+static void GHCFAppNameForBundleID(const char *bundleID, char *out, size_t outSize) {
+if (!bundleID || !out || outSize == 0) return;
+out[0] = '\0';
+int idx = GHCFAppIndexForBundleID(bundleID);
+if (idx >= 0 && GHCFAppNames[idx][0] != '\0') {
+strncpy(out, GHCFAppNames[idx], outSize - 1);
+out[outSize - 1] = '\0';
+return;
+}
+char *cached = GHCFCachedAppNameForBundleID(bundleID);
+if (cached) {
+strncpy(out, cached, outSize - 1);
+out[outSize - 1] = '\0';
+free(cached);
+return;
+}
+const char *lastDot = strrchr(bundleID, '.');
+const char *shortName = lastDot ? lastDot + 1 : bundleID;
+strncpy(out, shortName, outSize - 1);
+out[outSize - 1] = '\0';
+}
+
+// 固定 5 個在 GHCFAppBundleIDs[0..4] 的槽位號（-1 = 不是固定 App）。
+// 寫緩存時固定 5 個排最前面用。
+static int GHCFFixedSlotForBundleID(const char *bid) {
+if (!bid) return -1;
+for (int i = 0; i < 5; i++) {
+if (strcmp(GHCFAppBundleIDs[i], bid) == 0) return i;
+}
+return -1;
+}
+
+// 後台列舉已安裝 App（絕不在主線程做）。v52 改走 LSApplicationWorkspace
+// allApplications（SpringBoard 進程內、後台線程）：檔案掃描掃不到商店
+// App，/Applications 還把 AAUIViewService 這類服務當 App 列出來
+//（皇上 22:00 照片證實：選擇器裡只有 5 個固定 App＋一堆服務，
+// 沒有 QQ／微信／抖音）。只讀列舉，不調 openApplicationWithBundleID
+//（禁區——同步調用會堵主線程 ≥5 秒）。類名運行時查找
+//（objc_getClass + objc_msgSend，不連結私有框架，跟 GHCFAppIcon
+// 同一套寫法），不留 OBJC_CLASS 符號。只留有顯示名稱的 App
+//（allApplications 本來就不含服務；再防一手：bundleID／顯示名為空
+// 的不要）。固定 5 個釘在最前面，其餘按名字排。寫進緩存檔，設定頁
+// 與 ARC 選擇器共用同一份；寫完記一行日誌。
+// 若 workspace 叫不到／列出來是空的，退回檔案掃描（舊寫法），
+// 選擇器至少不空。列舉方法是探針：QQ／微信出不出來要皇上真機驗才算數。
+static void GHCFRefreshInstalledAppListInBackground(void) {
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+@try {
+NSMutableArray *apps = [NSMutableArray array];
+NSMutableSet *seenBids = [NSMutableSet set];
+NSString *cacheBidKey = [NSString stringWithCString:"bundleID" encoding:NSUTF8StringEncoding];
+NSString *cacheNameKey = [NSString stringWithCString:"name" encoding:NSUTF8StringEncoding];
+Class wsClass = objc_getClass("LSApplicationWorkspace");
+id workspace = nil;
+NSArray *allApps = nil;
+if (wsClass) {
+SEL defaultSel = sel_registerName("defaultWorkspace");
+if (defaultSel && [wsClass respondsToSelector:defaultSel]) {
+workspace = ((id (*)(id, SEL))objc_msgSend)((id)wsClass, defaultSel);
+}
+}
+if (workspace) {
+SEL allSel = sel_registerName("allApplications");
+if (allSel && [workspace respondsToSelector:allSel]) {
+allApps = ((id (*)(id, SEL))objc_msgSend)(workspace, allSel);
+}
+}
+if (allApps && [allApps isKindOfClass:[NSArray class]]) {
+SEL bidSel = sel_registerName("bundleIdentifier");
+SEL nameSel = sel_registerName("localizedName");
+for (id proxy in allApps) {
+if (!proxy) continue;
+NSString *bid = nil;
+NSString *name = nil;
+if (bidSel && [proxy respondsToSelector:bidSel]) bid = ((id (*)(id, SEL))objc_msgSend)(proxy, bidSel);
+if (nameSel && [proxy respondsToSelector:nameSel]) name = ((id (*)(id, SEL))objc_msgSend)(proxy, nameSel);
+if (!bid || ![bid isKindOfClass:[NSString class]] || [bid length] == 0) continue;
+if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) continue;
+if ([seenBids containsObject:bid]) continue;
+[seenBids addObject:bid];
+NSDictionary *item = [NSDictionary dictionaryWithObjectsAndKeys:bid, cacheBidKey, name, cacheNameKey, nil];
+[apps addObject:item];
+}
+}
+if ([apps count] == 0) {
+// workspace 沒給東西，退回檔案掃描（舊寫法）：讀 /Applications 與
+// /var/mobile/Containers/Bundle/Application 下面每個 .app 的 Info.plist。
+NSFileManager *fm = [NSFileManager defaultManager];
+NSString *appsDir = [NSString stringWithCString:"/Applications" encoding:NSUTF8StringEncoding];
+NSString *containersDir = [NSString stringWithCString:"/var/mobile/Containers/Bundle/Application" encoding:NSUTF8StringEncoding];
+NSString *appSuffix = [NSString stringWithCString:".app" encoding:NSUTF8StringEncoding];
+NSString *infoName = [NSString stringWithCString:"Info.plist" encoding:NSUTF8StringEncoding];
+NSString *bidKey = [NSString stringWithCString:"CFBundleIdentifier" encoding:NSUTF8StringEncoding];
+NSString *displayKey = [NSString stringWithCString:"CFBundleDisplayName" encoding:NSUTF8StringEncoding];
+NSString *nameKey2 = [NSString stringWithCString:"CFBundleName" encoding:NSUTF8StringEncoding];
+NSArray *dirs = [NSArray arrayWithObjects:appsDir, containersDir, nil];
+for (NSString *dir in dirs) {
+NSArray *entries = [fm contentsOfDirectoryAtPath:dir error:nil];
+if (!entries) continue;
+for (NSString *entry in entries) {
+NSString *entryPath = [dir stringByAppendingPathComponent:entry];
+BOOL isDir = NO;
+if (![fm fileExistsAtPath:entryPath isDirectory:&isDir] || !isDir) continue;
+NSString *appPath = nil;
+if ([entry hasSuffix:appSuffix]) {
+appPath = entryPath;
+} else {
+NSArray *inner = [fm contentsOfDirectoryAtPath:entryPath error:nil];
+for (NSString *innerEntry in inner) {
+if ([innerEntry hasSuffix:appSuffix]) {
+appPath = [entryPath stringByAppendingPathComponent:innerEntry];
+break;
+}
+}
+}
+if (!appPath) continue;
+NSString *infoPath = [appPath stringByAppendingPathComponent:infoName];
+NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
+if (!info) continue;
+NSString *bid = [info objectForKey:bidKey];
+if (!bid || [bid length] == 0) continue;
+if ([seenBids containsObject:bid]) continue;
+NSString *name = [info objectForKey:displayKey];
+if (!name || [name length] == 0) name = [info objectForKey:nameKey2];
+if (!name || [name length] == 0) name = [appPath lastPathComponent];
+[seenBids addObject:bid];
+NSDictionary *item = [NSDictionary dictionaryWithObjectsAndKeys:bid, cacheBidKey, name, cacheNameKey, nil];
+[apps addObject:item];
+}
+}
+GHCFLogLine("v57 installed apps fallback to disk scan");
+}
+[apps sortUsingComparator:^NSComparisonResult(id a, id b) {
+NSString *ba = [(NSDictionary *)a objectForKey:cacheBidKey];
+NSString *bb = [(NSDictionary *)b objectForKey:cacheBidKey];
+int ia = (ba) ? GHCFFixedSlotForBundleID([ba UTF8String]) : -1;
+int ib = (bb) ? GHCFFixedSlotForBundleID([bb UTF8String]) : -1;
+if (ia >= 0 && ib >= 0) return (ia < ib) ? NSOrderedAscending : ((ia > ib) ? NSOrderedDescending : NSOrderedSame);
+if (ia >= 0) return NSOrderedAscending;
+if (ib >= 0) return NSOrderedDescending;
+NSString *na = [(NSDictionary *)a objectForKey:cacheNameKey];
+NSString *nb = [(NSDictionary *)b objectForKey:cacheNameKey];
+if (!na) return NSOrderedAscending;
+if (!nb) return NSOrderedDescending;
+return [na localizedCaseInsensitiveCompare:nb];
+}];
+NSString *cachePath = GHCFAppListCachePath();
+if (cachePath) [apps writeToFile:cachePath atomically:YES];
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 installed apps cached %lu", (unsigned long)[apps count]);
+GHCFLogLine(buf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 installed apps scan failed");
+}
+});
+}
+
+// v40：小窗显示位置是不是左侧（prefs 里的 windowPosition，
+// "left" 或 "right"，默认 "right"；不是 "left" 就当右側）。
+static BOOL GHCFIsWindowPositionLeft(void) {
+char *pos = GHCFReadPrefsCString("windowPosition");
+BOOL isLeft = (pos && strcmp(pos, "left") == 0);
+if (pos) free(pos);
+return isLeft;
+}
+
+// v54：浮窗滑出方向（floatingWindowSlideSide，Window.plist）：開窗從哪邊滑
+// 進來、peek 貼哪邊。預設右（現有行為）。小窗顯示位置（windowPosition，
+// 見 GHCFIsWindowPositionLeft）是另一個設定。
+static BOOL GHCFIsFloatingWindowSlideLeft(void) {
+char *side = GHCFReadPrefsCString("floatingWindowSlideSide");
+BOOL isLeft = (side && strcmp(side, "left") == 0);
+if (side) free(side);
+return isLeft;
+}
+
+// v41：貼邊 peek 的 x（右：屏寬 - peek 寬 - 邊距；左：邊距）。重排
+// 與收起都用它，跟浮窗滑出方向設定走。
+// v42.3：小窗寬度每 App 各記各的，x 跟著寬度走。
+static CGFloat GHCFDockPeekXForWidth(CGFloat peekW) {
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+if (GHCFIsFloatingWindowSlideLeft()) return 2.0;
+return screenBounds.size.width - peekW - 2.0;
+}
+
+// v43.40（1.0.113）：清調試畫布的安全寫法——先拆子視圖（UIView 拆掉時
+// UIKit 自己把它的 backing layer 從圖層樹上摘掉），再清剩下的獨立圖層
+// （ARC 扇形那個 CAShapeLayer 不是任何視圖的 backing layer，直接摘是對的；
+// 用 delegate 是不是 UIView 來認，delegate 是 nil 或非視圖才摘）。
+// 舊寫法先對全部 sublayers 調 removeFromSuperlayer，會把活 UIView 的
+// backing layer 直接從圖層樹上摘掉（UIKit 不支援這麼幹），再調
+// removeFromSuperview 時視圖／圖層已經不同步——第一次真拆沒死、第二次真拆
+// 就把 SpringBoard 帶走（兩份日誌都死在第二次真拆）。
+static void GHCFClearDebugCanvas(void) {
+if (!GHCFDebugTriggerView) return;
+for (UIView *sv in [[GHCFDebugTriggerView subviews] copy]) [sv removeFromSuperview];
+CALayer *dbgLayer = GHCFDebugTriggerView.layer;
+if (!dbgLayer) return;
+for (CALayer *ly in [[dbgLayer sublayers] copy]) {
+if (ly && ![ly.delegate isKindOfClass:[UIView class]]) [ly removeFromSuperlayer];
+}
+}
+
+// v43.32：调试模式画触发区——按当前触发方式画：ARC 画扇形（中心屏幕中心，
+// 半径 min(宽,高)/2-20，起始角＋扇角）、边缘画左右矩形（每边一个矩形，
+// 只画触发侧选中的边）、悬浮条画一条竖条（位置 Y%、大小是条长，边跟触发侧
+// 走，双侧画左边）。窗不接手势（userInteractionEnabled=NO），改设定就重画
+//（prefschanged／感应带重定位时都调）。关了／分屏关了就藏窗。
+static void GHCFUpdateTriggerDebugOverlay(void) {
+if (!GHCFDebugTriggerWindow || !GHCFDebugTriggerView) return;
+@try {
+// v43.39：被挡闪框优先——调试开关关着时也画，只画被滑的那一侧
+// （重用调试画法的红框；闪完由 GHCFFlashTriggerZone 的收尾再调一次
+// 本函数，恢复常态画法）。
+if (GHCFFlashZoneSide >= 0) {
+CGRect sb = [UIScreen mainScreen].bounds;
+GHCFDebugTriggerWindow.frame = sb;
+GHCFDebugTriggerView.frame = CGRectMake(0, 0, sb.size.width, sb.size.height);
+GHCFClearDebugCanvas();
+BOOL landscape = sb.size.height < sb.size.width;
+CGRect z = GHCFReadTriggerZoneRect(GHCFFlashZoneSide == 0, landscape);
+UIView *box = [[UIView alloc] initWithFrame:z];
+box.backgroundColor = [[UIColor redColor] colorWithAlphaComponent:0.15];
+box.layer.borderColor = [UIColor redColor].CGColor;
+box.layer.borderWidth = 1.0;
+[GHCFDebugTriggerView addSubview:box];
+GHCFDebugTriggerWindow.hidden = NO;
+char dbuf[160];
+snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay flash side=%s frame=%.0f,%.0f,%.0f,%.0f", GHCFFlashZoneSide == 0 ? "left" : "right", z.origin.x, z.origin.y, z.size.width, z.size.height);
+GHCFLogLine(dbuf);
+return;
+}
+if (!GHCFReadTriggerDebugMode() || !GHCFReadEnabled()) {
+GHCFDebugTriggerWindow.hidden = YES;
+return;
+}
+CGRect sb = [UIScreen mainScreen].bounds;
+GHCFDebugTriggerWindow.frame = sb;
+GHCFDebugTriggerView.frame = CGRectMake(0, 0, sb.size.width, sb.size.height);
+GHCFClearDebugCanvas();
+UIColor *fill = [[UIColor redColor] colorWithAlphaComponent:0.15];
+UIColor *edge = [UIColor redColor];
+int mode = GHCFReadTriggerMode();
+if (mode == 1) {
+// 边缘：每边一个矩形（竖屏／横屏按当前方向取组）。
+BOOL landscape = sb.size.height < sb.size.width;
+int side = GHCFReadTriggerSide();
+if (side == 0 || side == 2) {
+CGRect z = GHCFReadTriggerZoneRect(YES, landscape);
+UIView *box = [[UIView alloc] initWithFrame:z];
+box.backgroundColor = fill;
+box.layer.borderColor = edge.CGColor;
+box.layer.borderWidth = 1.0;
+[GHCFDebugTriggerView addSubview:box];
+char dbuf[160];
+snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay edge left frame=%.0f,%.0f,%.0f,%.0f", z.origin.x, z.origin.y, z.size.width, z.size.height);
+GHCFLogLine(dbuf);
+}
+if (side == 1 || side == 2) {
+CGRect z = GHCFReadTriggerZoneRect(NO, landscape);
+UIView *box = [[UIView alloc] initWithFrame:z];
+box.backgroundColor = fill;
+box.layer.borderColor = edge.CGColor;
+box.layer.borderWidth = 1.0;
+[GHCFDebugTriggerView addSubview:box];
+char dbuf[160];
+snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay edge right frame=%.0f,%.0f,%.0f,%.0f", z.origin.x, z.origin.y, z.size.width, z.size.height);
+GHCFLogLine(dbuf);
+}
+} else if (mode == 0) {
+// ARC：扇形（起始角从右侧基准逆时针算，扇角是整扇跨度，跟转盘同一套数）。
+CGPoint c = CGPointMake(sb.size.width / 2.0, sb.size.height / 2.0);
+CGFloat r = MIN(sb.size.width, sb.size.height) / 2.0 - 20.0;
+if (r < 40.0) r = 40.0;
+double start = -GHCFReadARCStartAngle() * M_PI / 180.0;
+double span = GHCFReadARCFanAngle() * M_PI / 180.0;
+UIBezierPath *p = [UIBezierPath bezierPath];
+[p moveToPoint:c];
+[p addArcWithCenter:c radius:r startAngle:start endAngle:start - span clockwise:NO];
+[p closePath];
+CAShapeLayer *layer = [CAShapeLayer layer];
+layer.path = p.CGPath;
+layer.fillColor = fill.CGColor;
+layer.strokeColor = edge.CGColor;
+layer.lineWidth = 1.0;
+[GHCFDebugTriggerView.layer addSublayer:layer];
+char dbuf[160];
+snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay arc center=%.0f,%.0f r=%.0f", c.x, c.y, r);
+GHCFLogLine(dbuf);
+} else {
+// 悬浮条：一条竖条（宽 12，长度＝大小，中心 Y＝位置 Y%×屏高；
+// 边跟触发侧走，双侧画左边）。
+double y = GHCFReadFloatingBarY();
+double len = GHCFReadFloatingBarSize();
+int side = GHCFReadTriggerSide();
+CGFloat bx = (side == 1) ? sb.size.width - 12.0 : 0;
+CGFloat by = (CGFloat)(y * (double)sb.size.height) - (CGFloat)len / 2.0;
+UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(bx, by, 12.0, (CGFloat)len)];
+bar.backgroundColor = fill;
+bar.layer.borderColor = edge.CGColor;
+bar.layer.borderWidth = 1.0;
+bar.layer.cornerRadius = 6.0;
+[GHCFDebugTriggerView addSubview:bar];
+char dbuf[160];
+snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay bar side=%s frame=%.0f,%.0f,%.0f,%.0f", side == 1 ? "right" : "left", bar.frame.origin.x, bar.frame.origin.y, bar.frame.size.width, bar.frame.size.height);
+GHCFLogLine(dbuf);
+}
+GHCFDebugTriggerWindow.hidden = NO;
+} @catch (NSException *e) {
+const char *r = e.reason ? [e.reason UTF8String] : "n/a";
+char ebuf[256];
+snprintf(ebuf, sizeof(ebuf), "v43.40 debug overlay error: %s", r ? r : "n/a");
+GHCFLogLine(ebuf);
+if (GHCFDebugTriggerWindow) GHCFDebugTriggerWindow.hidden = YES;
+}
+}
+
+// v43.39：被挡闪框——边缘滑动起手 Y 落在触发区外面时，闪一下被滑那侧
+// 的触发区矩形（重用调试画法的红框，约 1.5 秒自收；调试开关关着时也闪，
+// 只闪被滑的那一侧）＋一下轻震（沿用 ARC 震动开关）。闪完调一次
+// GHCFUpdateTriggerDebugOverlay() 恢复常态（调试开着就画回调试框，
+// 关着就藏窗）；1.5 秒内再被挡就重开一轮，旧的收尾凭世代号让路。
+static void GHCFFlashTriggerZone(BOOL fromLeft) {
+if (!GHCFDebugTriggerWindow || !GHCFDebugTriggerView) return;
+GHCFFlashZoneSide = fromLeft ? 0 : 1;
+GHCFFlashZoneGen++;
+int gen = GHCFFlashZoneGen;
+GHCFUpdateTriggerDebugOverlay();
+if (GHCFReadARCHaptics()) {
+@try {
+UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+[haptic impactOccurred];
+} @catch (NSException *e) {
+(void)e;
+}
+}
+char dbuf[160];
+snprintf(dbuf, sizeof(dbuf), "v43.39 trigger zone flash side=%s gen=%d", fromLeft ? "left" : "right", gen);
+GHCFLogLine(dbuf);
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+if (gen != GHCFFlashZoneGen) return;
+GHCFFlashZoneSide = -1;
+GHCFUpdateTriggerDebugOverlay();
+GHCFLogLine("v43.39 trigger zone flash done");
+});
+}
+
+// v40：感应带跟小窗位置设定走（左/右）。%ctor 建带时调一次（初始位置）；
+// showLauncher 也调（设定改了，下次开启动器时带子就跟到对的边；
+// 觸發鈕一直在右邊，永遠能開啟動器）。带子 24pt 宽、全高。
+// v43.32：触发侧三段（edgeSwipeSide，默认双侧）——左右各一条带子，
+// 各挂自己的边缘滑动手势（左带 edges=Left，右带 edges=Right）；
+// 只显示触发侧选中的边（左／右／双侧）。旧的单带＋改 edges 写法拿掉。
+static void GHCFUpdateStripPosition(void) {
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat stripWidth = 24.0;
+int side = GHCFReadTriggerSide();
+BOOL showLeft = (side == 0 || side == 2);
+BOOL showRight = (side == 1 || side == 2);
+if (GHCFStripWindow) {
+GHCFStripWindow.frame = CGRectMake(screenBounds.size.width - stripWidth, 0, stripWidth, screenBounds.size.height);
+GHCFStripWindow.hidden = !showRight;
+}
+if (GHCFStripWindowLeft) {
+GHCFStripWindowLeft.frame = CGRectMake(0, 0, stripWidth, screenBounds.size.height);
+GHCFStripWindowLeft.hidden = !showLeft;
+}
+// 调试画布也跟到新设定（改触发侧／改方式／改宽高位置都重画）。
+// v43.40：重画包一层防护——重画出錯只記日誌，不中斷開啓動器、不殺 SpringBoard。
+@try {
+GHCFUpdateTriggerDebugOverlay();
+} @catch (NSException *e) {
+const char *r = e.reason ? [e.reason UTF8String] : "n/a";
+char ebuf[256];
+snprintf(ebuf, sizeof(ebuf), "v43.40 strip update overlay error: %s", r ? r : "n/a");
+GHCFLogLine(ebuf);
+}
+}
+
+// v40：把活动量切到指定窗（手势/小卡/启动器点按时调——多窗时每个手势
+// 都先调它，再做事；已经是活动窗就直接回；窗不在缓存里也直接回）。
+static void GHCFSetActiveToWindow(UIWindow *window) {
+if (!window || window == GHCFHostedWindow) return;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] == window) {
+GHCFLoadCacheToActive(i);
+return;
+}
+}
+}
+
+// v40：给一个 view 找它所在的窗（控制条按钮、滑杆、细条手势的
+// recognizer.view 都是窗里的子视图，沿 superview 一路往上找 UIWindow）。
+static UIWindow *GHCFWindowForView(UIView *view) {
+UIView *v = view;
+while (v) {
+if ([v isKindOfClass:[UIWindow class]]) return (UIWindow *)v;
+v = v.superview;
+}
+return nil;
+}
+
+// v40：现在看得见的悬浮窗有几个（新窗错位放、阴影背景显示时用）。
+static int GHCFVisibleHostedWindowCount(void) {
+int n = 0;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i]) n++;
+}
+return n;
+}
+
+
+// v40：缓存第 idx 项还活不活（复用守卫同款判定：进程还是同一个 pid，
+// 且 presenter 的 view 或 layer host view 还在）。死进程的项不能恢复，
+// 要走 launchHostedApp 让复用守卫销毁重建。
+static BOOL GHCFCachedEntryIsAlive(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return NO;
+if (!GHCFCacheWindows[idx] || !GHCFCacheScenes[idx]) return NO;
+if (!((GHCFCachePresenters[idx] && GHCFCachePresenters[idx].presentationView) || GHCFCacheLayerHostViews[idx])) return NO;
+const char *bid = GHCFCacheBundleIDs[idx];
+if (!bid || bid[0] == '\0') return NO;
+NSString *bidStr = [NSString stringWithCString:bid encoding:NSUTF8StringEncoding];
+if (!bidStr) return NO;
+RBSProcessIdentity *identity = [RBSProcessIdentity identityForEmbeddedApplicationIdentifier:bidStr];
+if (!identity) return NO;
+RBSProcessPredicate *predicate = [RBSProcessPredicate predicateMatchingIdentity:identity];
+RBSProcessHandle *handle = [RBSProcessHandle handleForPredicate:predicate error:nil];
+int pid = handle ? [handle pid] : 0;
+return (pid > 0 && pid == GHCFCachePids[idx]);
+}
+
+// v66：GHCFBackgroundCachedSceneAtIndex 已刪（全程不黑屏——鎖屏不再把
+// scene 推回後台，唯一呼叫處鎖屏回調已拿掉；-Werror 不許留著不用）。
+// v40：把缓存第 idx 项的 scene 推回前景（解锁时全窗循环用；
+// v39 的解锁推前景只管活动窗一个，v40 扩展到全部开着的窗）。
+static void GHCFPushForegroundCachedSceneAtIndex(int idx, const char *logLine) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+FBScene *scene = GHCFCacheScenes[idx];
+if (!scene) return;
+@try {
+[scene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+GHCFLogLine(logLine);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push failed");
+}
+}
+
+// v41：浮窗前後順序（主/副/副副）：最近帶到最前的在前。帶到最前/恢復/
+// 建新窗時更新；雙擊觸發鈕輪切、ARC 升主窗都按這張表走。
+static int GHCFAppIndexForWindow(UIWindow *window) {
+if (!window) return -1;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] == window) return i;
+}
+return -1;
+}
+static void GHCFMarkWindowFront(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+int pos = -1;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFFrontOrder[i] == idx) { pos = i; break; }
+}
+// v43.18：表裡沒有就插到最前面（後面依次後移，最後一個丟掉），
+// 不要直接 return——不然 12 號以後的自選 App 永遠進不了表，
+// 收起時 GHCFLayoutDockPeeks 數不到它，窗縮不成小卡（33.log 定案）。
+if (pos < 0) {
+for (int i = GHCFAppCount - 1; i > 0; i--) GHCFFrontOrder[i] = GHCFFrontOrder[i - 1];
+GHCFFrontOrder[0] = idx;
+return;
+}
+for (int i = pos; i > 0; i--) GHCFFrontOrder[i] = GHCFFrontOrder[i - 1];
+GHCFFrontOrder[0] = idx;
+}
+
+// v42.3：一次只有一個大浮窗（皇上 2026-11-14 18:19：主浮窗開著再點
+// 副浮窗，兩個大窗疊著，他不要；要 FV 那樣——點副浮窗時主浮窗自動縮
+// 成小的浮窗，點小的換回來，可以來回切）。任何窗被帶到最前時，其他
+// 看得見的大浮窗自動縮成 v41 peek（112x242 活內容小窗、貼邊疊著、
+// scene 保活絕不銷毀；收起前先存位置/大小、scene 推回後台，跟手動最
+// 小化同一套）。收在帶到最前的中心路徑裡（下面 GHCFBringWindowToFront
+// 結尾調），所有切換路徑（ARC 點 App、任務欄、點 peek、雙擊觸發鈕輪切、
+// 重開緩存窗、開新窗、恢復、點窗頂細條）都走這裡，不用每條路各寫一份。
+// 不縮的：釘選的窗（釘＝鎖定）、已經收著的、藏著的。
+static void GHCFAutoPeekOtherWindows(UIWindow *exceptWindow) {
+int exceptIdx = GHCFAppIndexForWindow(exceptWindow);
+if (exceptIdx < 0 || exceptIdx >= GHCFAppCount) return;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (i == exceptIdx) continue;
+UIWindow *w = GHCFCacheWindows[i];
+if (!w || w.hidden || GHCFCacheMinimized[i]) continue;
+if (GHCFCacheBundleIDs[i][0] == '\0') continue;
+if (GHCFIsWindowPinned(GHCFCacheBundleIDs[i])) continue;
+// 收起前先存位置/大小（跟手動最小化一樣，縮窗之後再存會存成 peek 尺寸）。
+GHCFSaveGeometryForIndex(i);
+// v49：scene 不推回後台——peek 要露活內容，後台化的 scene 停止合成
+// 就全黑（跟手動最小化同一根因）；恢復時本來就推前景，不用在這裡先推後台。
+GHCFShowDockPeekForIndex(i);
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 auto peeked %s", GHCFCacheBundleIDs[i]);
+GHCFLogLine(buf);
+}
+}
+
+// v40：把指定窗带到最前——别的宿主窗回基础层级（Alert - 2），这个窗
+// 升到最前层级（Alert - 1.75）。启动器（Alert - 1）与锁屏（2000）
+// 仍在它之上；贴边小卡（Alert - 1.5）也在它之上（卡要一直看得见）。
+static void GHCFBringWindowToFront(UIWindow *window) {
+if (!window) return;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && GHCFCacheWindows[i] != window && !GHCFCacheMinimized[i]) {
+GHCFCacheWindows[i].windowLevel = GHCF_HOSTED_BASE_LEVEL;
+}
+}
+window.windowLevel = GHCF_HOSTED_FRONT_LEVEL;
+// v42：釘選的窗提到最上層（比帶到最前的窗還高、別的窗蓋不住；
+// 收起的 peek 不提——peek 本來就在邊緣層級）。
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && GHCFCacheWindows[i] != window && !GHCFCacheMinimized[i] && !GHCFCacheWindows[i].hidden && GHCFCacheBundleIDs[i][0] != '\0' && GHCFIsWindowPinned(GHCFCacheBundleIDs[i])) {
+GHCFCacheWindows[i].windowLevel = GHCF_PINNED_LEVEL;
+}
+}
+GHCFSetActiveToWindow(window);
+// v70：帶到最前的窗如果掛著，先恢復（掛著的窗是半截出屏的，帶到最前就要回來）。
+{
+int fidx = GHCFAppIndexForWindow(window);
+if (fidx >= 0 && fidx < GHCFAppCount && GHCFCacheHung[fidx]) {
+GHCFRestoreHungWindowForIndex(fidx);
+}
+}
+GHCFMarkWindowFront(GHCFAppIndexForWindow(window));
+// v42.3：一次一個大窗——其他大窗自動縮成 peek（見上面）。
+GHCFAutoPeekOtherWindows(window);
+// v43.3：上限——活窗数超了就把最久没动的收成小卡。
+GHLSEnforceWindowCap(window);
+GHCFLogLine("v57 window brought to front");
+}
+
+
+// v43.3：浮窗数量上限——同时活著的浮窗超过上限时，最久没动的那扇
+// 自动收成小卡（跟自动收起同一条路：先存位置再 showDockPeek）。
+// 跳过：刚带到最前的窗、钉选的窗。
+// 单窗模式下自动收起本来就只留一扇，上限只在钉选
+// 把活窗数顶上去时才咬得住；全是钉选就谁也不收，只停下。
+static void GHLSEnforceWindowCap(UIWindow *window) {
+int cap = GHCFReadWindowCap();
+int exceptIdx = GHCFAppIndexForWindow(window);
+while (GHCFVisibleHostedWindowCount() > cap) {
+int victim = -1;
+for (int k = GHCFAppCount - 1; k >= 0; k--) {
+int i = GHCFFrontOrder[k];
+if (i == exceptIdx) continue;
+if (i < 0 || i >= GHCFAppCount) continue;
+UIWindow *w = GHCFCacheWindows[i];
+if (!w || w.hidden || GHCFCacheMinimized[i]) continue;
+if (GHCFCacheBundleIDs[i][0] == '\0') continue;
+if (GHCFIsWindowPinned(GHCFCacheBundleIDs[i])) continue;
+victim = i;
+break;
+}
+if (victim < 0) break;
+GHCFSaveGeometryForIndex(victim);
+GHCFShowDockPeekForIndex(victim);
+char buf[128];
+snprintf(buf, sizeof(buf), "v43.3 window cap peeked %s", GHCFCacheBundleIDs[victim]);
+GHCFLogLine(buf);
+}
+}
+
+
+
+
+// v54：狀態列高度（夾 startY 用）：取第一個連接場景的 statusBar 高度，拿不到就 44。
+static CGFloat GHCFScreenSafeTopInset(void) {
+UIWindowScene *scene = GHCFActiveWindowScene();
+if (scene && scene.statusBarManager) {
+CGFloat h = scene.statusBarManager.statusBarFrame.size.height;
+if (h > 0) return h;
+}
+return 44.0;
+}
+
+// v41：貼邊 peek 重新排布——收著的窗縮到邊緣、上下疊著排（圖 1 的樣子：
+// 右邊緣上下疊著收起的浮窗，只露出一截活內容）。peek 就是宿主窗本身
+//（112x242），不是另外的小卡窗。有 peek 增減時調（最小化、恢復、
+// 關窗、從 peek 關掉）。順序按前後順序表（主窗在最上面）。
+// v54：A 修法——(1) 只算沒藏起來的窗：關掉的窗 hidden=YES、CacheMinimized 卻還是
+// YES（見 §134 A）；關窗後 Minimized 不清是刻意的：重開走 restore 路要認它
+//（handleAppButton／promoteWindowToMainIndex／restoreHostedWindow 都認
+// CacheMinimized，清了重開就走錯路）；(2) startY 下限夾到狀態列底；
+// (3) 總高超屏時按比例縮顯示高度（不改存過的尺寸）、頂部對齊；
+// (4) 記一行 n／startY／縮放比。注意：縮顯示高度時 scene 還是原 peek 尺寸，
+// 底部可能切掉一點（超屏才發生，4 扇以上才縮）。
+// v55：觸發鈕被排布挪開過（peek 收完要回記住的位置）。
+static BOOL GHCFPeekNudgedFlyTriggerButton = NO;
+
+// v55：觸發鈕回記住的位置（只在排布挪開過時動；沒挪過不動，
+// 免得每輪排布都重設、打斷用戶拖動）。位置語義跟啟動時一樣：
+// flyTriggerButtonX/Y 存的是鈕中心，沒拖過就走邊緣預設。
+static void GHCFRestoreFlyTriggerButtonPosition(void) {
+if (!GHCFPeekNudgedFlyTriggerButton) return;
+if (!GHCFFlyTriggerButtonWindow) return;
+CGFloat size = GHCFReadFlyTriggerIconSize();
+CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
+CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
+double savedX = GHCFReadFlyTriggerButtonX();
+double savedY = GHCFReadFlyTriggerButtonY();
+CGFloat centerX = (savedX >= 0) ? (CGFloat)savedX : (GHCFIsFlyTriggerSideLeft() ? size / 2.0 : (screenW - size / 2.0));
+CGFloat centerY = (savedY >= 0) ? (CGFloat)savedY : (screenH / 2.0);
+if (centerX < size / 2.0) centerX = size / 2.0;
+if (centerX > screenW - size / 2.0) centerX = screenW - size / 2.0;
+if (centerY < 100.0) centerY = 100.0;
+if (centerY > screenH - 100.0) centerY = screenH - 100.0;
+GHCFFlyTriggerButtonWindow.frame = CGRectMake(centerX - size / 2.0, centerY - size / 2.0, size, size);
+GHCFPeekNudgedFlyTriggerButton = NO;
+GHCFLogLine("v57 flyTrigger button restored after peeks cleared");
+}
+
+// v55：排布後觸發鈕別壓住任何一扇 peek——鈕框跟任一扇相交就挪開
+//（先試堆疊上方、再試下方、都沒空就換到對邊同高度；不寫 prefs，
+// peek 收完回原位——見 GHCFRestoreFlyTriggerButtonPosition）。
+static void GHCFNudgeFlyTriggerButtonAwayFromPeeks(CGRect *frames, int n) {
+if (!GHCFFlyTriggerButtonWindow || n <= 0) return;
+CGRect btnFrame = GHCFFlyTriggerButtonWindow.frame;
+BOOL overlap = NO;
+for (int k = 0; k < n; k++) {
+if (CGRectIntersectsRect(btnFrame, frames[k])) { overlap = YES; break; }
+}
+if (!overlap) return;
+CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
+CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
+CGFloat topInset = GHCFScreenSafeTopInset();
+CGFloat btnW = btnFrame.size.width;
+CGFloat btnH = btnFrame.size.height;
+CGFloat stackTop = frames[0].origin.y;
+CGFloat stackBottom = frames[n - 1].origin.y + frames[n - 1].size.height;
+CGFloat newX = btnFrame.origin.x;
+CGFloat newY = -1;
+if (stackTop - 4.0 - btnH >= topInset) {
+newY = stackTop - 4.0 - btnH;
+} else if (stackBottom + 4.0 + btnH <= screenH - 34.0) {
+newY = stackBottom + 4.0;
+} else {
+newX = (btnFrame.origin.x + btnW / 2.0 < screenW / 2.0) ? (screenW - btnW - 2.0) : 2.0;
+newY = btnFrame.origin.y;
+if (newY < topInset) newY = topInset;
+if (newY + btnH > screenH - 34.0) newY = screenH - 34.0 - btnH;
+}
+GHCFFlyTriggerButtonWindow.frame = CGRectMake(newX, newY, btnW, btnH);
+GHCFPeekNudgedFlyTriggerButton = YES;
+GHCFLogLine("v57 flyTrigger button nudged away from peeks");
+}
+
+
+static void GHCFLayoutDockPeeks(void) {
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+int *docked = (int *)calloc((size_t)(GHCFAppCount > 0 ? GHCFAppCount : 1), sizeof(int));
+if (!docked) return;
+int n = 0;
+for (int k = 0; k < GHCFAppCount; k++) {
+int i = GHCFFrontOrder[k];
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && GHCFCacheMinimized[i]) {
+docked[n++] = i;
+}
+}
+if (n == 0) {
+// v55：peek 都收完了，觸發鈕回記住的位置（排布時被挪開過才動）。
+GHCFRestoreFlyTriggerButtonPosition();
+free(docked);
+return;
+}
+// v42.3：小窗尺寸每 App 各記各的（預設 112x242，拖調尺寸後記住）——
+// 總高跟著各窗高加總，x 跟著各窗寬走。
+CGFloat totalH = 0;
+for (int k = 0; k < n; k++) {
+CGFloat pw, ph;
+GHCFPeekSizeForIndex(docked[k], &pw, &ph);
+totalH += ph;
+}
+totalH += (n - 1) * GHCF_DOCK_PEEK_GAP;
+CGFloat topInset = GHCFScreenSafeTopInset();
+CGFloat bottomInset = 34.0;
+CGFloat availH = screenBounds.size.height - topInset - bottomInset;
+CGFloat shrink = 1.0;
+if (totalH > availH && totalH > 0) shrink = availH / totalH;
+CGFloat startY = (screenBounds.size.height - totalH * shrink) / 2.0;
+if (startY < topInset) startY = topInset;
+CGFloat y = startY;
+CGRect *peekFrames = (CGRect *)calloc((size_t)(GHCFAppCount > 0 ? GHCFAppCount : 1), sizeof(CGRect));
+if (!peekFrames) { free(docked); return; }
+for (int k = 0; k < n; k++) {
+CGFloat pw, ph;
+GHCFPeekSizeForIndex(docked[k], &pw, &ph);
+ph *= shrink;
+CGFloat x = GHCFDockPeekXForWidth(pw);
+UIWindow *peekWin = GHCFCacheWindows[docked[k]];
+CGRect targetFrame = CGRectMake(x, y, pw, ph);
+peekFrames[k] = targetFrame;
+// v54：peek 重排走彈簧（damping 0.7）——最小化／恢復／關窗時各扇 peek
+// 滑到新位置，不直接跳過去。每扇窗各一個動畫塊，只抓窗指針（堆上）＋
+// 目標 frame（值拷貝），不抓 stack 上的 docked 陣列（塊是異步跑的，
+// 函數返回後 stack 陣列就沒了，抓了會野指針）。
+NSTimeInterval peekAnimDur = 0.6;
+[UIView animateWithDuration:peekAnimDur delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
+peekWin.frame = targetFrame;
+} completion:nil];
+y += ph + GHCF_DOCK_PEEK_GAP * shrink;
+}
+// v55：觸發鈕別壓 peek（排布完再看，鈕框跟任一扇相交就挪開）。
+GHCFNudgeFlyTriggerButtonAwayFromPeeks(peekFrames, n);
+char buf[160];
+snprintf(buf, sizeof(buf), "v57 dock layout n=%d startY=%d shrink=%d%%", n, (int)startY, (int)(shrink * 100.0));
+GHCFLogLine(buf);
+free(docked);
+free(peekFrames);
+}
+
+// v41：把第 idx 個窗收成貼邊 peek——窗本身縮到邊緣（112x242，露出一截
+// 活內容，上下疊著排；圖 1 的樣子），不是另外建小卡窗。窗上蓋一層透明
+// 點按層（點整截恢復窗；往下滑取消，v64）。scene 活著
+// （只縮窗 + 推後台，不銷毀；v35 規則）。收起前的位置/大小由
+// minimizeHostedWindow 在縮窗之前存過（GHCFSaveGeometryForIndex）。
+// v42.3：小窗尺寸每 App 各記各的（預設 112x242，拖調尺寸後記住的尺寸）。
+// v53：把第 idx 個窗的 scene 推到 peek 尺寸（收成 peek 時調）：容器／
+// 內容區先縮到 peek 尺寸（它們沒有 autoresizing、不跟著窗縮，以前只縮
+// 窗、scene 沒動，peek 裡只剩左上切片）；presenter 路把 presenterView
+// bounds＋scene frame 推到 peek 尺寸（App 按小窗重排版），layer-host 路
+// 按 peek 寬重算 displayScale（整屏縮進小窗）。只推這一個窗的 scene，
+// 不動活動量；恢復時 restoreHostedWindow 會再推回滿窗尺寸。
+static void GHCFPushPeekScaleForIndex(int idx, CGFloat peekW, CGFloat peekH) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+UIWindow *w = GHCFCacheWindows[idx];
+UIView *container = GHCFCacheContainers[idx];
+UIView *contentView = GHCFCacheContentViews[idx];
+FBScene *scene = GHCFCacheScenes[idx];
+if (!w || !container || !contentView || !scene) return;
+// v55：peek 內容裁進窗框——內容就算算大了也不許畫出框外（窗框對了、
+// 內容溢出，一樣會被屏幕緣切掉；恢復成大窗時 HideDockPeek 還原）。
+container.clipsToBounds = YES;
+contentView.clipsToBounds = YES;
+container.frame = CGRectMake(0, 0, peekW, peekH);
+contentView.frame = CGRectMake(0, 0, peekW, peekH);
+contentView.layer.anchorPoint = CGPointMake(0, 0);
+contentView.layer.position = CGPointMake(0, 0);
+const char *bid = GHCFCacheBundleIDs[idx];
+BOOL isFixed = GHCFIsFixedLayoutBundleID(bid);
+const char *peekPath = "none";
+CGFloat peekScale = 1.0;
+CGSize peekFrame = CGSizeMake(peekW, peekH);
+if (GHCFCacheLayerHostViews[idx] && !GHCFCachePresenters[idx]) {
+UIView *layerHostView = GHCFCacheLayerHostViews[idx];
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+layerHostView.bounds = CGRectMake(0, 0, screenSize.width, screenSize.height);
+layerHostView.layer.anchorPoint = CGPointMake(0, 0);
+layerHostView.layer.position = CGPointMake(0, 0);
+// v55：peek 一律整體貼合——不管窗的縮放比（ratio>1 時內容寬＝peekW×ratio、
+// 右邊被屏幕緣切掉；ratio=1 時 896 高的內容也比 242 高的窗高）。
+// 寬高取最小貼合比，雙向置中（position 要先除以縮放比）。
+CGFloat fitW = (screenSize.width > 0) ? peekW / screenSize.width : 1.0;
+CGFloat fitH = (screenSize.height > 0) ? peekH / screenSize.height : 1.0;
+CGFloat displayScale = (fitW < fitH) ? fitW : fitH;
+if (displayScale <= 0) displayScale = 1.0;
+CGFloat offX = (peekW - screenSize.width * displayScale) / 2.0;
+CGFloat offY = (peekH - screenSize.height * displayScale) / 2.0;
+layerHostView.layer.position = CGPointMake(offX / displayScale, offY / displayScale);
+peekPath = isFixed ? "fixed-layerhost" : "layerhost";
+peekScale = displayScale;
+peekFrame = screenSize;
+contentView.layer.sublayerTransform = CATransform3DMakeScale(displayScale, displayScale, 1.0);
+} else if (GHCFCachePresenters[idx] && GHCFCachePresenters[idx].presentationView) {
+UIView *presenterView = GHCFCachePresenters[idx].presentationView;
+CGSize frameSize;
+// v54 B：固定佈局 App 的 presenter 路走整體縮放——scene 保持自然佈局
+// 尺寸（計算器 320x693、文件 320x480），不推 peek 小 frame
+//（計算器 145x279 塞不下四欄鍵盤）；整窗等比縮進 peek（寬高取小比）
+// 並置中。置中算法：sublayerTransform 會把 sublayer 的 position 也縮
+// 掉，所以 position 要先除以縮放比，落點才剛好是置中偏移。
+if (isFixed) {
+CGSize natural = GHCFHostedContentSizeForBundleID(bid);
+CGFloat fitW = (natural.width > 0) ? peekW / natural.width : 1.0;
+CGFloat fitH = (natural.height > 0) ? peekH / natural.height : 1.0;
+CGFloat fitScale = (fitW < fitH) ? fitW : fitH;
+if (fitScale <= 0) fitScale = 1.0;
+presenterView.bounds = CGRectMake(0, 0, natural.width, natural.height);
+presenterView.layer.anchorPoint = CGPointMake(0, 0);
+CGFloat offX = (peekW - natural.width * fitScale) / 2.0;
+CGFloat offY = (peekH - natural.height * fitScale) / 2.0;
+presenterView.layer.position = CGPointMake(offX / fitScale, offY / fitScale);
+contentView.layer.sublayerTransform = CATransform3DMakeScale(fitScale, fitScale, 1.0);
+frameSize = natural;
+peekPath = "fixed-presenter";
+peekScale = fitScale;
+peekFrame = natural;
+} else {
+// v58（§151-3）：非固定 App 的 presenter 路也走整體貼合＋置中——
+// 以前把 scene 推到 peek 小 frame（112x216，scale 1.0），App 在
+// 112 寬下重排版、固定寬元素溢出右緣被切掉（電話／音樂實證）；現在
+// scene 保持全屏尺寸、整窗等比縮進 peek（跟 layer-host 路同一做法），
+// App 按全屏排版再整體縮小，內容完整、置中、不切邊。恢復時
+// restoreHostedWindow 會再推回滿窗尺寸（見 restoreHostedWindow）。
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+CGFloat fitW = (screenSize.width > 0) ? peekW / screenSize.width : 1.0;
+CGFloat fitH = (screenSize.height > 0) ? peekH / screenSize.height : 1.0;
+CGFloat fitScale = (fitW < fitH) ? fitW : fitH;
+if (fitScale <= 0) fitScale = 1.0;
+presenterView.bounds = CGRectMake(0, 0, screenSize.width, screenSize.height);
+presenterView.layer.anchorPoint = CGPointMake(0, 0);
+CGFloat offX = (peekW - screenSize.width * fitScale) / 2.0;
+CGFloat offY = (peekH - screenSize.height * fitScale) / 2.0;
+presenterView.layer.position = CGPointMake(offX / fitScale, offY / fitScale);
+contentView.layer.sublayerTransform = CATransform3DMakeScale(fitScale, fitScale, 1.0);
+frameSize = screenSize;
+peekPath = "presenter";
+peekScale = fitScale;
+peekFrame = screenSize;
+}
+@try {
+[scene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.frame = CGRectMake(0, 0, frameSize.width, frameSize.height);
+settings.interfaceOrientation = UIInterfaceOrientationPortrait;
+settings.deviceOrientation = UIDeviceOrientationPortrait;
+settings.peripheryInsets = UIEdgeInsetsZero;
+settings.safeAreaInsetsPortrait = UIEdgeInsetsZero;
+// v63：推 frame 時順手把前景也推回去（scene 一旦丟了前景就停止合成，
+// peek 就是黑的；跟 v30／v26 已證明能用的推法同一套）。
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v58 peek scene frame push failed");
+}
+if (scene == GHCFHostedScene) { // v73：只有活動窗的 scene 尺寸才追蹤（別窗收小卡不要動它）。
+GHCFHostedSceneFrameSize = frameSize;
+GHCFHostedSceneFrameSizeValid = YES;
+}
+}
+char buf[256];
+snprintf(buf, sizeof(buf), "v58 peek scaled %s %s %dx%d scale=%.3f frame=%dx%d", bid ? bid : "?", peekPath, (int)peekW, (int)peekH, peekScale, (int)peekFrame.width, (int)peekFrame.height);
+GHCFLogLine(buf);
+}
+
+static void GHCFShowDockPeekForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+UIWindow *w = GHCFCacheWindows[idx];
+if (!w || !GHCFCacheContainers[idx]) return;
+GHCFCacheMinimized[idx] = YES;
+w.windowLevel = GHCF_DOCK_LEVEL;
+UIView *container = GHCFCacheContainers[idx];
+CGFloat peekW, peekH;
+GHCFPeekSizeForIndex(idx, &peekW, &peekH);
+if (!GHCFPeekTapOverlays[idx]) {
+UIButton *tapOverlay = [UIButton buttonWithType:UIButtonTypeCustom];
+tapOverlay.tag = idx;
+[tapOverlay addTarget:GHCFLauncherShared action:@selector(handleDockPeekTap:) forControlEvents:UIControlEventTouchUpInside];
+[container addSubview:tapOverlay];
+GHCFPeekTapOverlays[idx] = tapOverlay;
+// v65：小浮窗往下滑取消改拖動跟手（皇上 15:39：下滑手感不好）——
+// UISwipeGestureRecognizer 只認成形快滑、沒有跟手，改 UIPanGestureRecognizer：
+// 手指往下拖，小窗跟著往下走＋漸淡；放手時下滑 ≥60pt 或向下滑動速度
+// ≥700pt/s 就關掉，否則彈回原位。點按層蓋滿整個小窗，小窗任意位置往
+// 下拖都認；右下角 36×36 調尺寸手柄在點按層之上，手指落在手柄上還是
+// 走拖調尺寸，不誤關。點小浮窗本身恢復主窗不變（handleDockPeekTap）。
+UIPanGestureRecognizer *peekPanDown = [[UIPanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleDockPeekPan:)];
+[tapOverlay addGestureRecognizer:peekPanDown];
+}
+GHCFPeekTapOverlays[idx].hidden = NO;
+// v42.3：調尺寸手柄放到小窗右下角、提到點按層之上（點按層蓋滿整個小窗，
+// 手柄不提到上面，拖動會被點按層吃掉）。手柄的自動排版先關掉（不然容器
+// 一改尺寸它會按大窗的邊距亂跑）；恢復成大窗時 GHCFHideDockPeekForIndex
+// 再把排版與位置還原。
+if (GHCFCacheResizeHandles[idx]) {
+UIView *handle = GHCFCacheResizeHandles[idx];
+handle.autoresizingMask = UIViewAutoresizingNone;
+handle.hidden = NO;
+[container bringSubviewToFront:handle];
+}
+GHCFLayoutDockPeeks();
+// v55：排布後才定顯示尺寸——窗框可能被 shrink 縮過（總高超屏時），
+// 點按層／手柄／內容縮放一律按顯示尺寸（窗的實際 frame），
+// 不要按記住的未縮放尺寸，不然內容比窗大、溢出框外跑出屏幕。
+CGFloat dispW = w.frame.size.width;
+CGFloat dispH = w.frame.size.height;
+if (dispW < GHCF_DOCK_PEEK_W) dispW = GHCF_DOCK_PEEK_W;
+if (dispH < GHCF_DOCK_PEEK_H) dispH = GHCF_DOCK_PEEK_H;
+GHCFPeekTapOverlays[idx].frame = CGRectMake(0, 0, dispW, dispH);
+if (GHCFCacheResizeHandles[idx]) {
+GHCFCacheResizeHandles[idx].frame = CGRectMake(dispW - 36, dispH - 36, 36, 36);
+}
+// v53：收成 peek 時把 scene 推到 peek 尺寸（App 按小窗重排版，不再是左上切片）。
+GHCFPushPeekScaleForIndex(idx, dispW, dispH);
+// v43.23：第 7 件——黑小卡 dock 快照：dock 當下抓一張活快照，存進 dock 快照槽位
+//（GHCFPeekDockSnaps；97 的 C 凍結幀只在主窗恢復門控裡，小卡沒有；也不能共用
+// 那個槽位——看門狗每 2 秒清一次凍結幀，dock 快照放那裡活不過一輪）。
+// scene 之後掉到 contentState==0 時，看門狗走 GHCFShowPlaceholderForIndex——
+// 那裡優先顯示 dock 快照而不是深灰佔位，所以小卡顯示最後一幀而不是黑的；
+// scene 恢復活了（cs==2），看門狗走 GHCFHidePlaceholderForIndex 把快照藏回去，
+// 換回 live。快照平時藏著（hidden=YES），不蓋活內容；97 的 A（熔斷 2 秒）＋
+// C（主窗凍結幀）不動。
+{
+// v43.24：第 2 件——scene 掉到 0 時不抓快照（抓到的是黑的，會蓋掉舊的活快照；
+// 沒有舊快照就什麼都不抓，小卡走佔位）。
+NSUInteger dockCS = 2;
+FBScene *dockScene = GHCFCacheScenes[idx];
+@try { if (dockScene) dockCS = [dockScene contentState]; } @catch (NSException *e) { (void)e; dockCS = 2; }
+if (dockCS == 0) {
+char dbuf[192];
+snprintf(dbuf, sizeof(dbuf), "v43.24 dock snapshot skipped, scene 0 %s", GHCFCacheBundleIDs[idx]);
+GHCFLogLine(dbuf);
+} else {
+UIView *oldDockSnap = GHCFPeekDockSnaps[idx];
+if (oldDockSnap && oldDockSnap.superview == container) [oldDockSnap removeFromSuperview];
+GHCFPeekDockSnaps[idx] = nil;
+UIView *dockSnap = nil;
+@try { dockSnap = [container snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; dockSnap = nil; }
+if (dockSnap) {
+dockSnap.frame = container.bounds;
+dockSnap.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+dockSnap.userInteractionEnabled = NO;
+dockSnap.hidden = YES;
+[container addSubview:dockSnap];
+if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
+if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+GHCFPeekDockSnaps[idx] = dockSnap;
+char dbuf[192];
+snprintf(dbuf, sizeof(dbuf), "v43.23 dock snapshot captured %s", GHCFCacheBundleIDs[idx]);
+GHCFLogLine(dbuf);
+}
+}
+}
+// v63：修黑 peek——peek 顯示時把它的 scene 推回前景（所有 peek 的必經之路：
+// 手動收起、自動 peek、遊戲模式收小都在這裡）。scene 一旦因鎖屏推後台、
+// 或進程被掛起而丟了前景，就停止合成、peek 全黑；推前景把它喚回來
+//（v30／v26 已證明能用的推法；不銷毀、不重建 scene；鎖屏推後台邏輯不動）。
+// 喚醒被掛起的進程要一點時間，peek 剛出來可能先黑一下再亮，是正常延遲。
+{
+FBScene *peekScene = GHCFCacheScenes[idx];
+if (peekScene) {
+@try {
+[peekScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+char pbuf[256];
+snprintf(pbuf, sizeof(pbuf), "v68 peek foreground pushed %s", GHCFCacheBundleIDs[idx]);
+GHCFLogLine(pbuf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v68 peek foreground push failed");
+}
+}
+}
+char buf[160];
+snprintf(buf, sizeof(buf), "v57 window docked to peek %s %dx%d", GHCFCacheBundleIDs[idx], (int)dispW, (int)dispH);
+GHCFLogLine(buf);
+}
+
+// v41：收掉第 idx 個 App 的貼邊 peek（恢復/關窗時調）：點按層藏起來
+// （不刪，下次收起再用），再重排剩下的 peek。窗的尺寸由恢復處
+// 從存過的位置/大小還原（見 restoreHostedWindow）。
+// v42.3：調尺寸手柄還原到大窗右下角（自動排版也還原——恢復時容器改回
+// 大窗尺寸，排版會按右/下邊距 0 把它帶回大窗右下角；若容器當下還是小
+// 窗尺寸，手柄先回到小窗右下角、容器一放大就跟著過去）。
+static void GHCFHideDockPeekForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+GHCFCacheMinimized[idx] = NO;
+// v43.23：第 7 件——小卡恢復／關掉時 dock 快照一起清掉（下次收起再抓新的）。
+UIView *dockSnap = GHCFPeekDockSnaps[idx];
+if (dockSnap) {
+[dockSnap removeFromSuperview];
+GHCFPeekDockSnaps[idx] = nil;
+}
+if (GHCFPeekTapOverlays[idx]) GHCFPeekTapOverlays[idx].hidden = YES;
+if (GHCFCacheResizeHandles[idx] && GHCFCacheContainers[idx]) {
+UIView *handle = GHCFCacheResizeHandles[idx];
+UIView *container = GHCFCacheContainers[idx];
+handle.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin;
+handle.frame = CGRectMake(container.bounds.size.width - 36, container.bounds.size.height - 36, 36, 36);
+// v63：尺寸固定——恢復成大窗，手柄藏回去（大窗拖角落縮放停用）。
+handle.hidden = YES;
+}
+// v59：恢復成大窗，裁切保持開（容器＋內容區的圓角靠裁切才看得見；
+// v55 以前關掉它，四角就變直角——見 13:22 照片。peek 路本來就開著裁切）。
+if (GHCFCacheContainers[idx]) GHCFCacheContainers[idx].clipsToBounds = YES;
+if (GHCFCacheContentViews[idx]) GHCFCacheContentViews[idx].clipsToBounds = YES;
+GHCFLayoutDockPeeks();
+}
+
+// v40：阴影背景（点窗外事件）的显示/隐藏——开关开着、且至少有一个
+// 看得见的悬浮窗时显示；否则藏起来。v70：掛著的窗不算（掛著時陰影要藏，
+// 不然點窗外又會觸發一次；點露出的那截恢復）。层级 Alert - 4.5（1995.5）：
+// 在主屏之上、感应带/觸發鈕（1996）之下、悬浮窗（1998）之下——
+// 点浮窗本身不受影响（浮窗在 overlay 之上），点觸發鈕/感应带
+// 也不受影响（它们在 overlay 之上），只有点浮窗外的空白才落到
+// overlay 上。启动器（1997/1999）在 overlay 之上，打开时不受影响。
+// 浮窗可见性有变时调（建窗、最小化、恢复、关窗、锁屏回调）。
+static void GHCFUpdateDimOverlay(void) {
+BOOL shouldShow = NO;
+if (GHCFReadTapOutsideEnabled()) {
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i] && !GHCFCacheHung[i]) {
+shouldShow = YES;
+break;
+}
+}
+}
+if (!shouldShow) {
+if (GHCFDimOverlayWindow) GHCFDimOverlayWindow.hidden = YES;
+return;
+}
+if (!GHCFLauncherShared) return;
+if (!GHCFDimOverlayWindow) {
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+GHCFDimOverlayWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+GHCFDimOverlayWindow.windowLevel = GHCF_DIM_OVERLAY_LEVEL;
+GHCFDimOverlayWindow.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.45];
+UIWindowScene *overlayScene = GHCFActiveWindowScene();
+if (overlayScene) GHCFDimOverlayWindow.windowScene = overlayScene;
+UIViewController *overlayVC = [[UIViewController alloc] init];
+UIView *overlayView = [[UIView alloc] initWithFrame:screenBounds];
+overlayView.backgroundColor = [UIColor clearColor];
+UITapGestureRecognizer *overlayTap = [[UITapGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleDimOverlayTap:)];
+[overlayView addGestureRecognizer:overlayTap];
+overlayVC.view = overlayView;
+GHCFDimOverlayWindow.rootViewController = overlayVC;
+GHCFLogLine("v57 dim overlay created");
+}
+GHCFDimOverlayWindow.hidden = NO;
+}
+
+// v70：懸掛——把第 idx 個窗掛到最近的邊、只露 30pt，點那截恢復。
+// 做法：記住掛起前的 frame，窗移到邊外（只露 30pt），蓋一層透明點按層
+// （跟 peek 點按層同一套：UIButton 蓋滿容器，點了恢復；scene 不動，
+// 內容還活著，不推後台）。陰影背景重算（掛著的窗不算，陰影藏起來）。
+static void GHCFHangWindowForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+UIWindow *w = GHCFCacheWindows[idx];
+if (!w || !GHCFCacheContainers[idx] || GHCFCacheHung[idx]) return;
+GHCFHangSavedFrames[idx] = w.frame;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat sliver = 30.0;
+CGFloat x = (w.center.x < screenBounds.size.width / 2.0) ? (-w.frame.size.width + sliver) : (screenBounds.size.width - sliver);
+w.frame = CGRectMake(x, w.frame.origin.y, w.frame.size.width, w.frame.size.height);
+if (!GHCFHangTapOverlays[idx]) {
+UIButton *tapOverlay = [UIButton buttonWithType:UIButtonTypeCustom];
+tapOverlay.tag = idx;
+[tapOverlay addTarget:GHCFLauncherShared action:@selector(handleHangTap:) forControlEvents:UIControlEventTouchUpInside];
+[GHCFCacheContainers[idx] addSubview:tapOverlay];
+GHCFHangTapOverlays[idx] = tapOverlay;
+}
+GHCFHangTapOverlays[idx].frame = GHCFCacheContainers[idx].bounds;
+[GHCFCacheContainers[idx] bringSubviewToFront:GHCFHangTapOverlays[idx]];
+GHCFHangTapOverlays[idx].hidden = NO;
+GHCFCacheHung[idx] = YES;
+GHCFLogLine("v70 window hung");
+GHCFUpdateDimOverlay();
+}
+
+// v70：把掛著的第 idx 個窗恢復回來（frame 還原、點按層藏起來）。
+static void GHCFRestoreHungWindowForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheHung[idx]) return;
+UIWindow *w = GHCFCacheWindows[idx];
+if (w) w.frame = GHCFHangSavedFrames[idx];
+if (GHCFHangTapOverlays[idx]) GHCFHangTapOverlays[idx].hidden = YES;
+GHCFCacheHung[idx] = NO;
+GHCFLogLine("v70 hung window restored");
+GHCFUpdateDimOverlay();
+}
+
+// v70：只清懸掛狀態（點按層藏起來、旗標清掉），不動 frame——最小化／
+// 關窗前調（它們接著就自己改 frame／藏窗，不用先還原）。
+static void GHCFClearHungStateForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (GHCFHangTapOverlays[idx]) GHCFHangTapOverlays[idx].hidden = YES;
+GHCFCacheHung[idx] = NO;
+}
+
+// ── v41：置頂 / 最近 / 遊戲模式 ──
+// 置頂與最近都存在 prefs 裡一個逗號分隔的字串鍵（pinnedAppIDs、
+// recentAppIDs），讀寫走上面現成的字串 helper；順序就是字串裡的順序。
+static NSArray *GHCFReadIDList(const char *key) {
+char *raw = GHCFReadPrefsCString(key);
+if (!raw) return [NSArray array];
+NSString *rawStr = [NSString stringWithCString:raw encoding:NSUTF8StringEncoding];
+free(raw);
+if (!rawStr || [rawStr length] == 0) return [NSArray array];
+NSString *sep = [NSString stringWithCString:"," encoding:NSUTF8StringEncoding];
+return [rawStr componentsSeparatedByString:sep];
+}
+static void GHCFWriteIDList(const char *key, NSArray *ids) {
+NSString *sep = [NSString stringWithCString:"," encoding:NSUTF8StringEncoding];
+NSString *joined = [ids componentsJoinedByString:sep];
+const char *utf8 = joined ? [joined UTF8String] : "";
+GHCFWritePrefsCString(key, utf8 ? utf8 : "");
+}
+static BOOL GHCFListContainsBid(NSArray *ids, const char *bundleID) {
+if (!bundleID) return NO;
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+for (id item in ids) {
+if ([item isKindOfClass:[NSString class]] && [(NSString *)item isEqualToString:bidStr]) return YES;
+}
+return NO;
+}
+
+// v60：标题栏整个拿掉——toolbarOrder 排序、GHCFReadToolbarOrder、
+// GHCFToolbarButtonForID、GHCFRelayoutActiveTitleBar、毛玻璃圆钮
+// （GHCFMakeFrostedControlButton／GHCFSetFrostedButtonPinned）全删；
+// 釘選只剩手勢動作 "pin"，不再有按钮可排、可点。
+// v46：觸發鈕大小／左右邊改完 2 秒內生效（不用 respring）：
+// tick 裡比對設定值跟上次套用的值，變了才重排。拖動中不碰——
+// 拖動改的是窗的 frame，不是設定值。
+// v51：大小變了只改尺寸、中心不動（重排時中心取窗現在的中心 x、y，
+// 拖到的位置留著）；左右邊不再決定位置——有拖過（存了 X）時改邊
+// 不動鈕，沒拖過時才落到新邊。顯示不用這裡管
+// （鈕永遠顯示，不再跟全屏狀態走——v53 全屏自動藏已取消）。
+static CGFloat GHCFAppliedFlyTriggerSize = -1;
+static BOOL GHCFAppliedFlyTriggerLeft = NO;
+static void GHCFApplyFlyTriggerSettings(void) {
+if (!GHCFFlyTriggerButtonWindow || !GHCFFlyTriggerButton) return;
+CGFloat size = GHCFReadFlyTriggerIconSize();
+BOOL left = GHCFIsFlyTriggerSideLeft();
+if (size == GHCFAppliedFlyTriggerSize && left == GHCFAppliedFlyTriggerLeft) return;
+CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
+CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
+CGFloat centerX = GHCFFlyTriggerButtonWindow.frame.origin.x + GHCFFlyTriggerButtonWindow.frame.size.width / 2.0;
+CGFloat centerY = GHCFFlyTriggerButtonWindow.frame.origin.y + GHCFFlyTriggerButtonWindow.frame.size.height / 2.0;
+// v51：沒拖過（沒存 X）時左右邊設定才作預設落點；拖過的鈕位置不動。
+if (GHCFReadFlyTriggerButtonX() < 0) {
+centerX = left ? size / 2.0 : (screenW - size / 2.0);
+}
+if (centerX < size / 2.0) centerX = size / 2.0;
+if (centerX > screenW - size / 2.0) centerX = screenW - size / 2.0;
+if (centerY < 100.0) centerY = 100.0;
+if (centerY > screenH - 100.0) centerY = screenH - 100.0;
+GHCFFlyTriggerButtonWindow.frame = CGRectMake(centerX - size / 2.0, centerY - size / 2.0, size, size);
+UIView *root = GHCFFlyTriggerButtonWindow.rootViewController.view;
+if (root) root.frame = CGRectMake(0, 0, size, size);
+GHCFFlyTriggerButton.frame = CGRectMake(0, 0, size, size);
+GHCFFlyTriggerButton.layer.cornerRadius = size / 2.0;
+GHCFAppliedFlyTriggerSize = size;
+GHCFAppliedFlyTriggerLeft = left;
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 flyTrigger settings applied size=%d side=%s", (int)size, left ? "left" : "right");
+GHCFLogLine(buf);
+}
+// v53：悬浮图标換了才重讀（設定頁換圖後 2 秒內生效，不用 respring；
+// 用自訂檔的修改時間判斷，沒換不重讀——tick 每 2 秒跑，不讀圖不花錢；
+// 恢復默認時（custom 關掉）重讀 bundle 預設圖）。
+static double GHCFAppliedFlyTriggerImageMtime = -1;
+static void GHCFRefreshFlyTriggerButtonImageIfNeeded(void) {
+if (!GHCFFlyTriggerButton) return;
+if (!GHCFReadFlyTriggerIconCustom()) {
+if (GHCFAppliedFlyTriggerImageMtime >= 0) {
+GHCFAppliedFlyTriggerImageMtime = -1;
+UIImage *defImage = GHCFLoadFlyTriggerImage();
+if (defImage) [GHCFFlyTriggerButton setImage:defImage forState:UIControlStateNormal];
+}
+return;
+}
+NSString *path = GHCFCustomFlyTriggerImagePath();
+NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
+NSDate *mtime = attrs ? [attrs objectForKey:NSFileModificationDate] : nil;
+double t = mtime ? [mtime timeIntervalSince1970] : -1;
+if (t < 0 || t == GHCFAppliedFlyTriggerImageMtime) return;
+GHCFAppliedFlyTriggerImageMtime = t;
+UIImage *image = GHCFLoadFlyTriggerImage();
+if (image) [GHCFFlyTriggerButton setImage:image forState:UIControlStateNormal];
+}
+// v53：啟用分屏開關跟進（tick 每 2 秒跑一次＋%ctor 建完 UI 後跑一次）。
+// 關→收啟動器、藏觸發鈕＋感應帶＋全部未藏的快取窗（含 peek，記
+// GHCFCacheHiddenByDisable）；開→取消隱藏被記的窗＋推前景、顯示鈕＋
+// 感應帶。開關狀態變了才動手，沒變直接回（tick 便宜）。
+static BOOL GHCFAppliedEnabledState = NO;
+static BOOL GHCFAppliedEnabledValue = NO;
+// v43.28：激活码锁（定义在这里，GHCFApplyEnabledState 和下面
+// %ctor 后的激活模块共用）——锁住时分屏开关就当关着。
+static BOOL GHCFActivationLocked = NO;
+// v43.43（1.0.115，觸發鈕開關）：顯示開關跟進（tick 每 2 秒跑一次＋
+// prefschanged 立刻跑一次）。關→藏鈕；開→只在分屏開著、沒鎖、表盤沒藏
+// 著鈕時顯示回來。開關狀態變了才動手，沒變直接回（tick 便宜）。
+static BOOL GHCFAppliedFlyTriggerButtonEnabled = NO;
+static BOOL GHCFAppliedFlyTriggerButtonEnabledValue = YES;
+static void GHCFApplyFlyTriggerButtonEnabled(void) {
+BOOL want = GHCFReadFlyTriggerButtonEnabled();
+if (GHCFAppliedFlyTriggerButtonEnabled && want == GHCFAppliedFlyTriggerButtonEnabledValue) return;
+GHCFAppliedFlyTriggerButtonEnabled = YES;
+GHCFAppliedFlyTriggerButtonEnabledValue = want;
+if (!GHCFFlyTriggerButtonWindow) return;
+if (!want) {
+GHCFFlyTriggerButtonWindow.hidden = YES;
+GHCFLogLine("v43.43 flyTrigger button disabled");
+return;
+}
+// 開：表盤正藏著鈕時不搶回來（dismissLauncher 會放回）；分屏關著／
+// 激活鎖住時也不顯示（GHCFApplyEnabledState 管那邊）。
+if (GHCFDialHidFlyTriggerButton) return;
+if (!GHCFReadEnabled() || GHCFActivationLocked) return;
+GHCFFlyTriggerButtonWindow.hidden = NO;
+GHCFLogLine("v43.43 flyTrigger button enabled");
+}
+static void GHCFApplyEnabledState(void) {
+BOOL enabled = GHCFReadEnabled() && !GHCFActivationLocked;
+if (GHCFAppliedEnabledState && enabled == GHCFAppliedEnabledValue) return;
+GHCFAppliedEnabledState = YES;
+GHCFAppliedEnabledValue = enabled;
+if (!enabled) {
+if (GHCFLauncherShared) [GHCFLauncherShared dismissLauncher];
+if (GHCFFlyTriggerButtonWindow) GHCFFlyTriggerButtonWindow.hidden = YES;
+if (GHCFStripWindow) GHCFStripWindow.hidden = YES;
+if (GHCFStripWindowLeft) GHCFStripWindowLeft.hidden = YES;
+if (GHCFDebugTriggerWindow) GHCFDebugTriggerWindow.hidden = YES;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden) {
+GHCFCacheWindows[i].hidden = YES;
+GHCFCacheHiddenByDisable[i] = YES;
+}
+}
+GHCFUpdateTaskbar();
+GHCFLogLine("v57 splitscreen disabled");
+return;
+}
+if (GHCFFlyTriggerButtonWindow && GHCFReadFlyTriggerButtonEnabled()) GHCFFlyTriggerButtonWindow.hidden = NO;
+// v43.32：感应带按触发侧重放（左／右／双侧各显各的边；调试画布也一起重画）。
+GHCFUpdateStripPosition();
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheHiddenByDisable[i] && GHCFCacheWindows[i]) {
+GHCFCacheWindows[i].hidden = NO;
+GHCFCacheHiddenByDisable[i] = NO;
+if (GHCFCacheScenes[i]) {
+char fbuf[160];
+snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on re-enable %s", GHCFCacheBundleIDs[i]);
+GHCFPushForegroundCachedSceneAtIndex(i, fbuf);
+}
+}
+}
+GHCFUpdateTaskbar();
+GHCFLogLine("v57 splitscreen enabled");
+}
+static BOOL GHCFIsAppPinned(const char *bundleID) {
+return GHCFListContainsBid(GHCFReadIDList("pinnedAppIDs"), bundleID);
+}
+static void GHCFSetAppPinned(const char *bundleID, BOOL pinned) {
+if (!bundleID || bundleID[0] == '\0') return;
+NSMutableArray *ids = [NSMutableArray arrayWithArray:GHCFReadIDList("pinnedAppIDs")];
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+[ids removeObject:bidStr];
+if (pinned) [ids insertObject:bidStr atIndex:0];
+GHCFWriteIDList("pinnedAppIDs", ids);
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 app %s %s", bundleID, pinned ? "pinned" : "unpinned");
+GHCFLogLine(buf);
+}
+// 最近開過的浮窗 App（上限 5 個，最近的在前；開窗時調）。
+static void GHCFPushRecentApp(const char *bundleID) {
+if (!bundleID || bundleID[0] == '\0') return;
+NSMutableArray *ids = [NSMutableArray arrayWithArray:GHCFReadIDList("recentAppIDs")];
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+[ids removeObject:bidStr];
+[ids insertObject:bidStr atIndex:0];
+while ([ids count] > 5) [ids removeLastObject];
+GHCFWriteIDList("recentAppIDs", ids);
+}
+// ── v42 輔助函數（配對／恢復清單／任務欄／
+// 低電量／卡片圖片／定時 tick；全部在 %ctor 延後塊之前定義，
+// 供 %ctor 與各方法調用） ──
+
+// v53：觸發鈕自訂圖路徑（設定頁換圖存的固定檔；跟卡片頭像／背景同一
+// 個設定目錄，檔名分開）。
+static NSString *GHCFCustomFlyTriggerImagePath(void) {
+return [NSString stringWithCString:"/var/mobile/Library/Preferences/ChinaFly-flyTrigger.jpg" encoding:NSUTF8StringEncoding];
+}
+static BOOL GHCFReadFlyTriggerIconCustom(void) {
+return GHCFReadPrefsBool("flyTriggerIconCustom", NO);
+}
+// v42：讀觸發鈕圖（%ctor 裡鈕的同一套路徑：先 /var/jb 再 /Library；
+// v53：先試自訂圖（設定頁換圖存的固定檔），沒有才走 bundle 預設圖；
+// 讀不到回 nil → 呼叫處退回金色「分」）。
+static UIImage *GHCFLoadFlyTriggerImage(void) {
+UIImage *image = nil;
+@try {
+if (GHCFReadFlyTriggerIconCustom()) {
+NSString *customPath = GHCFCustomFlyTriggerImagePath();
+if (customPath) image = [UIImage imageWithContentsOfFile:customPath];
+}
+if (!image) {
+NSString *resName = [NSString stringWithCString:"flyTrigger-button" encoding:NSUTF8StringEncoding];
+NSString *resType = [NSString stringWithCString:"png" encoding:NSUTF8StringEncoding];
+NSString *imagePath = nil;
+NSString *bundlePath = [NSString stringWithCString:"/var/jb/Library/PreferenceBundles/ChinaFlyPrefs.bundle" encoding:NSUTF8StringEncoding];
+NSBundle *prefsBundle = bundlePath ? [NSBundle bundleWithPath:bundlePath] : nil;
+if (prefsBundle && resName && resType) imagePath = [prefsBundle pathForResource:resName ofType:resType];
+if (!imagePath) {
+NSString *bundlePath2 = [NSString stringWithCString:"/Library/PreferenceBundles/ChinaFlyPrefs.bundle" encoding:NSUTF8StringEncoding];
+NSBundle *prefsBundle2 = bundlePath2 ? [NSBundle bundleWithPath:bundlePath2] : nil;
+if (prefsBundle2 && resName && resType) imagePath = [prefsBundle2 pathForResource:resName ofType:resType];
+}
+if (imagePath) image = [UIImage imageWithContentsOfFile:imagePath];
+}
+if (image && image.CGImage) {
+CGFloat screenScale = [UIScreen mainScreen].scale;
+if (screenScale > 0) image = [UIImage imageWithCGImage:image.CGImage scale:screenScale orientation:image.imageOrientation];
+}
+} @catch (NSException *e) {
+(void)e;
+image = nil;
+}
+return image;
+}
+// v42：把「a|b」拆成兩份（回 YES 才拆開；a/b 緩衝區由呼叫處給）。
+// v42：存重啟後要恢復的浮窗清單（看得見的窗：浮窗本身 + 貼邊 peek；
+// X 關掉的窗 hidden=YES，不算；開/關/收/恢復時都重存一次）。
+static void GHCFSaveRestoreList(void) {
+NSMutableArray *ids = [NSMutableArray array];
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && GHCFCacheBundleIDs[i][0] != '\0') {
+NSString *bidStr = [NSString stringWithCString:GHCFCacheBundleIDs[i] encoding:NSUTF8StringEncoding];
+if (bidStr) [ids addObject:bidStr];
+}
+}
+GHCFWriteIDList("restoreWindows", ids);
+}
+// v53：全屏觸發鈕自動藏已取消（函數整個拿掉；鈕永遠顯示）。
+// v50：全部收窗共用迴圈（低電量自動收窗 + 任務欄「全部收起」同一套：
+// 對每個看得見的浮窗調現成的收窗路徑，不另寫收窗邏輯）。
+// recordLowBattery＝YES 時記下這次收的是哪些窗（電量恢復提醒用）。
+static int GHCFLowBatteryDockedCount = 0;
+static int GHCFDockAllVisibleWindows(BOOL recordLowBattery) {
+if (recordLowBattery) GHCFLowBatteryDockedCount = 0;
+int docked = 0;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i]) {
+if (recordLowBattery && GHCFCacheBundleIDs[i][0] != '\0' && GHCFLowBatteryDockedCount < GHCFAppCount) {
+strncpy(GHCFLowBatteryDockedBids[GHCFLowBatteryDockedCount], GHCFCacheBundleIDs[i], 127);
+GHCFLowBatteryDockedBids[GHCFLowBatteryDockedCount][127] = '\0';
+GHCFLowBatteryDockedCount++;
+}
+GHCFLoadCacheToActive(i);
+if (GHCFLauncherShared) [GHCFLauncherShared minimizeHostedWindow];
+docked++;
+}
+}
+return docked;
+}
+// v42：低電量自動收窗（UIDevice batteryLevel；batteryMonitoringEnabled
+// 在 %ctor 開）。低於閾值：看得見的浮窗全收成貼邊小卡 + 橫幅提示；
+// 回到閾值+5% 以上才重新武裝（遲滯，免得在閾值邊緣反覆收放）。
+static void GHCFCheckLowBattery(void) {
+if (!GHCFReadLowBatteryAutoDock()) {
+GHCFLowBatteryDocked = NO;
+GHCFLowBatteryDockedCount = 0;
+return;
+}
+CGFloat level = -1.0;
+@try {
+level = [UIDevice currentDevice].batteryLevel;
+} @catch (NSException *e) {
+(void)e;
+level = -1.0;
+}
+if (level < 0) return;
+double pct = (double)level * 100.0;
+double threshold = GHCFReadLowBatteryThreshold();
+if (pct < threshold && !GHCFLowBatteryDocked) {
+GHCFLowBatteryDocked = YES;
+int docked = GHCFDockAllVisibleWindows(YES);
+char buf[192];
+snprintf(buf, sizeof(buf), "v57 low battery %d%% docked %d windows", (int)pct, docked);
+GHCFLogLine(buf);
+if (GHCFLauncherShared && docked > 0) {
+char msg[192];
+snprintf(msg, sizeof(msg), "电量低于 %d%%，浮窗已收成贴边小卡", (int)threshold);
+[GHCFLauncherShared showNotificationBannerWithText:msg];
+}
+} else if (pct >= threshold + 5.0) {
+// v50：電量恢復提醒——回升超過閾值+5% 且確實有窗是被低電量收起的，
+// 才彈橫幅提示。橫幅本身不支援點按（只是顯示幾秒的提示條），所以不做
+// 點橫幅彈回——文字直接寫點貼邊小卡恢復，窗照樣點小卡叫回來。
+if (GHCFLowBatteryDocked && GHCFLowBatteryDockedCount > 0) {
+if (GHCFLauncherShared) [GHCFLauncherShared showNotificationBannerWithText:"电量恢复，点贴边小卡弹回浮窗"];
+char buf[192];
+snprintf(buf, sizeof(buf), "v57 low battery recovered %d%%, %d windows were docked", (int)pct, GHCFLowBatteryDockedCount);
+GHCFLogLine(buf);
+}
+GHCFLowBatteryDocked = NO;
+GHCFLowBatteryDockedCount = 0;
+}
+}
+// v42：底部任務欄（開了要 respring 才建欄；內容每次重建：開著的窗
+// 的圖標 + 綠點，點一下切到那個窗；沒窗時藏起來）。
+static void GHCFBuildTaskbarIfNeeded(void) {
+if (GHCFSettingsTaskbarWindow) return;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+GHCFSettingsTaskbarWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, screenBounds.size.height - 60, screenBounds.size.width, 52)];
+GHCFSettingsTaskbarWindow.windowLevel = GHCF_DOCK_LEVEL;
+GHCFSettingsTaskbarWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *taskScene = GHCFActiveWindowScene();
+if (taskScene) GHCFSettingsTaskbarWindow.windowScene = taskScene;
+UIViewController *vc = [[UIViewController alloc] init];
+UIView *root = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenBounds.size.width, 52)];
+root.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
+root.layer.cornerRadius = 16.0;
+root.tag = 55;
+vc.view = root;
+GHCFSettingsTaskbarWindow.rootViewController = vc;
+GHCFSettingsTaskbarWindow.hidden = YES;
+GHCFLogLine("v57 taskbar built");
+}
+static void GHCFUpdateTaskbar(void) {
+if (!GHCFSettingsTaskbarWindow) return;
+if (!GHCFReadTaskbarEnabled()) {
+GHCFSettingsTaskbarWindow.hidden = YES;
+return;
+}
+UIView *root = GHCFSettingsTaskbarWindow.rootViewController.view;
+// v43.16 C：位置／透明度／大小每次刷新都重套（設定一改 prefschanged
+// 就調 GHCFUpdateTaskbar，立刻生效；2 秒輪詢也會重套，最多 2 秒）。
+CGFloat tbScale = GHCFReadTaskbarScale();
+CGFloat tbBarH = 52.0 * tbScale;
+CGRect tbScreen = [UIScreen mainScreen].bounds;
+CGFloat tbY = GHCFReadTaskbarIsTop() ? 8.0 : tbScreen.size.height - 8.0 - tbBarH;
+// v43.21：先數有幾顆芯片，兩種樣式都讓窗貼著芯片排、居中放（無底條時
+// 透明窗不吃多餘觸摸，點窗外空白處才不會被透明窗擋住）。
+int tbCount = 0;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (!GHCFCacheWindows[i]) continue;
+const char *b = GHCFCacheBundleIDs[i];
+if (!b || b[0] == '\0') continue;
+tbCount++;
+}
+int tbStyle = GHCFReadTaskbarStyle(); // 0＝nobar 無底條（預設），1＝gold 金邊膠囊
+CGFloat tbRowW = tbCount > 0 ? ((tbCount - 1) * 44.0 + 36.0) * tbScale : 0;
+CGFloat tbBarW = tbRowW + 16.0 * tbScale;
+CGFloat tbX = (tbScreen.size.width - tbBarW) / 2.0;
+GHCFSettingsTaskbarWindow.frame = CGRectMake(tbX, tbY, tbBarW, tbBarH);
+root.frame = CGRectMake(0, 0, tbBarW, tbBarH);
+if (tbStyle == 1) {
+// gold：黑底膠囊＋細金邊。
+root.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85 * GHCFReadTaskbarOpacity()];
+root.layer.cornerRadius = 16.0 * tbScale;
+root.layer.borderWidth = 1.0;
+root.layer.borderColor = [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0].CGColor;
+} else {
+// nobar（預設）：沒底沒框，圖標直接浮著。
+root.backgroundColor = [UIColor clearColor];
+root.layer.cornerRadius = 0;
+root.layer.borderWidth = 0;
+}
+for (UIView *sub in [root.subviews copy]) [sub removeFromSuperview];
+int count = 0;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (!GHCFCacheWindows[i]) continue;
+const char *bid = GHCFCacheBundleIDs[i];
+if (!bid || bid[0] == '\0') continue;
+CGFloat x = 8.0 * tbScale + count * 44.0 * tbScale;
+UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+btn.frame = CGRectMake(x, 8.0 * tbScale, 36.0 * tbScale, 36.0 * tbScale);
+btn.tag = i;
+// v43.21：芯片只顯示 App 圖標（跟啟動器圖標一樣），不再抓宿主窗快照。
+UIImage *icon = GHCFAppIcon(bid);
+if (icon) {
+[btn setImage:icon forState:UIControlStateNormal];
+} else {
+btn.backgroundColor = [UIColor grayColor];
+}
+// v43.21：無底條時圖標浮著，加一點陰影才看得出是浮著的。
+if (tbStyle == 0) {
+btn.layer.shadowColor = [UIColor blackColor].CGColor;
+btn.layer.shadowOpacity = 0.35f;
+btn.layer.shadowRadius = 4.0 * tbScale;
+btn.layer.shadowOffset = CGSizeMake(0, 2.0 * tbScale);
+}
+btn.imageView.layer.cornerRadius = 8.0 * tbScale;
+btn.imageView.layer.masksToBounds = YES;
+[btn addTarget:GHCFLauncherShared action:@selector(handleTaskbarButton:) forControlEvents:UIControlEventTouchUpInside];
+// v43.20：芯片長按直接關窗（不彈菜單）。長按認出時會取消按鈕的觸摸，
+// 所以長按不會誤觸點按切主窗；快點則在長按認出前就觸發切主窗。
+UILongPressGestureRecognizer *tbLP = [[UILongPressGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleTaskbarChipLongPress:)];
+[btn addGestureRecognizer:tbLP];
+[root addSubview:btn];
+BOOL isOpen = !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i];
+BOOL isMain = (i == GHCFActiveAppIndex);
+if (isOpen || GHCFCacheMinimized[i]) {
+// v43.16 B：狀態點在芯片右下角（v43.22：紅 × 已拿掉，點的位置不動）。
+// 顏色不變：金點主窗、綠點已開。
+UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(x + 26.0 * tbScale, 8.0 * tbScale + 36.0 * tbScale - 10.0 * tbScale, 10.0 * tbScale, 10.0 * tbScale)];
+dot.backgroundColor = isMain ? [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0] : [UIColor colorWithRed:0.2 green:0.8 blue:0.2 alpha:1.0];
+dot.layer.cornerRadius = 5.0 * tbScale;
+dot.layer.borderWidth = 1.0;
+dot.layer.borderColor = [UIColor whiteColor].CGColor;
+[root addSubview:dot];
+}
+count++;
+}
+// v43.20：「全部收起」鈕拿掉（任務欄只留芯片；收窗走點窗外／拖小卡）。
+GHCFSettingsTaskbarWindow.hidden = (count == 0);
+}
+// v53：懸浮球已整個拿掉（建球函數刪除；只留一個觸發鈕按鈕）。
+// v42：圖片居中裁成方形再縮到指定邊長（卡片頭像用，512；
+// 設定頁那邊也有一份同款，兩個進程調不到彼此的函數）。
+// v42：2 秒定時輪詢（設定 App 改開關不發通知給 SpringBoard，
+// dylib 不聽通知——每 2 秒自己讀一次 prefs 補狀態：
+// 任務欄；每 60 秒查一次電量。
+// v43.30：游戏模式整套已删（皇上 2026-11-22 定）：进出模式、自动触发、工具箱、每游戏窗口位置、亮度音量、勿扰探针、清后台、双击切微信、最小动画。
+// v64：小浮窗黑屏看門狗（21.log 定案，見檔頭 v42.22）：2 秒一輪巡一次
+// 全部快取窗——窗可見（沒藏起來）且 scene 還在、contentState 還不是 2
+// （0 沒就緒、1 準備中）就再推一次前景。只推沒就緒的，好的窗每輪只讀
+// 一次 contentState，不花錢。鎖著時整條跳過（鎖屏回調負責推後台，
+// 看門狗不跟它打架；解鎖回調＋下一輪 tick 會把黑 peek 推回來）。
+// 專治：鎖屏把 scene 推後台後、解鎖通知沒送到／被合併，peek 一直黑
+// （21.log：計算器 peek 收起時 contentState=2，連鎖 4 次後點開恢復
+// 時 contentState=0，之前沒有任何一次解鎖推前景）。進程本身死了的
+// scene 推了也沒用（要關掉重開才會重建），看門狗只記日誌、不重建。
+static void GHCFPeekWatchdogTick(void) {
+if (GHCFScreenLocked) return;
+for (int i = 0; i < GHCFAppCount; i++) {
+FBScene *scene = GHCFCacheScenes[i];
+UIWindow *w = GHCFCacheWindows[i];
+if (!scene || !w || w.hidden) continue;
+@try {
+NSUInteger cs = [scene contentState];
+if (cs == 2) {
+// 就绪——把占位拿掉（之前盖过的）。
+// v73：尺寸門控進行中時不拿活動窗的佔位——門控 tick 會在尺寸對上＋就緒後自己淡出佔位；
+// 看門狗在這裡拿掉會讓黑半邊露出來。
+if (!(GHCFRestoreGateActive && i == GHCFActiveAppIndex)) {
+GHCFHidePlaceholderForIndex(i);
+}
+} else if (cs == 0) {
+// v72：小卡 scene 卡在 0——盖占位，绝不让小卡露黑；不推前景
+//（24.log 证明推 0 没用：时针／计算器／电池小卡各推过一次，一直是 0）。
+// 卡 0 的救法是恢复／切到它时走门控重建，不是看门狗反复推。
+GHCFShowPlaceholderForIndex(i);
+} else {
+// 准备中（1）——推前景帮它一把。
+char wbuf[256];
+snprintf(wbuf, sizeof(wbuf), "v68 peek watchdog foreground pushed %s contentState=%lu", GHCFCacheBundleIDs[i], (unsigned long)cs);
+GHCFPushForegroundCachedSceneAtIndex(i, wbuf);
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v68 peek watchdog check failed");
+}
+}
+}
+
+static void GHCFSchedulePeriodicTick(void) {
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+GHCFApplyFlyTriggerSettings();
+GHCFRefreshFlyTriggerButtonImageIfNeeded();
+GHCFApplyEnabledState();
+// v43.43：觸發鈕開關兜底（prefschanged 沒收到時 2 秒內也跟上）。
+GHCFApplyFlyTriggerButtonEnabled();
+// v42：任務欄開了就建（2 秒內生效，不用 respring；v53：懸浮球已拿掉）。
+if (GHCFReadTaskbarEnabled()) GHCFBuildTaskbarIfNeeded();
+GHCFUpdateTaskbar();
+// v54 (b)：系統橫幅探針（2 秒一輪；開關關著不探，見 GHCFCheckSystemBanner）。
+GHCFCheckSystemBanner();
+// v64：小浮窗黑屏看門狗（見上面 GHCFPeekWatchdogTick）。
+GHCFPeekWatchdogTick();
+// 重建（設定頁拖完寫 prefs，dylib 這邊 2 秒內接手；沒變不動，
+// 不擾正在用的窗；第一輪只記基準、不記 log）。
+// v60：標題欄拿掉，工具欄排序沒了，這裡只剩 App 排序。
+GHCFPeriodicTickCount++;
+if (GHCFPeriodicTickCount % 30 == 0) GHCFCheckLowBattery();
+// v50：選擇器「重新掃描」請求（設定頁寫 rescanAppsRequested 鍵，
+// 這裡 2 秒內接手重建緩存；掃描本身在後台跑，失敗留舊表）。
+if (GHCFReadPrefsBool("rescanAppsRequested", NO)) {
+GHCFWritePrefsBool("rescanAppsRequested", NO);
+GHCFRefreshInstalledAppListInBackground();
+GHCFLogLine("v57 rescan apps requested from settings");
+}
+GHCFSchedulePeriodicTick();
+});
+}
+
+@implementation GHCFLauncher
+
+// 允许我们的手势与系统手势同时识别（不抢系统手势）。
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+return YES;
+}
+
+// v38：点按手势不接按钮上的触摸——控制条的点按（收起控制条）与
+// 细条的点按（展开/收起控制条）都挂在这个代理上；点在红 X、黄
+// 最小化、± 按钮上时，手势不认，按钮自己处理。点在控制条中间
+//（标题处，UILabel 默认不接手势）才认，收起控制条。点在细条的
+// 小 pill 上（普通 UIView）也认，展开/收起控制条。边缘滑动手势
+// 的触摸在感应带上（不是按钮），不受影响。
+// v41 修：觸發鈕自己的手勢（拖動 pan、長按、單擊、雙擊）掛在鈕上，
+// 觸摸的 view 就是鈕本身（UIButton）——按上面那條一律回 NO，鈕的手勢
+// 永遠收不到觸摸（v40 拖不動、長按關全部也死的根因）。所以先判：
+// 手勢掛在觸發鈕上就回 YES；其他手勢碰到 UIButton 才回 NO。
+// v52：懸浮球同理——（v53：球已整個拿掉，這行只留歷史）。
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+if (gestureRecognizer.view == GHCFFlyTriggerButton) return YES;
+if ([touch.view isKindOfClass:[UIButton class]]) return NO;
+// v43.19：新樣式的面板（9101 側邊欄／9102 抽屜／9103 輪盤 scroll view／
+// 9104 磁貼卡）裡面的空白處點下去不收起啟動器（面板自己接手勢；點面板
+// 外面才收）。格狀／圓環沒有面板，行為不變。
+UIView *tv = touch.view;
+while (tv) {
+if (tv.tag == 9101 || tv.tag == 9102 || tv.tag == 9103 || tv.tag == 9104) return NO;
+tv = tv.superview;
+}
+return YES;
+}
+
+// v41：右邊緣滑動開 ARC（調度窗口設置：滑幾次、滑哪邊）。滑 1 次開
+// （edgeSwipeCount=1）或 2 秒內滑兩次才開（=2，預設，防誤觸）；
+// 第一次只記日誌。滑哪邊跟調度設定走（沒設就跟小窗顯示位置）。
+// v43.24：邊緣滑動只開啟動器（第 2 下也是；配對與三屏入口已拿掉）。
+- (void)handleEdgeSwipe:(UIScreenEdgePanGestureRecognizer *)recognizer {
+// v43.3：记下起手 Y——触发区判定用起手位置，不是松手位置。
+if (recognizer.state == UIGestureRecognizerStateBegan) {
+CGPoint p = [recognizer locationInView:nil];
+GHCFLastSwipeStartY = p.y;
+return;
+}
+if (recognizer.state == UIGestureRecognizerStateCancelled || recognizer.state == UIGestureRecognizerStateFailed) {
+GHCFLastSwipeStartY = -1;
+return;
+}
+if (recognizer.state != UIGestureRecognizerStateEnded) return;
+// v43.14：改边立刻生效（其一）——每次边缘滑动先按现值重算感应带位置
+//（设定改了、还没开过启动器时，带子先跟到新边；新边滑动本身见 3b）。
+GHCFUpdateStripPosition();
+// v43.32：触发区——每边一个矩形（Trigger.plist 边缘那套）：起手 Y 必须落在
+// 这次滑动那边的矩形里（宽＝距边宽度，高＝高度，竖直中心＝位置 Y%×屏高；
+// 竖屏用竖屏那组、横屏用横屏那组），不然这次滑动不开启动器，也不计入
+// 1x/2x 计数。感应带窗本身保持全高（拖动手势拿它当固定参考坐标，
+// 改 frame 会量错手指位置），只在这里按起手 Y 拦。起手 Y 没记到就退回松手 Y。
+CGFloat swipeStartY = GHCFLastSwipeStartY;
+GHCFLastSwipeStartY = -1;
+if (swipeStartY < 0) swipeStartY = [recognizer locationInView:nil].y;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+BOOL fromLeft = (recognizer.edges == UIRectEdgeLeft);
+BOOL landscape = screenBounds.size.height < screenBounds.size.width;
+CGRect zone = GHCFReadTriggerZoneRect(fromLeft, landscape);
+if (swipeStartY < zone.origin.y || swipeStartY > zone.origin.y + zone.size.height) {
+char dbuf[160];
+snprintf(dbuf, sizeof(dbuf), "v43.32 edge swipe outside trigger zone y=%.0f side=%s zone y=%.0f..%.0f", swipeStartY, fromLeft ? "left" : "right", zone.origin.y, zone.origin.y + zone.size.height);
+GHCFLogLine(dbuf);
+// v43.39：被挡时闪一下被滑那侧的区间框＋轻震（调试关着也闪），让皇上
+// 知道滑到了、只是位置不对；不计入 1x/2x 计数、不开启动器。
+GHCFFlashTriggerZone(fromLeft);
+return;
+}
+// v53：分屏關著時邊緣滑動不觸發（開關關了就真的停用）。
+if (!GHCFReadEnabled()) return;
+// v55：記下手指在邊緣的 Y——ARC 弧心錨在這裡（下次開 ARC 會重記；
+// 感應帶窗是全屏高，窗座標 Y 就是屏幕 Y）。
+CGPoint swipeLoc = [recognizer locationInView:nil];
+GHCFLauncherAnchorY = swipeLoc.y;
+GHCFLauncherAnchorX = swipeLoc.x;
+if (GHCFReadEdgeSwipeCount() <= 1) {
+GHCFLogLine("v57 edge swipe 1x, opening ARC");
+[self showLauncher];
+return;
+}
+double now = CFAbsoluteTimeGetCurrent();
+if (now - GHCFLastSwipeTime < 2.0) {
+GHCFLastSwipeTime = 0;
+GHCFLogLine("v43.24 edge swipe 2nd, opening ARC");
+[self dismissLauncher];
+[self showLauncher];
+} else {
+GHCFLastSwipeTime = now;
+GHCFLogLine("v57 edge swipe 1st, armed");
+// v43.15：第 1 下待命给轻震回饋（Lee 2026-11-21 定「肯定给反应」），沿用 ARC 震动开关。
+if (GHCFReadARCHaptics()) {
+@try {
+UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+[haptic impactOccurred];
+GHCFLogLine("v57 edge swipe 1st haptic");
+} @catch (NSException *e) {
+(void)e;
+}
+}
+}
+}
+
+// v41：觸發鈕單擊——開 ARC（代替原來的 TouchUpInside：單擊手勢要
+// 等雙擊失敗才認，雙擊時不誤開 ARC）。剛被長按過（關全部窗）——這次
+// 單擊不開 ARC（長按鬆手不觸發）；旗標清掉，下次單擊恢復正常。
+- (void)handleFlyTriggerButtonSingleTap:(UITapGestureRecognizer *)recognizer {
+(void)recognizer;
+if (GHCFFlyTriggerLongPressed) {
+GHCFFlyTriggerLongPressed = NO;
+GHCFLogLine("v57 handle button tap suppressed after long press");
+return;
+}
+// v55：啟動器開著就收起（再點鈕切換）；錨點取鈕中心 Y。
+if (GHCFLauncherVisible) {
+[self dismissLauncher];
+return;
+}
+if (GHCFFlyTriggerButtonWindow) {
+GHCFLauncherAnchorY = GHCFFlyTriggerButtonWindow.frame.origin.y + GHCFFlyTriggerButtonWindow.frame.size.height / 2.0;
+GHCFLauncherAnchorX = GHCFFlyTriggerButtonWindow.frame.origin.x + GHCFFlyTriggerButtonWindow.frame.size.width / 2.0;
+}
+GHCFLogLine("v57 handle button tapped, opening ARC");
+[self showLauncher];
+}
+// v41：觸發鈕雙擊——輪切主窗（按順序表找下一個看得見的窗升為主窗）。
+- (void)handleFlyTriggerButtonDoubleTap:(UITapGestureRecognizer *)recognizer {
+(void)recognizer;
+GHCFLogLine("v57 flyTrigger double tapped");
+[self cycleMainWindow];
+}
+// v41：把第 idx 個窗升為主窗（ARC 點已開的 App / 點 peek / 雙擊輪切）。
+// 收著的從 peek 恢復（帶到最前、推前景）；看得見的帶到最前 + 推前景；
+// 進程死了就走正常開窗流程（復用守衛銷毀重建）。
+- (void)promoteWindowToMainIndex:(int)idx {
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheWindows[idx]) return;
+if (GHCFCacheMinimized[idx]) {
+if (GHCFCachedEntryIsAlive(idx)) {
+GHCFLoadCacheToActive(idx);
+[self restoreHostedWindow];
+} else {
+GHCFLogLine("v57 promote entry stale, relaunching");
+const char *bid = GHCFCacheBundleIDs[idx];
+if (bid && bid[0] != '\0') {
+[self launchHostedApp:bid name:GHCFAppNames[idx]];
+}
+}
+return;
+}
+GHCFLoadCacheToActive(idx);
+GHCFBringWindowToFront(GHCFHostedWindow);
+// v72：切到看得見的窗也要門控——scene 沒就緒就蓋占位等它（不要有任何 App 閃黑邊）。
+// 就緒（2）照舊直接推前景；準備中（1）推一次再門控；卡在 0 不推（推 0 沒用，
+// 24.log 為證），直接門控、5 秒還 0 就重建。
+NSUInteger promoteCS = 2;
+if (GHCFHostedScene) {
+@try { promoteCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; promoteCS = 2; }
+}
+if (promoteCS != 2) {
+if (promoteCS == 1) {
+@try {
+[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push on promote failed");
+}
+}
+GHCFShowPlaceholderForIndex(idx);
+GHCFRestoreGateActive = YES;
+GHCFRestoreGateScene = GHCFHostedScene;
+GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
+GHCFRestoreGateRebuilt = NO;
+GHCFRestoreGateStuckLogged = NO;
+GHCFRestoreGateTimeoutDeferredLogged = NO;
+GHCFRestoreGateTimeoutDeferCount = 0;
+if (idx >= 0 && idx < GHCFAppCount) GHCFRestoreGaveUp[idx] = NO; // v43.7：切窗是新的尝试，清掉停手旗标。
+GHCFRestoreGateMode = 1; // 窗本来就看得见，只盖占位、就绪淡出占位。
+GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
+if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
+GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：promote 也要過尺寸門。
+GHCFSizeGateMatchedOnce = NO;
+GHCFSizeGateWaitingLogged = NO;
+GHCFLogLine("v72 promote gated until ready");
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+[self showGatedRestoredWindowTick];
+});
+} else {
+@try {
+if (GHCFHostedScene) {
+[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push on promote failed");
+}
+}
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 window promoted to main %s", GHCFCacheBundleIDs[idx]);
+GHCFLogLine(buf);
+}
+// v41：雙擊觸發鈕輪切主窗——按順序表找下一個看得見的窗升為主窗。
+// 雙擊開關關了就不切；少於 2 個可見窗也沒得切。
+- (void)cycleMainWindow {
+if (!GHCFReadFlyTriggerDoubleTapEnabled()) {
+GHCFLogLine("v57 window cycle disabled");
+return;
+}
+// v53：可見窗＋收著的 peek 都能輪切（以前只列看得見的窗，收著的永遠
+// 輪不到；主↔副↔小窗雙向自由切，點一下就換過去）。
+CFAbsoluteTime cycleStart = CFAbsoluteTimeGetCurrent();
+int *cands = (int *)calloc((size_t)(GHCFAppCount > 0 ? GHCFAppCount : 1), sizeof(int));
+if (!cands) return;
+int n = 0;
+for (int k = 0; k < GHCFAppCount; k++) {
+int idx = GHCFFrontOrder[k];
+if (GHCFCacheWindows[idx] && !GHCFCacheWindows[idx].hidden) cands[n++] = idx;
+}
+if (n <= 1) {
+GHCFLogLine("v57 window cycle nothing to cycle");
+free(cands);
+return;
+}
+int current = GHCFActiveAppIndex;
+int pos = -1;
+for (int i = 0; i < n; i++) {
+if (cands[i] == current) { pos = i; break; }
+}
+int next = cands[(pos + 1) % n];
+[self promoteWindowToMainIndex:next];
+CFAbsoluteTime cycleEnd = CFAbsoluteTimeGetCurrent();
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 window cycled main %s %dms", GHCFCacheBundleIDs[next], (int)((cycleEnd - cycleStart) * 1000.0));
+GHCFLogLine(buf);
+free(cands);
+}
+
+// v40：长按觸發鈕——一键关掉全部已开的浮窗 +
+// 已收起的 peek（第 7 项）。每个窗走现有的关闭路径（hide +
+// background scene，不在 session 内 destroy scene，遵守 v35 规则；
+// peek 清除）。关一个不影响别的——这里是全部关掉（用户主动长按）。
+// 只在 Began 时做一次（长按中途状态变 Changed 不重复关）。
+// 旗标不在 Ended/Cancelled 里清——触摸抬起时手势先变 Ended、按钮的
+// 单击手势后到，先清会让 ARC 误开；旗标由 handleFlyTriggerButtonSingleTap
+//（点按）与 handleFlyTriggerButtonDrag（拖动）清。
+- (void)handleFlyTriggerButtonLongPress:(UILongPressGestureRecognizer *)recognizer {
+if (recognizer.state != UIGestureRecognizerStateBegan) return;
+GHCFFlyTriggerLongPressed = YES;
+GHCFLogLine("v57 close all windows");
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i]) {
+GHCFLoadCacheToActive(i);
+[self closeHostedWindow];
+}
+}
+GHCFUpdateDimOverlay();
+}
+
+// v51：觸發鈕全屏任意拖動（皇上 21:26：不要只沿邊緣上下移，要全局
+// 都能移）。x、y 都跟手指走；中心 x 夾在 [size/2, 屏寬 - size/2]（56pt
+// 鈕就是 [28, 屏寬-28]）、y 夾在 100 到 h-100（別頂到劉海、別掉出底
+// 邊）；放手記住 x、y（prefs 鍵 flyTriggerButtonX／flyTriggerButtonY），
+// 下次啟動恢復到同一位置。鈕的大小、樣子不變。左右邊設定不再決定位
+// 置，只作從來沒拖過時的預設落點。
+// 點按跟拖動分開：UIPanGestureRecognizer 有內建位移門檻（約 10pt），
+// 手指沒怎麼動、快速抬起時 pan 不認、TouchUpInside 照舊開啟動器；
+// 拖動了 pan 認出來（cancelsTouchesInView 預設 YES，會取消鈕的點按
+// 追蹤），才算移動鈕的位置。
+- (void)handleFlyTriggerButtonDrag:(UIPanGestureRecognizer *)recognizer {
+if (!GHCFFlyTriggerButtonWindow) return;
+// v40：拖动钮时清掉长按旗标——长按后拖出按钮外、TouchUpInside 不触发
+// 时的兜底（不然旗标一直留着，下次点按会被误 suppress）。
+GHCFFlyTriggerLongPressed = NO;
+// v68：跟手修法——translation 不能量在會動的鈕窗上（同款毛病）。
+// 改拿固定不動的邊條窗當參考座標，只換這兩行，其餘夾取邏輯不動。
+UIView *fixedRefView = GHCFStripWindow ? (UIView *)GHCFStripWindow : (UIView *)GHCFFlyTriggerButtonWindow;
+CGPoint point = [recognizer translationInView:fixedRefView];
+[recognizer setTranslation:CGPointZero inView:fixedRefView];
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat flyTriggerW = GHCFFlyTriggerButtonWindow.frame.size.width;
+CGFloat halfW = flyTriggerW / 2.0;
+CGFloat minX = halfW;
+CGFloat maxX = screenBounds.size.width - halfW;
+CGFloat minY = 100.0;
+CGFloat maxY = screenBounds.size.height - 100.0;
+CGPoint center = GHCFFlyTriggerButtonWindow.center;
+CGFloat newX = center.x + point.x;
+CGFloat newY = center.y + point.y;
+if (newX < minX) newX = minX;
+if (newX > maxX) newX = maxX;
+if (newY < minY) newY = minY;
+if (newY > maxY) newY = maxY;
+GHCFFlyTriggerButtonWindow.center = CGPointMake(newX, newY);
+if (recognizer.state == UIGestureRecognizerStateEnded) {
+// v51：放手記住 x、y（prefs 鍵 flyTriggerButtonX／flyTriggerButtonY），
+// 下次啟動恢復到同一位置。
+GHCFWritePrefsDouble("flyTriggerButtonX", (double)newX);
+GHCFWritePrefsDouble("flyTriggerButtonY", (double)newY);
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 flyTrigger button moved to x=%f y=%f", (double)newX, (double)newY);
+GHCFLogLine(buf);
+}
+}
+
+// v41：點貼邊 peek——把這個 App 的窗叫回來升為主窗（恢復：帶到最前、
+// 推前景）。peek 上 tag 是 App 下標；進程死了就走正常開窗流程
+//（promoteWindowToMainIndex 裡面分叉處理）。
+- (void)handleDockPeekTap:(UIButton *)sender {
+NSInteger idx = sender.tag;
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheWindows[idx]) return;
+// v43.17：收起后 0.8 秒内点小卡不恢复——小卡正好贴在刚点的边上，
+// 手一抬或再点一下就误触恢复（§347 定案）。
+if (GHCFMinimizeTime > 0 && ([NSDate timeIntervalSinceReferenceDate] - GHCFMinimizeTime) < 0.8) {
+GHCFLogLine("v43.17 peek tap ignored, just minimized");
+return;
+}
+GHCFLogLine("v57 docked peek tapped");
+[self promoteWindowToMainIndex:(int)idx];
+}
+
+// v70：點掛著的窗露出的那截——把這個 App 的窗恢復回來（先叫回主窗，
+// promoteWindowToMainIndex 裡面會走 GHCFBringWindowToFront，那裡已經
+// 會先恢復懸掛；這裡再補一次恢復是 no-op，雙保險）。
+- (void)handleHangTap:(UIButton *)sender {
+NSInteger idx = sender.tag;
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheWindows[idx]) return;
+GHCFLogLine("v70 hung window tapped");
+GHCFLoadCacheToActive((int)idx);
+GHCFRestoreHungWindowForIndex((int)idx);
+[self promoteWindowToMainIndex:(int)idx];
+}
+
+// v64：小浮窗往下滑取消（皇上 2026-11-16，FV 式；打叉已拿掉）：點按層上
+// 的往下滑手勢觸發，徹底關掉這個窗（不再回來）。窗藏起來、peek 收掉、
+// scene 留著不銷毀（v35 規則）；別的窗不受影響。下次從啟動器重開這個
+// App，直接復用緩存裡的 scene。
+// v66：小浮窗往下滑取消的拖動跟手實現（見上面創建處註解）。拖動狀態記在
+// 靜態量裡（一次只會拖一張小卡；點按不動手指不觸發 pan，照舊恢復主窗）。
+// v66 修 1.0.65 的跟手 bug：原來用 translationInView:w 量位移，w 是小窗
+// 自己（跟著手指走），量出來的位移會被窗的移動吃掉，拖了不跟手、只有
+// 快甩才關得了（皇上：要貼著邊才可以關）。改拿固定不動的邊條窗
+// （GHCFStripWindow，390,0,24,896）當參考座標，手指位置每輪都量在它
+// 上面，窗跟著手指走才準。
+static CGPoint GHCFPeekPanStartCenter = {0, 0};
+static CGPoint GHCFPeekPanStartPoint = {0, 0};
+static CGFloat GHCFPeekPanTotalDy = 0;
+static CGFloat GHCFPeekPanTotalDx = 0;
+static int GHCFPeekPanIdx = -1;
+- (void)handleDockPeekPan:(UIPanGestureRecognizer *)recognizer {
+UIView *v = recognizer.view;
+if (!v) return;
+NSInteger idx = v.tag;
+if (idx < 0 || idx >= GHCFAppCount) return;
+UIWindow *w = GHCFCacheWindows[idx];
+if (!w) return;
+UIView *refView = GHCFStripWindow ? (UIView *)GHCFStripWindow : w;
+if (recognizer.state == UIGestureRecognizerStateBegan) {
+GHCFPeekPanIdx = (int)idx;
+GHCFPeekPanStartCenter = w.center;
+GHCFPeekPanTotalDy = 0;
+GHCFPeekPanTotalDx = 0;
+if (recognizer.numberOfTouches > 0) {
+GHCFPeekPanStartPoint = [recognizer locationOfTouch:0 inView:refView];
+}
+} else if (recognizer.state == UIGestureRecognizerStateChanged) {
+if (GHCFPeekPanIdx != (int)idx) return;
+if (recognizer.numberOfTouches == 0) return;
+CGPoint p = [recognizer locationOfTouch:0 inView:refView];
+CGFloat dy = p.y - GHCFPeekPanStartPoint.y;
+if (dy < 0) dy = 0;
+GHCFPeekPanTotalDy = dy;
+// v43.14：侧滑小窗——横向也跟手（移边判定用总位移＋速度，见 Ended）。
+CGFloat dx = p.x - GHCFPeekPanStartPoint.x;
+GHCFPeekPanTotalDx = dx;
+w.center = CGPointMake(GHCFPeekPanStartCenter.x + dx, GHCFPeekPanStartCenter.y + dy);
+CGFloat alpha = 1.0 - dy / 300.0;
+if (alpha < 0.3) alpha = 0.3;
+w.alpha = alpha;
+} else if (recognizer.state == UIGestureRecognizerStateEnded || recognizer.state == UIGestureRecognizerStateCancelled) {
+if (GHCFPeekPanIdx != (int)idx) return;
+GHCFPeekPanIdx = -1;
+CGPoint vel = [recognizer velocityInView:refView];
+// v43.14：侧滑小窗——横向位移占主导且够大（≥60pt 或横向速度 ≥700pt/s）
+// 就移到另一边（翻浮窗滑出方向设定，全部 peek 一起过去、位置与每 App
+// 尺寸照旧）；垂直下滑仍关掉；不够格就弹回原位。
+if (recognizer.state == UIGestureRecognizerStateEnded && fabs(GHCFPeekPanTotalDx) > fabs(GHCFPeekPanTotalDy) && (fabs(GHCFPeekPanTotalDx) >= 60.0 || fabs(vel.x) >= 700.0)) {
+BOOL toLeft = !GHCFIsFloatingWindowSlideLeft();
+GHCFWritePrefsCString("floatingWindowSlideSide", toLeft ? "left" : "right");
+w.alpha = 1.0;
+GHCFLayoutDockPeeks();
+char sbuf[96];
+snprintf(sbuf, sizeof(sbuf), "v43.14 peek side swipe moved to %s", toLeft ? "left" : "right");
+GHCFLogLine(sbuf);
+} else if (recognizer.state == UIGestureRecognizerStateEnded && (GHCFPeekPanTotalDy >= 60 || vel.y >= 700)) {
+GHCFLogLine("v68 docked peek dragged down closed");
+[UIView animateWithDuration:0.2 animations:^{
+w.center = CGPointMake(GHCFPeekPanStartCenter.x, GHCFPeekPanStartCenter.y + 220);
+w.alpha = 0.0;
+} completion:^(BOOL finished) {
+(void)finished;
+w.alpha = 1.0;
+GHCFLoadCacheToActive((int)idx);
+[self closeHostedWindow];
+}];
+} else {
+[UIView animateWithDuration:0.25 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+w.center = GHCFPeekPanStartCenter;
+w.alpha = 1.0;
+} completion:nil];
+}
+}
+}
+
+// v40：点阴影背景——按设定把最上面/主浮窗关掉或移到侧边贴成小卡。
+// 主浮窗 = 活动窗（最近互动的，就是最上面那个）；活动窗不可见就
+// 找第一个看得见的缓存窗。开着「側邊」就贴边成小卡，选「關閉」就关掉。
+- (void)handleDimOverlayTap:(UITapGestureRecognizer *)recognizer {
+(void)recognizer;
+int idx = GHCFActiveAppIndex;
+if (idx < 0 || idx >= GHCFAppCount || !GHCFCacheWindows[idx] || GHCFCacheWindows[idx].hidden || GHCFCacheMinimized[idx]) {
+idx = -1;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i]) {
+idx = i;
+break;
+}
+}
+}
+if (idx < 0) {
+GHCFUpdateDimOverlay();
+return;
+}
+GHCFLoadCacheToActive(idx);
+char *action = GHCFReadPrefsCString("tapOutsideAction");
+int tapMode = 1; // v70：0 關閉、1 側邊（預設）、2 懸掛
+if (action) {
+if (strcmp(action, "close") == 0) tapMode = 0;
+else if (strcmp(action, "hang") == 0) tapMode = 2;
+free(action);
+}
+if (tapMode == 0) {
+GHCFLogLine("v57 tap outside closed");
+[self closeHostedWindow];
+} else if (tapMode == 2) {
+GHCFLogLine("v70 tap outside hung");
+GHCFHangWindowForIndex(idx);
+} else {
+GHCFLogLine("v57 tap outside docked");
+[self minimizeHostedWindow];
+}
+}
+
+// 点启动器里的一个 App：v25 不再全屏打开（那条路在 SpringBoard 里
+// 是死的：在 SpringBoard 里打开 App 返回 NO，四次全失败，还把主线程
+// 堵 5 秒以上、触发看门狗重启）。
+// 新流程：先收启动器，再在主线程走 FB 事务建 scene、嵌进悬浮窗。
+// FB 事务是异步的：begin 立刻返回，场景创建走回调；主线程不被堵。
+- (void)handleAppButton:(UIButton *)sender {
+NSInteger idx = sender.tag;
+if (idx < 0 || idx >= GHCFAppCount) return;
+const char *bid = GHCFAppBundleIDs[idx];
+const char *name = GHCFAppNames[idx];
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 app tapped %s", bid);
+GHCFLogLine(buf);
+// v43.24：第 5 件——點按回饋（輕震＋點按音）已在 TouchDown 時給過
+//（handleLauncherIconTouchDown／handleCarouselCardTouchDown），這裡不再重複給，
+// 不然一次點按震兩次、響兩聲。最近使用記錄（點過就算，置頂/最近都用這份記錄）。
+GHCFPushRecentApp(bid);
+// v40：多窗（5.3）——「window busy」删掉，点启动器里的 App 不再被挡：
+// ① 点的 App 已开着（窗看得见）→ 带到最前（层级升到 Alert - 1.75，
+// 活动量切到它）；② 点的 App 收着（最小化/贴边小卡）→ 从小卡恢复
+//（带到最前、推前景）；③ 没开的 → 在新窗打开，别的窗不动（不藏旧窗）。
+// ④ 缓存里的项死了（进程死了）→ 走正常开窗流程，复用守卫会销毁
+// 旧项重建（见 createHostedScene；销毁时连贴边小卡一起收掉）。
+// scene 永遠不銷毀（v35 规则）：关窗/最小化都只藏窗（不推后台），
+// 切回来直接复用缓存里的旧 scene。
+UIWindow *cachedWindow = GHCFCacheWindows[idx];
+if (cachedWindow && !GHCFCacheMinimized[idx] && !cachedWindow.hidden) {
+// 已开着：带到最前。
+GHCFLogLine("v57 window already open, bringing to front");
+[self dismissLauncher];
+GHCFBringWindowToFront(cachedWindow);
+GHCFUpdateDimOverlay();
+return;
+}
+if (cachedWindow && GHCFCacheMinimized[idx]) {
+// 收着：从小卡恢复（先确认进程还活着；死了就走正常开窗流程，
+// 复用守卫会销毁旧项重建）。
+if (GHCFCachedEntryIsAlive(idx)) {
+GHCFLogLine("v57 window minimized, restoring from dock");
+GHCFLoadCacheToActive(idx);
+[self restoreHostedWindow];
+[self dismissLauncher];
+return;
+}
+GHCFLogLine("v57 docked entry stale, relaunching");
+}
+if (GHCFHostedLaunching) {
+GHCFLogLine("v57 launch in progress, ignoring tap");
+return;
+}
+// v41：ARC 打開方式（預設浮窗）：全屏打開走 SB 啟動探針（失敗退回浮窗）、
+// 橫屏下強制浮窗（FV 的注意文字：橫屏狀態下 arc 上應用操作都是以浮窗
+// 模式顯示）。
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+BOOL isLandscape = screenBounds.size.width > screenBounds.size.height;
+int openMode = GHCFReadARCMenuOpenMode();
+if (isLandscape && openMode != 1) {
+GHCFLogLine("v57 landscape forces floating");
+openMode = 1;
+}
+// 先收启动器（v23 卡死的教训：收窗是便宜操作，先做；
+// 启动是慢操作，后做——但要在主线程做，v24 放后台队列崩了）。
+[self dismissLauncher];
+if (openMode == 0) {
+[self openAppFullscreen:bid];
+return;
+}
+[self launchHostedApp:bid name:name];
+}
+
+// v41：ARC 打開方式「全屏打開」的探針——用 SpringBoard 自己的
+// SBApplicationController 把 App 叫到前台全屏（tweak 在 SpringBoard
+// 進程裡，調它自己的類是常規做法；LSApplicationWorkspace 從
+// SpringBoard 調會堵主線程 ≥5 秒，已禁用，不走那條路）。類名/方法都
+// 用運行時現做的字串找，找不到或調失敗就退回浮窗（不崩、不卡）。
+// 橫屏下不走這裡（handleAppButton 已強制浮窗）。真機行為見 BUILD_LOG
+// §113（探針，需皇上真機驗證）。
+- (void)openAppFullscreen:(const char *)bundleID {
+if (!bundleID || bundleID[0] == '\0') return;
+BOOL opened = NO;
+@try {
+NSString *controllerName = [NSString stringWithCString:"SBApplicationController" encoding:NSUTF8StringEncoding];
+Class controllerClass = NSClassFromString(controllerName);
+if (controllerClass && [controllerClass respondsToSelector:@selector(sharedInstance)]) {
+id controller = [controllerClass sharedInstance];
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+SEL appSel = NSSelectorFromString([NSString stringWithCString:"applicationWithBundleIdentifier:" encoding:NSUTF8StringEncoding]);
+if (controller && [controller respondsToSelector:appSel]) {
+id app = ((id (*)(id, SEL, id))objc_msgSend)(controller, appSel, bidStr);
+if (app) {
+SEL launchSel = NSSelectorFromString([NSString stringWithCString:"launchWithCompletion:" encoding:NSUTF8StringEncoding]);
+if ([app respondsToSelector:launchSel]) {
+((void (*)(id, SEL, id))objc_msgSend)(app, launchSel, nil);
+opened = YES;
+} else {
+SEL activateSel = NSSelectorFromString([NSString stringWithCString:"activateWithCompletion:" encoding:NSUTF8StringEncoding]);
+if ([app respondsToSelector:activateSel]) {
+((void (*)(id, SEL, id))objc_msgSend)(app, activateSel, nil);
+opened = YES;
+}
+}
+}
+}
+}
+} @catch (NSException *e) {
+(void)e;
+opened = NO;
+}
+if (opened) {
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 fullscreen open %s", bundleID);
+GHCFLogLine(buf);
+// v43.23：第 6 件——全屏開了，同 App 的浮窗副本自己退出（見下面）。
+[self closeDockedPeekForFullscreenBid:bundleID];
+} else {
+GHCFLogLine("v57 fullscreen open unavailable, falling back to floating");
+int fidx = GHCFAppIndexForBundleID(bundleID);
+const char *fname = (fidx >= 0) ? GHCFAppNames[fidx] : bundleID;
+[self launchHostedApp:bundleID name:fname];
+}
+}
+
+// v43.23：第 6 件——App 全屏開了，同 App 的小浮窗自己退出。
+// 什麼算「全屏開」：只有 openAppFullscreen 經 SBApplicationController
+// 成功把 App 叫到前台（opened==YES）才算；失敗退回浮窗的不算。
+// 小卡是整個關掉（closeCachedEntryAtIndex：load→closeHostedWindow→
+// drop entry，scene 留著），不是只藏起來——關了重開再托管現有 scene。
+// 只關全屏開那個 App 自己的浮窗副本，主窗不動。
+- (void)closeDockedPeekForFullscreenBid:(const char *)bundleID {
+if (!bundleID || bundleID[0] == '\0') return;
+int idx = GHCFAppIndexForBundleID(bundleID);
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheWindows[idx]) return;
+BOOL wasMinimized = GHCFCacheMinimized[idx];
+if (!GHCFCacheWindows[idx]) return;
+[self closeCachedEntryAtIndex:idx];
+const char *kind = wasMinimized ? "docked peek" : "floating window";
+char buf[256];
+snprintf(buf, sizeof(buf), "v43.23 fullscreen open closed %s %s", kind, bundleID);
+GHCFLogLine(buf);
+}
+
+// v25：启动必须在主线程做——v24 把它放后台队列，BSTransaction 的 begin
+// 在里面断言当前队列是主队列（BSDispatchQueueAssert），直接把 SpringBoard
+// 杀进安全模式（.ips：EXC_BREAKPOINT，-[BSTransaction begin]，后台队列）。
+// 参考实现 FrontBoardAppLauncher 就是在主线程点按回调里做这一模一样的
+// 调用。FB 事务本身是异步的：begin 立刻返回、完成走回调，主线程不会被堵
+//（v23 那种 5 秒卡死是同步打开调用造成的，那条路已经删了，不会重演）。
+// 每一步都记日志，下次再崩直接定位到具体调用。
+- (void)launchHostedApp:(const char *)bundleID name:(const char *)name {
+char *bidCopy = strdup(bundleID);
+char *nameCopy = strdup(name);
+if (!bidCopy || !nameCopy) {
+if (bidCopy) free(bidCopy);
+if (nameCopy) free(nameCopy);
+GHCFLogLine("v57 launch failed no memory");
+return;
+}
+GHCFHostedLaunching = YES;
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 launch start %s", bundleID);
+GHCFLogLine(buf);
+// v41：最近使用記錄（開窗就算用過一次）。
+GHCFPushRecentApp(bundleID);
+@try {
+NSString *bidStr = [NSString stringWithCString:bidCopy encoding:NSUTF8StringEncoding];
+if (!bidStr) {
+GHCFLogLine("v57 launch failed bad bundle id");
+GHCFHostedLaunching = NO;
+free(bidCopy);
+free(nameCopy);
+return;
+}
+RBSProcessIdentity *identity = [RBSProcessIdentity identityForEmbeddedApplicationIdentifier:bidStr];
+if (!identity) {
+GHCFLogLine("v57 launch failed no identity");
+GHCFHostedLaunching = NO;
+free(bidCopy);
+free(nameCopy);
+return;
+}
+GHCFLogLine("v57 identity ok");
+// 先看 App 是不是已经在跑（单场景 App 已有全屏版时，再建
+// 第二个 scene 可能只剩白窗——测前要先把目标 App 彻底关掉）。
+RBSProcessPredicate *predicate = [RBSProcessPredicate predicateMatchingIdentity:identity];
+RBSProcessHandle *handle = [RBSProcessHandle handleForPredicate:predicate error:nil];
+int pid = handle ? [handle pid] : 0;
+if (pid > 0) {
+char pbuf[128];
+snprintf(pbuf, sizeof(pbuf), "v57 app already running pid=%d", pid);
+GHCFLogLine(pbuf);
+// 已经在跑：不走事务，直接去建 scene（和参考实现同一做法）。
+dispatch_async(dispatch_get_main_queue(), ^{
+[self createHostedSceneForBundleID:bidCopy name:nameCopy];
+free(bidCopy);
+free(nameCopy);
+});
+return;
+}
+GHCFLogLine("v57 handle pid=0");
+FBProcessManager *manager = [FBProcessManager sharedInstance];
+if (!manager) {
+GHCFLogLine("v57 manager failed nil");
+GHCFHostedLaunching = NO;
+free(bidCopy);
+free(nameCopy);
+return;
+}
+GHCFLogLine("v57 manager ok");
+FBApplicationProcessLaunchTransaction *transaction = [[FBApplicationProcessLaunchTransaction alloc] initWithProcessIdentity:identity executionContextProvider:^id(void) {
+GHCFLogLine("v57 launch provider called");
+FBMutableProcessExecutionContext *context = [FBMutableProcessExecutionContext new];
+context.identity = identity;
+context.environment = [NSDictionary dictionary];
+context.launchIntent = 4;
+return [manager launchProcessWithContext:context];
+}];
+if (!transaction) {
+GHCFLogLine("v57 transaction failed nil");
+GHCFHostedLaunching = NO;
+free(bidCopy);
+free(nameCopy);
+return;
+}
+GHCFLogLine("v57 transaction created");
+[transaction setCompletionBlock:^{
+// 事务完成可能跑在任意队列——场景创建回主线程做。
+dispatch_async(dispatch_get_main_queue(), ^{
+[self createHostedSceneForBundleID:bidCopy name:nameCopy];
+free(bidCopy);
+free(nameCopy);
+});
+}];
+[transaction begin];
+GHCFLogLine("v57 begin called");
+GHCFLogLine("v57 launch transaction begun");
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 launch failed exception");
+GHCFHostedLaunching = NO;
+free(bidCopy);
+free(nameCopy);
+}
+}
+
+// 在主线程建 scene + presenter（V5_DESIGN.md §2.2 第 2–5 步）。
+// 每一步都记日志、包 @try/@catch：任何一步失败只记日志，
+// 绝不拖垮 SpringBoard。
+- (void)createHostedSceneForBundleID:(const char *)bundleID name:(const char *)name {
+@try {
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 scene start %s", bundleID);
+GHCFLogLine(buf);
+NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
+if (!bidStr) {
+GHCFLogLine("v57 scene failed no bid");
+return;
+}
+RBSProcessIdentity *identity = [RBSProcessIdentity identityForEmbeddedApplicationIdentifier:bidStr];
+RBSProcessPredicate *predicate = [RBSProcessPredicate predicateMatchingIdentity:identity];
+RBSProcessHandle *handle = [RBSProcessHandle handleForPredicate:predicate error:nil];
+int pid = handle ? [handle pid] : 0;
+if (pid <= 0) {
+GHCFLogLine("v57 scene failed no process");
+return;
+}
+snprintf(buf, sizeof(buf), "v57 process launched pid=%d", pid);
+GHCFLogLine(buf);
+// v35 复用守卫：缓存里已有这个 App 的 scene（关窗或切走时没销毁）
+// 且进程还是同一个 pid、presenter 与它的 view 还活着——直接复用，
+// 不建新 scene。固定 ID 一个会话里只建一次，残留撞不到。scene 旧
+// 了（进程换了或 presenter/view 没了）就先销毁缓存里那一项再建
+//（掉下去之前先清掉旧 scene，见下面；只调销毁缓存那一项，不碰
+// 活动量）。查缓存不查活动量：切走后活动量是空的，旧 scene 只在
+// 缓存里。
+int cacheIdx = GHCFAppIndexForBundleID(bundleID);
+if (cacheIdx >= 0 && GHCFCacheScenes[cacheIdx]) {
+// v38：复用守卫分叉——presenter 的项看 presenter 与 view 活着，
+// layer-host 的项（presenter 是 nil）看 layerHostView 活着；
+// 只要一边活着就复用，不建新 scene。
+if (pid == GHCFCachePids[cacheIdx] && ((GHCFCachePresenters[cacheIdx] && GHCFCachePresenters[cacheIdx].presentationView) || GHCFCacheLayerHostViews[cacheIdx])) {
+if (GHCFCacheSceneIDs[cacheIdx]) {
+char rbuf[256];
+snprintf(rbuf, sizeof(rbuf), "v57 reusing cached scene %s", [GHCFCacheSceneIDs[cacheIdx] UTF8String]);
+GHCFLogLine(rbuf);
+} else {
+GHCFLogLine("v57 reusing cached scene");
+}
+GHCFLoadCacheToActive(cacheIdx);
+if (GHCFHostedMinimized) {
+[self restoreHostedWindow];
+} else if (GHCFHostedWindow) {
+GHCFHostedWindow.hidden = NO;
+// v40：复用的窗已开着——带到最前（别的窗回基础层级，这个窗升到
+// 最前层级、活动量切到它），再推前景。
+GHCFBringWindowToFront(GHCFHostedWindow);
+// v43.25：複用門控——44.log L401–403：複用只推前景、不讀 contentState；
+// scene 是 0 時推了也沒用，大窗一直黑著蓋佔位（到日誌結尾一次都沒回來過）。
+// 複用後讀一次 contentState，是 0 就按 promote 那套設門控（2 秒熔斷重建）。
+// 準備中（1）先推一次再門控；卡 0 不推（推 0 沒用）；就緒（2）保持原行為。
+NSUInteger reuseCS = 2;
+if (GHCFHostedScene) {
+@try { reuseCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; reuseCS = 2; }
+}
+if (reuseCS != 2) {
+if (reuseCS == 1) {
+@try {
+[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push on reuse failed");
+}
+}
+GHCFShowPlaceholderForIndex(cacheIdx);
+GHCFRestoreGateActive = YES;
+GHCFRestoreGateScene = GHCFHostedScene;
+GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
+GHCFRestoreGateRebuilt = NO;
+GHCFRestoreGateStuckLogged = NO;
+GHCFRestoreGateTimeoutDeferredLogged = NO;
+GHCFRestoreGateTimeoutDeferCount = 0;
+if (cacheIdx >= 0 && cacheIdx < GHCFAppCount) GHCFRestoreGaveUp[cacheIdx] = NO;
+GHCFRestoreGateMode = 1;
+GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
+if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
+GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow();
+GHCFSizeGateMatchedOnce = NO;
+GHCFSizeGateWaitingLogged = NO;
+if (reuseCS == 0) {
+GHCFLogLine("v43.25 reuse scene stuck 0, gating");
+} else {
+GHCFLogLine("v43.25 reuse scene gating cs=1");
+}
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+[self showGatedRestoredWindowTick];
+});
+} else {
+@try {
+[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+GHCFLogLine("v57 foreground pushed on reuse");
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push on reuse failed");
+}
+}
+}
+return;
+}
+GHCFLogLine("v57 stored scene stale, destroying");
+GHCFDestroyCachedEntryAtIndex(cacheIdx);
+}
+// v35：sceneID 仍是固定格式 `sceneID:<bundleID>-default`（v28 的
+// 格式）——v33 的每次新 UUID 让计算器黑屏：已在跑着的单 scene App
+// 只往自己默认 ID 的 scene 里画，全新 UUID 的 scene 它认不出来、
+// 不往里画（§84 定死）。固定 ID + 低层级（v29）两个条件都要，缺
+// 一不可。残留撞 ID 的崩不靠新 ID 修，靠会话内永不销毁（见文件头
+// v35 节：关窗与切走都只藏窗，复用缓存里的旧 scene；同一 ID 一个
+// 会话只建一次）。persistenceIdentifier 仍与 sceneID 相同（下面那
+// 行本来就是 settings.persistenceIdentifier = sceneID）。主线程启
+// 动、foreground 推送、1.5 秒 + 4 秒重试，其余什么都不动。
+NSString *fmt = [NSString stringWithCString:"sceneID:%s-default" encoding:NSUTF8StringEncoding];
+NSString *sceneID = [NSString stringWithFormat:fmt, bundleID];
+// v38：已在跑的 App，先查它已有的主 scene（KonbanXV 的路，见文件
+// 头 v38 节第 1 项）。找到就走新路（托管已有主 scene，不 createScene、
+// 不撞固定 ID）；找不到、或新路任何一步失败，就走老路（下面
+// registerProcessForAuditToken + createScene），不崩、不拦、不跳过。
+FBScene *existingScene = GHCFExistingMainSceneForBundleID(bundleID);
+BOOL hostedExisting = NO;
+if (existingScene) {
+char ebuf[256];
+snprintf(ebuf, sizeof(ebuf), "v57 hosting existing scene %s", bundleID);
+GHCFLogLine(ebuf);
+@try {
+Class layerHostClass = objc_getClass("_UISceneLayerHostContainerView");
+UIView *layerHostView = nil;
+if (layerHostClass) {
+layerHostView = [[layerHostClass alloc] initWithScene:existingScene debugDescription:nil];
+}
+if (layerHostView) {
+Class contextClass = objc_getClass("UIScenePresentationContext");
+if (contextClass) {
+id context = [[contextClass alloc] _initWithDefaultValues];
+if (context) [(_UISceneLayerHostContainerView *)layerHostView _setPresentationContext:context];
+}
+// 已有主 scene 不推 frame、不动 insets（见文件头 v38 节第 1 项）；
+// 只推 foreground（建窗时同一个已证明能用的做法），让它在浮窗里画。
+@try {
+[existingScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+GHCFLogLine("v57 foreground pushed on existing scene");
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push on existing scene failed");
+}
+GHCFLogLine("v57 layer host ready");
+[self buildHostedWindowForBundleID:bundleID name:name scene:existingScene presenter:nil layerHostView:layerHostView sceneID:sceneID pid:pid];
+hostedExisting = YES;
+} else {
+GHCFLogLine("v57 layer host view nil, creating new");
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 layer host failed, creating new");
+}
+}
+if (hostedExisting) return;
+GHCFLogLine("v57 no existing scene, creating new");
+FBProcessManager *manager = [FBProcessManager sharedInstance];
+[manager registerProcessForAuditToken:[handle auditToken]];
+GHCFLogLine("v57 creating new scene");
+char idbuf[256];
+snprintf(idbuf, sizeof(idbuf), "v57 sceneID %s", [sceneID UTF8String]);
+GHCFLogLine(idbuf);
+FBSMutableSceneDefinition *definition = [FBSMutableSceneDefinition definition];
+definition.identity = [FBSSceneIdentity identityForIdentifier:sceneID];
+definition.clientIdentity = [FBSSceneClientIdentity identityForProcessIdentity:[handle identity]];
+definition.specification = [UIApplicationSceneSpecification specification];
+FBSMutableSceneParameters *parameters = [FBSMutableSceneParameters parametersForSpecification:definition.specification];
+UIMutableApplicationSceneSettings *settings = [UIMutableApplicationSceneSettings new];
+settings.canShowAlerts = YES;
+settings.cornerRadiusConfiguration = [[BSCornerRadiusConfiguration alloc] initWithTopLeft:GHCFReadCornerRadius() bottomLeft:GHCFReadCornerRadius() bottomRight:GHCFReadCornerRadius() topRight:GHCFReadCornerRadius()];
+settings.displayConfiguration = [[UIScreen mainScreen] displayConfiguration];
+settings.foreground = YES;
+settings.deviceOrientation = UIDeviceOrientationPortrait;
+settings.interfaceOrientation = UIInterfaceOrientationPortrait;
+// v38：frame = 内容尺寸 ÷ 默认 scale（反向耦合，见
+// GHCFSceneFrameSizeForBundleID）：计算器 320x693 ÷ 0.77 ≈ 414x896
+//（屏幕尺寸，它的远端图层得是整张全屏画面），别的 App 320x480 ÷
+// 1.0 = 320x480。presentationView 的尺寸就是 frame 的尺寸（日志里那行
+// presentationView w=... 会印证：计算器应是 414x896）。
+CGSize sceneFrameSize = GHCFSceneFrameSizeForBundleID(bundleID);
+settings.frame = CGRectMake(0, 0, sceneFrameSize.width, sceneFrameSize.height);
+GHCFHostedSceneFrameSize = sceneFrameSize; // v73：追蹤推給 scene 的 frame 尺寸（尺寸門用）。
+GHCFHostedSceneFrameSizeValid = YES;
+settings.level = 1;
+settings.persistenceIdentifier = sceneID;
+settings.peripheryInsets = UIEdgeInsetsZero;
+settings.safeAreaInsetsPortrait = UIEdgeInsetsZero;
+settings.statusBarDisabled = YES;
+parameters.settings = settings;
+UIMutableApplicationSceneClientSettings *clientSettings = [UIMutableApplicationSceneClientSettings new];
+clientSettings.interfaceOrientation = UIInterfaceOrientationPortrait;
+clientSettings.statusBarStyle = 0;
+parameters.clientSettings = clientSettings;
+FBScene *scene = [[FBSceneManager sharedInstance] createSceneWithDefinition:definition initialParameters:parameters];
+if (!scene) {
+GHCFLogLine("v57 scene failed nil scene");
+return;
+}
+GHCFLogLine("v57 scene created");
+id presenterManager = [scene uiPresentationManager];
+if (!presenterManager) {
+GHCFLogLine("v57 presenter failed no manager");
+return;
+}
+_UIScenePresenter *presenter = [presenterManager createPresenterWithIdentifier:sceneID];
+if (!presenter) {
+GHCFLogLine("v57 presenter failed nil");
+return;
+}
+[presenter modifyPresentationContext:^(UIMutableScenePresentationContext *context) {
+context.appearanceStyle = 2;
+}];
+[presenter activate];
+if (!presenter.presentationView) {
+GHCFLogLine("v57 presenter failed no view");
+return;
+}
+// v28：记 presenterView 的尺寸与有没有 layer——计算器在 v26 还是黑的
+//（别的 App 都能画出来），要先排除 view 本身没尺寸、没嵌进去的可能。
+// 只记日志，不改任何行为；同样包 @try/@catch，出错只记日志。
+@try {
+char pbuf[128];
+UIView *pv = presenter.presentationView;
+snprintf(pbuf, sizeof(pbuf), "v57 presentationView w=%d h=%d layer=%d", (int)pv.bounds.size.width, (int)pv.bounds.size.height, pv.layer ? 1 : 0);
+GHCFLogLine(pbuf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 presentationView failed");
+}
+// v28：scene 建好了、presenter 也 activate 了，但 v25 的窗是黑的——
+// 计算器进程没往 scene 里画。KonbanXV 的做法是建完 scene 就把
+// foreground 显式推给客户端（"important for the view to be
+// interactable"）。先记 contentState（0 没就绪、1 准备中、2 就绪），
+// 再用已经证明能用的 updateSettingsWithBlock: 把 foreground=YES 推
+// 一遍、再记一次 contentState。推 foreground 绝不能拖垮建窗：
+// 单独包 @try/@catch，出错只记日志、继续建窗。
+@try {
+char cbuf[128];
+snprintf(cbuf, sizeof(cbuf), "v57 scene contentState=%lu", (unsigned long)[scene contentState]);
+GHCFLogLine(cbuf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 scene contentState failed");
+}
+// v72：锁着时不推 foreground——锁着建的 scene 推了也会掉回 0（24.log 时钟案：
+// 建时 state=1，推完读 0，之后再也没起来）。锁着就等解锁再推（解锁回调
+// 会给全部缓存 scene 推前景，新 scene 那时已进缓存）。
+if (GHCFScreenLocked) {
+GHCFLogLine("v72 foreground push deferred, screen locked");
+} else {
+@try {
+[scene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+}];
+char fbuf[128];
+snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed contentState=%lu", (unsigned long)[scene contentState]);
+GHCFLogLine(fbuf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push failed");
+}
+}
+GHCFLogLine("v57 presenter ready");
+[self buildHostedWindowForBundleID:bundleID name:name scene:scene presenter:presenter layerHostView:nil sceneID:sceneID pid:pid];
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 scene failed exception");
+} @finally {
+GHCFHostedLaunching = NO;
+}
+}
+
+// 建 FV 风格的悬浮窗（V5_DESIGN.md §4.4 + 附录 D）：
+// 圆角 35、有阴影、离屏幕边缘有距离、44pt 标题栏（可拖动）、
+// 红关闭钮、黄最小化钮、右下角缩放手柄。内容区嵌 presenter 的 view。
+- (void)buildHostedWindowForBundleID:(const char *)bundleID name:(const char *)name scene:(FBScene *)scene presenter:(_UIScenePresenter *)presenter layerHostView:(UIView *)layerHostView sceneID:(NSString *)sceneID pid:(int)pid {
+@try {
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+// v38：窗尺寸按 App 定——计算器拿 320x693（内容就是窗，没有标题栏
+// 了；之前 320x737 是含 44pt 标题栏的总高，内容几何不变），别的
+// App 拿 350x757（85% 宽、和屏幕同宽高比）。见
+// GHCFHostedContentSizeForBundleID。
+CGSize hostedContentSize = GHCFHostedContentSizeForBundleID(bundleID);
+CGFloat winW = hostedContentSize.width;
+CGFloat winH = hostedContentSize.height;
+// v53：浮窗大小預設走共用 helper（小 280x600／中＝內容尺寸／大 414x800；
+// 計算器永遠自己的 320x693，不跟預設走；有存過的位置/大小時，
+// 後面會蓋掉這裡）。
+GHCFPresetSizeForBundleID(bundleID, &winW, &winH);
+hostedContentSize = CGSizeMake(winW, winH);
+{
+char pbuf[128];
+snprintf(pbuf, sizeof(pbuf), "v57 window build preset size %dx%d %s", (int)winW, (int)winH, bundleID);
+GHCFLogLine(pbuf);
+}
+// v38：新窗的 scaleRatio 用这个 App 的默认值（计算器 0.77，别的 1.0）。
+GHCFHostedScaleRatio = GHCFDefaultScaleRatioForBundleID(bundleID);
+CGRect winFrame = CGRectMake((screenBounds.size.width - winW) / 2.0, (screenBounds.size.height - winH) / 2.0, winW, winH);
+// v40：恢复上次的位置/大小/缩放（有存过的才恢复；没有就走默认+错位）。
+// 存的是窗中心 + 窗尺寸 + scale；恢复后夹在屏幕内（左右留 8pt、
+// 顶留安全距离、底留 8pt），缩放夹在 0.5–2.0。内容按恢复后的尺寸嵌
+//（hostedContentSize 改成恢复的窗尺寸，反向耦合按它算，内容贴边
+// 填满、不错位；建窗后再调一次 resizeHostedSceneToContentSize，把
+// scene frame 也推到恢复的尺寸，见下面 window shown 后）。
+BOOL geometryRestored = NO;
+CGFloat restoredW = 0, restoredH = 0;
+{
+int geoIdx = GHCFAppIndexForBundleID(bundleID);
+CGFloat geoCX, geoCY, geoW, geoH, geoScale;
+// v53：恢復尺寸＝存過的幾何（夾到預設）；固定中心開著
+// 時也恢復尺寸、只不恢復位置（居中開——尺寸是拖調後記住的，位置照舊
+// 不記）；沒存過就走預設（下面分支本來就居中放）。
+BOOL centerOpen = GHCFReadCenterOnOpen();
+if (geoIdx >= 0 && GHCFRestoreGeometryForIndex(geoIdx, &geoCX, &geoCY, &geoW, &geoH, &geoScale)) {
+// v63：尺寸固定——存過的 W/H 不再採用，一律用固定尺寸（winW/winH 在
+// 上面已按固定尺寸算好；計算器是自己的 320x693）；只恢復位置（中心）。
+geoW = winW;
+geoH = winH;
+if (centerOpen) {
+winFrame = CGRectMake((screenBounds.size.width - geoW) / 2.0, (screenBounds.size.height - geoH) / 2.0, geoW, geoH);
+} else {
+CGFloat safeDistance = GHCFReadSafeDistance();
+CGFloat minCX = geoW / 2.0 + 8.0;
+CGFloat maxCX = screenBounds.size.width - geoW / 2.0 - 8.0;
+CGFloat minCY = safeDistance + geoH / 2.0;
+CGFloat maxCY = screenBounds.size.height - geoH / 2.0 - 8.0;
+if (geoCX < minCX) geoCX = minCX;
+if (geoCX > maxCX) geoCX = maxCX;
+if (geoCY < minCY) geoCY = minCY;
+if (geoCY > maxCY) geoCY = maxCY;
+winFrame = CGRectMake(geoCX - geoW / 2.0, geoCY - geoH / 2.0, geoW, geoH);
+}
+winW = geoW;
+winH = geoH;
+hostedContentSize = CGSizeMake(geoW, geoH);
+GHCFHostedScaleRatio = geoScale;
+geometryRestored = YES;
+restoredW = geoW;
+restoredH = geoH;
+GHCFLogLine("v57 geometry restored");
+}
+}
+if (!geometryRestored) {
+// v40：新窗错位放——每多一个看得见的窗错开 44pt（横竖交错），不直接
+// 盖在旧窗正上方；夹在屏幕里（左右留 8pt、顶留安全距离、底留 8pt）。
+int visibleCount = GHCFVisibleHostedWindowCount();
+if (visibleCount > 0) {
+CGFloat step = GHCF_NEW_WINDOW_OFFSET;
+CGFloat dx = step * visibleCount;
+CGFloat dy = step * visibleCount;
+CGFloat minX = 8.0;
+CGFloat maxX = screenBounds.size.width - winW - 8.0;
+CGFloat minY = GHCFReadSafeDistance();
+CGFloat maxY = screenBounds.size.height - winH - 8.0;
+CGFloat nx = winFrame.origin.x + dx;
+CGFloat ny = winFrame.origin.y + dy;
+if (nx > maxX) nx = maxX;
+if (nx < minX) nx = minX;
+if (ny > maxY) ny = maxY;
+if (ny < minY) ny = minY;
+winFrame = CGRectMake(nx, ny, winW, winH);
+}
+}
+if (strcmp(bundleID, "com.apple.calculator") == 0) {
+char wbuf[160];
+CGFloat calcScale = hostedContentSize.width / GHCFSceneFrameSizeForBundleID(bundleID).width;
+snprintf(wbuf, sizeof(wbuf), "v57 calculator window %dx%d scale %d%%", (int)winW, (int)winH, (int)(calcScale * 100.0));
+GHCFLogLine(wbuf);
+}
+GHCFHostedWindow = [[UIWindow alloc] initWithFrame:winFrame];
+// v29：层级降到 Alert 之下——锁屏约在 Alert（2000），锁屏必须盖住我们的窗，密码键盘才能点到（2026-11-13 锁屏密码输不进去的 bug）。
+// v40：基础层级用常量 Alert - 2（1998）；新窗建好后带到最前
+//（Alert - 1.75，见下面 window shown 后）。
+GHCFHostedWindow.windowLevel = GHCF_HOSTED_BASE_LEVEL;
+GHCFHostedWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *hostedScene = GHCFActiveWindowScene();
+if (hostedScene) {
+GHCFHostedWindow.windowScene = hostedScene;
+} else {
+GHCFLogLine("v57 hosted scene nil");
+}
+// 窗的阴影与圆角（画在窗的 layer 上；内容容器自己裁圆角）。
+// v41：圆角、阴影开关/透明度/半径都走设定（浮窗设置 → 浮窗阴影设置）。
+GHCFHostedWindow.layer.shadowColor = [UIColor blackColor].CGColor;
+GHCFHostedWindow.layer.cornerRadius = GHCFReadCornerRadius();
+GHCFHostedWindow.layer.shadowOpacity = GHCFReadShadowEnabled() ? GHCFReadShadowOpacity() : 0.0;
+GHCFHostedWindow.layer.shadowRadius = GHCFReadShadowRadius();
+GHCFHostedWindow.layer.shadowOffset = CGSizeMake(0, 6);
+UIViewController *vc = [[UIViewController alloc] init];
+// 内容容器：圆角 35、裁掉超出部分、细边框。v36：底色由白改黑——万一
+// 哪有缝，露黑不露白（v35 计算器两侧的白边就是内容区的白色底）。
+UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, winW, winH)];
+container.backgroundColor = [UIColor blackColor];
+container.layer.cornerRadius = GHCFReadCornerRadius();
+container.layer.masksToBounds = YES;
+container.layer.borderWidth = 1.0;
+container.layer.borderColor = [UIColor colorWithWhite:0.8 alpha:1.0].CGColor;
+vc.view = container;
+GHCFHostedContainer = container;
+// v38：内容区就是整个窗（没有标题栏了，App 内容从顶到底贴边填满）。
+// v36：底色由白改黑（同容器）。
+UIView *contentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, winW, winH)];
+contentView.backgroundColor = [UIColor blackColor];
+// v39：contentView layer 的 anchorPoint 改 (0,0)、position (0,0)
+//（frame 仍是 (0,0,winW,winH)）。sublayerTransform 是繞 layer 的
+// anchorPoint 縮——預設 (0.5,0.5) 是中心，scale<1.0 的 App（計算機
+// 0.77、設置 0.845）會往右下偏中心×(1−scale)，見 BUILD_LOG §108；
+// 改成左上錨點後，建窗、resize、滑桿的 sublayerTransform 全都繞左上縮。
+contentView.layer.anchorPoint = CGPointMake(0, 0);
+contentView.layer.position = CGPointMake(0, 0);
+[container addSubview:contentView];
+GHCFHostedContentView = contentView;
+// v38：嵌 view 分叉——有 presenter 走新建 scene 的老路（反向耦合），
+// 有 layerHostView 走托管已有主 scene 的新路（bounds = 屏幕尺寸，
+// 显示 scale 用 GHCFLayerHostDisplayScaleForContentSizeAndBundleID，
+// 不推 scene frame）。presenter 与 layerHostView 有且只有一个非空。
+if (presenter && presenter.presentationView) {
+UIView *presenterView = presenter.presentationView;
+// v38：反向耦合（所有 App 都一样，不再有计算器特判）——
+// presentationView 的 bounds = scene frame 尺寸（内容尺寸 ÷ scale），
+// anchorPoint (0,0)、position (0,0)（FBAL 的左上对齐做法）；内容区
+// layer 的 sublayerTransform 缩回窗尺寸。autoresizing 关掉，尺寸由
+// 缩放管（resize 与滑杆时重算，见 GHCFApplyScaleToHostedWindow）。
+CGSize frameSize = GHCFSceneFrameSizeForContentSizeAndScale(hostedContentSize, GHCFHostedScaleRatio);
+presenterView.autoresizingMask = UIViewAutoresizingNone;
+presenterView.bounds = CGRectMake(0, 0, frameSize.width, frameSize.height);
+presenterView.layer.anchorPoint = CGPointMake(0, 0);
+presenterView.layer.position = CGPointMake(0, 0);
+[contentView insertSubview:presenterView atIndex:0];
+contentView.layer.sublayerTransform = CATransform3DMakeScale(GHCFHostedScaleRatio, GHCFHostedScaleRatio, 1.0);
+{
+char sbuf[128];
+snprintf(sbuf, sizeof(sbuf), "v57 scene scaled %d%%", (int)(GHCFHostedScaleRatio * 100.0));
+GHCFLogLine(sbuf);
+}
+} else if (layerHostView) {
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+layerHostView.autoresizingMask = UIViewAutoresizingNone;
+layerHostView.bounds = CGRectMake(0, 0, screenSize.width, screenSize.height);
+layerHostView.layer.anchorPoint = CGPointMake(0, 0);
+layerHostView.layer.position = CGPointMake(0, 0);
+[contentView insertSubview:layerHostView atIndex:0];
+CGFloat displayScale = GHCFLayerHostDisplayScaleForContentSizeAndBundleID(hostedContentSize, bundleID);
+contentView.layer.sublayerTransform = CATransform3DMakeScale(displayScale, displayScale, 1.0);
+{
+char sbuf[128];
+snprintf(sbuf, sizeof(sbuf), "v57 layer host scaled %d%%", (int)(displayScale * 100.0));
+GHCFLogLine(sbuf);
+}
+} else {
+GHCFLogLine("v57 window failed no view to embed");
+return;
+}
+// v38：记实际嵌进去的 view 的 frame——注意：frame 现在是图层的
+// 尺寸（未缩放），显示尺寸 = frame × scale（sublayerTransform 缩
+// 回）。新建 scene 的计算器应是 0,0 414x896（图层尺寸）+ scene
+// scaled 77%（显示 320x693）；新建 scene 的非计算器 App 应是
+// 0,0 350x757 + scaled 100%；layer-host 的 App 应是 0,0 414x896
+//（屏幕尺寸）+ layer host scaled 85%（一般 App，显示 350x757）
+// 或 77%（计算器，显示 320x693）。
+@try {
+UIView *embeddedView = (presenter && presenter.presentationView) ? presenter.presentationView : layerHostView;
+CGRect pvFrame = embeddedView.frame;
+char fbuf[160];
+snprintf(fbuf, sizeof(fbuf), "v57 hosted view frame %d,%d %dx%d", (int)pvFrame.origin.x, (int)pvFrame.origin.y, (int)pvFrame.size.width, (int)pvFrame.size.height);
+GHCFLogLine(fbuf);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 hosted view frame failed");
+}
+// v38：缩放滑杆条（默认藏着）——点细条展开，盖在内容区顶
+// 上（细条下面，y=24；半透明黑底，不改窗尺寸、不推内容区）。
+// v60：标题栏拿掉，± 钮没了，改由点细条（handleTopStripTap）展开／收起。
+// 里面一条 UISlider（0.5–2.0，步进 0.01）+ 右边一个百分比。拖滑杆
+// 改 scaleRatio，走同一条反向耦合路径。滑杆条是 container 的子视图
+//（在内容区之上），跟着窗一起缓存、一起藏/显示。
+// v42：滑桿條加高到 72pt，第二行放浮窗大小預設（小/中/大三顆鈕，
+// 點一下窗就變那個尺寸，走 resize 路；窄窗（<240pt）不放這行）。
+UIView *scaleBar = [[UIView alloc] initWithFrame:CGRectMake(0, GHCF_HOSTED_STRIP_H, winW, 72)];
+scaleBar.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
+scaleBar.hidden = YES;
+[container addSubview:scaleBar];
+GHCFHostedScaleSliderBar = scaleBar;
+UISlider *scaleSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, 3, winW - 70, 30)];
+scaleSlider.minimumValue = 0.5;
+scaleSlider.maximumValue = 2.0;
+scaleSlider.value = GHCFHostedScaleRatio;
+scaleSlider.minimumTrackTintColor = [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0];
+[scaleSlider addTarget:self action:@selector(handleScaleSlider:) forControlEvents:UIControlEventValueChanged];
+// v40：滑杆松手时存一次位置/大小/缩放（ValueChanged 拖动中一直在触发，
+// 每动一下都写 prefs 太费；松手（TouchUpInside/Outside）才存一次）。
+[scaleSlider addTarget:self action:@selector(handleScaleSliderEnded:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+[scaleBar addSubview:scaleSlider];
+GHCFHostedScaleSlider = scaleSlider;
+UILabel *scaleLabel = [[UILabel alloc] initWithFrame:CGRectMake(winW - 56, 3, 46, 30)];
+{
+char pbuf[32];
+snprintf(pbuf, sizeof(pbuf), "%d%%", (int)(GHCFHostedScaleRatio * 100.0));
+scaleLabel.text = [NSString stringWithCString:pbuf encoding:NSUTF8StringEncoding];
+}
+scaleLabel.textColor = [UIColor whiteColor];
+scaleLabel.font = [UIFont boldSystemFontOfSize:14];
+scaleLabel.textAlignment = NSTextAlignmentCenter;
+[scaleBar addSubview:scaleLabel];
+GHCFHostedScaleLabel = scaleLabel;
+if (winW >= 240.0) {
+UILabel *sizeTitle = [[UILabel alloc] initWithFrame:CGRectMake(10, 39, 40, 28)];
+sizeTitle.text = [NSString stringWithCString:"尺寸" encoding:NSUTF8StringEncoding];
+sizeTitle.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.8];
+sizeTitle.font = [UIFont systemFontOfSize:13];
+[scaleBar addSubview:sizeTitle];
+const char *sizeNames[3] = {"小", "中", "大"};
+int currentPreset = GHCFReadWindowSizePreset();
+for (int sp = 0; sp < 3; sp++) {
+UIButton *sizeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+sizeBtn.frame = CGRectMake(winW - 140 + sp * 44, 39, 40, 28);
+sizeBtn.tag = 100 + sp;
+sizeBtn.backgroundColor = [UIColor colorWithRed:0.25 green:0.25 blue:0.25 alpha:1.0];
+sizeBtn.layer.cornerRadius = 8.0;
+sizeBtn.layer.borderWidth = (sp == currentPreset) ? 2.0 : 1.0;
+sizeBtn.layer.borderColor = (sp == currentPreset) ? [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0].CGColor : [[UIColor whiteColor] colorWithAlphaComponent:0.3].CGColor;
+[sizeBtn setTitle:[NSString stringWithCString:sizeNames[sp] encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
+[sizeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+sizeBtn.titleLabel.font = [UIFont boldSystemFontOfSize:13];
+[sizeBtn addTarget:self action:@selector(handleSizePresetButton:) forControlEvents:UIControlEventTouchUpInside];
+[scaleBar addSubview:sizeBtn];
+}
+}
+// v47：「透」拿掉——透明度滑桿條整個刪掉（透明度只留在系統設定
+// 浮窗設置裡）；每窗讀值 winOpacity_<bid> 還留著（沒設走全域）。
+// v38：窗顶上的 24pt 透明细条（拖动窗 + 点它展开/收起控制条，
+// 唯一的常驻装饰——App 名（12pt，置中）+ 一颗 72x6 的白点小 pill，
+// alpha 0.7、贴条底）。
+// v40 从 16pt 加宽到 24pt（皇上 11:34：v39 的 16pt 细条太细、太透明，
+// 找不到地方抓；细条保持透明——App 内容透出来）。细条在
+// 内容区之上、控制条之下（控制条展开时会盖住它）。点细条的手势
+// 要等拖动失败才认（拖动时不触发点按）。
+// v40：细条中央加 App 名（12pt，白字 + 黑色阴影，浅色内容上也看得见；
+// UILabel 默认不收触摸，点按/拖动仍归细条的手势，不影响拖动）。
+// pill 从垂直置中改成贴条底（72x6 不变，y=17），给名字让位；名字
+// 与 pill 都跟窗宽走（名字横向拉伸、pill 左右留空、水平置中），
+// 窗调尺寸后不跑偏。
+UIView *topStrip = [[UIView alloc] initWithFrame:CGRectMake(0, 0, winW, GHCF_HOSTED_STRIP_H)];
+topStrip.backgroundColor = [UIColor clearColor];
+[container addSubview:topStrip];
+GHCFHostedTopStrip = topStrip;
+UILabel *stripNameLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, winW, 15)];
+stripNameLabel.text = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
+stripNameLabel.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.85];
+stripNameLabel.font = [UIFont systemFontOfSize:12];
+stripNameLabel.textAlignment = NSTextAlignmentCenter;
+stripNameLabel.shadowColor = [UIColor blackColor];
+stripNameLabel.shadowOffset = CGSizeMake(0, 1);
+stripNameLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+[topStrip addSubview:stripNameLabel];
+// v59：細條上的小橫條改成 FV 抓手尺寸 36x5（本來 72x6 太長）。
+// v60：雙擊放大／還原取消（皇上說沒用），拖動走細條的 stripDrag。
+UIView *pill = [[UIView alloc] initWithFrame:CGRectMake((winW - 36) / 2.0, 17, 36, 5)];
+pill.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.7];
+pill.layer.cornerRadius = 2.5;
+pill.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+[topStrip addSubview:pill];
+UIPanGestureRecognizer *stripDrag = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleTitleDrag:)];
+stripDrag.minimumNumberOfTouches = 1;
+stripDrag.maximumNumberOfTouches = 1;
+// v57（§144-6 真根因）：pan 之前沒設 delegate——UIKit 同時識別要問雙方
+// delegate，nil 預設回 NO；pan 一有移動就先認，上下滑／左右滑永遠被迫失敗。
+stripDrag.delegate = self;
+[topStrip addGestureRecognizer:stripDrag];
+UITapGestureRecognizer *stripTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTopStripTap:)];
+stripTap.delegate = self;
+[stripTap requireGestureRecognizerToFail:stripDrag];
+[topStrip addGestureRecognizer:stripTap];
+// v42：手勢自定義（綁在窗頂細條上，不綁內容區——App 自己的滑動/
+// 點按不會誤觸；動作走設定 gestureTripleTap/gestureSwipeV/
+// gestureSwipeH/gestureTwoFingerTap；單擊點細條（開／關縮放滑桿條）
+// 要等三擊失敗才認，免得三擊時滑桿條先跳一下）。
+UITapGestureRecognizer *tripleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleGestureTripleTap:)];
+tripleTap.numberOfTapsRequired = 3;
+tripleTap.delegate = self;
+tripleTap.cancelsTouchesInView = NO;
+[topStrip addGestureRecognizer:tripleTap];
+[stripTap requireGestureRecognizerToFail:tripleTap];
+// v60：雙擊放大／還原取消——stripDoubleTap 整個刪掉；單擊只等
+// 三擊失敗才認（上面那行不動）。
+UISwipeGestureRecognizer *swipeV = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(handleGestureSwipeVertical:)];
+swipeV.direction = UISwipeGestureRecognizerDirectionUp | UISwipeGestureRecognizerDirectionDown;
+swipeV.delegate = self;
+swipeV.cancelsTouchesInView = NO;
+[topStrip addGestureRecognizer:swipeV];
+UISwipeGestureRecognizer *swipeH = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(handleGestureSwipeHorizontal:)];
+swipeH.direction = UISwipeGestureRecognizerDirectionLeft | UISwipeGestureRecognizerDirectionRight;
+swipeH.delegate = self;
+swipeH.cancelsTouchesInView = NO;
+[topStrip addGestureRecognizer:swipeH];
+UITapGestureRecognizer *twoFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleGestureTwoFingerTap:)];
+twoFingerTap.numberOfTouchesRequired = 2;
+twoFingerTap.delegate = self;
+twoFingerTap.cancelsTouchesInView = NO;
+[topStrip addGestureRecognizer:twoFingerTap];
+// v57：診斷——建窗時記細條上到底掛了幾個 recognizer（日誌對得上才
+// 能定死「觸摸到沒到細條」）。
+{
+char gbuf[128];
+snprintf(gbuf, sizeof(gbuf), "v57 gesture strip attached %lu recognizers", (unsigned long)[topStrip.gestureRecognizers count]);
+GHCFLogLine(gbuf);
+}
+// v60：标题栏（控制条）整个拿掉——App 名、釘選、± 缩放钮全没了，
+// 不留空条；内容区本来就是整个窗，不用改。缩放改由点细条开滑杆条。
+// v40：右下角缩放手柄（36x36 触摸区——比说的 24 稍大，好抓；
+// 带一个看得见的白色角落括号「⌟」标记，0.8 alpha。原来 60x60 透明窗
+// + 0.2 alpha 淡菱形太难找，皇上 11:55 要一个看得见的手柄）。
+// 拖动即改窗口 frame，松手时调 scene 的 frame（跟原来一样）；
+// 限制最小 200x300、最大不超过屏幕（见 handleResizeDrag），
+// 保持圆角 35 与 anchorPoint (0,0) 的 v39 修正（只改 frame，
+// 不动圆角与锚点）。手柄跟着窗走（FlexibleLeftMargin|FlexibleTopMargin，
+// 一直在右下角）。
+UIView *resizeHandle = [[UIView alloc] initWithFrame:CGRectMake(winW - 36, winH - 36, 36, 36)];
+resizeHandle.backgroundColor = [UIColor clearColor];
+resizeHandle.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin;
+resizeHandle.hidden = YES;
+// v63：尺寸固定——大窗上的縮放手柄藏起來（拖角落縮放停用）；收成 peek 時
+// GHCFShowDockPeekForIndex 會再把它顯示出來（小窗調尺寸用），恢復成大窗
+// 時 GHCFHideDockPeekForIndex 再藏回去。
+// 角落括号「⌟」：竖条（右边缘）+ 横条（底边缘），白 0.8 alpha。
+UIView *bracketV = [[UIView alloc] initWithFrame:CGRectMake(31, 17, 3, 17)];
+bracketV.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.8];
+bracketV.layer.cornerRadius = 1.5;
+[resizeHandle addSubview:bracketV];
+UIView *bracketH = [[UIView alloc] initWithFrame:CGRectMake(17, 31, 17, 3)];
+bracketH.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.8];
+bracketH.layer.cornerRadius = 1.5;
+[resizeHandle addSubview:bracketH];
+UIPanGestureRecognizer *resizeGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleResizeDrag:)];
+resizeGesture.minimumNumberOfTouches = 1;
+resizeGesture.maximumNumberOfTouches = 1;
+[resizeHandle addGestureRecognizer:resizeGesture];
+[container addSubview:resizeHandle];
+GHCFHostedResizeHandle = resizeHandle;
+GHCFHostedWindow.rootViewController = vc;
+// v54：浮窗滑出方向——開窗時從設定那邊滑進來（左／右，預設右）。
+// 動畫只改窗 frame，內容不動；
+// slideWin／finalFrame 用局部變數抓著進動畫塊（不用全域量，免得連開
+// 兩窗時塊跑到新窗身上）。
+UIWindow *slideWin = GHCFHostedWindow;
+CGRect finalFrame = slideWin.frame;
+// v72：重建 scene 时不滑入（GHCFSuppressSlideInOnce，重建直接出现在原位）。
+BOOL suppressSlide = GHCFSuppressSlideInOnce;
+GHCFSuppressSlideInOnce = NO;
+BOOL doSlideIn = !suppressSlide;
+if (doSlideIn) {
+BOOL slideLeft = GHCFIsFloatingWindowSlideLeft();
+CGFloat startX = slideLeft ? (-finalFrame.size.width) : ([UIScreen mainScreen].bounds.size.width);
+slideWin.frame = CGRectMake(startX, finalFrame.origin.y, finalFrame.size.width, finalFrame.size.height);
+}
+GHCFHostedWindow.hidden = NO;
+if (doSlideIn) {
+NSTimeInterval openAnimDur = 0.7;
+[UIView animateWithDuration:openAnimDur delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+slideWin.frame = finalFrame;
+} completion:nil];
+}
+GHCFHostedScene = scene;
+GHCFHostedPresenter = presenter;
+GHCFHostedLayerHostView = layerHostView;
+GHCFHostedSceneID = sceneID;
+strncpy(GHCFHostedBundleID, bundleID, sizeof(GHCFHostedBundleID) - 1);
+GHCFHostedBundleID[sizeof(GHCFHostedBundleID) - 1] = '\0';
+GHCFHostedPid = pid;
+GHCFHostedMinimized = NO;
+// v35：新窗也进缓存（这个 App 的第一份），活动下标指到它；以后切
+// 走再切回来，直接复用这一份，不再建新 scene。
+int newCacheIdx = GHCFAppIndexForBundleID(bundleID);
+if (newCacheIdx >= 0) {
+GHCFActiveAppIndex = newCacheIdx;
+GHCFSaveActiveToCache();
+}
+GHCFLogLine("v57 window shown");
+// v43.23：第 9 件——建窗日誌補原點（40.log §6 建議 3）：window shown 時
+// finalFrame 已定（滑入動畫只改 slideWin.frame，finalFrame 是最終框），
+// 把尺寸＋屏幕原點一起印出來，診斷不用再靠夾取反推位置。
+{
+char wbuf[128];
+snprintf(wbuf, sizeof(wbuf), "v43.23 window shown frame %dx%d@%d,%d", (int)finalFrame.size.width, (int)finalFrame.size.height, (int)finalFrame.origin.x, (int)finalFrame.origin.y);
+GHCFLogLine(wbuf);
+}
+// v42：浮窗透明度（每窗 winOpacity_<bid>，沒設走全域；調窗的 alpha）。
+GHCFHostedWindow.alpha = GHCFReadWindowOpacityForBundleID(bundleID);
+// v40：新窗带到最前（别的窗回基础层级，这个窗升到最前层级、活动量
+// 切到它），再更新阴影背景（开关开着、且有浮窗看得见时显示）。
+GHCFBringWindowToFront(GHCFHostedWindow);
+GHCFUpdateDimOverlay();
+// 重啟恢復清單 + 任務欄。
+GHCFSaveRestoreList();
+GHCFUpdateTaskbar();
+// v72：新窗建好不再彈「已打開 <App>」橫幅（皇上：浮窗已打开提示取消）——
+// showNotificationBannerForName 整个拿掉；低电量提示走 showNotificationBannerWithText，不动。
+// v40：恢复了上次的位置/大小——建窗时内容已按恢复的尺寸嵌，再调一次
+// resizeHostedSceneToContentSize，把 scene frame 也推到恢复的尺寸
+//（跟拖角落调尺寸松手时同一条路；只在恢复时调一次）。
+if (geometryRestored) {
+[self resizeHostedSceneToContentSize:CGSizeMake(restoredW, restoredH)];
+}
+// v28：1.5 秒重试 + 4 秒再重试一次。v26 的 1.5 秒重试在真机日志里
+// 一次都没出现——不知道是重试块根本没跑，还是窗在 1.5 秒内就被
+// 关/最小化了、守卫条件直接 return 没留日志。所以两次重试的块一跑
+// 就先无条件记一行 retry check（窗关了也记：scene 是 nil 时
+// contentState 记 0），再按老条件决定推不推；推了记 retry /
+// retry2。再包一层 @try/@catch，重试绝不能拖垮 SpringBoard。
+// v53：重試不再跳過最小化的窗——peek 的 scene 也要前景才有活內容
+//（計算器偶爾黑的嫌疑之一：開窗 1.5 秒內被收成 peek，重試直接跳過，
+// foreground 再也沒人推）。
+// v40：重试块抓当前窗的 scene/window（多窗时活动量会切到别的窗，
+// 老写法读活动量会推错窗）；缓存里的 scene 换了（销毁重建）就跳过。
+FBScene *retryScene = scene;
+UIWindow *retryWindow = GHCFHostedWindow;
+int retryIdx = newCacheIdx;
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+char cbuf[160];
+snprintf(cbuf, sizeof(cbuf), "v57 foreground retry check contentState=%lu minimized=%d", (unsigned long)(retryScene ? [retryScene contentState] : 0), (retryIdx >= 0 && GHCFCacheMinimized[retryIdx]) ? 1 : 0);
+GHCFLogLine(cbuf);
+if (!retryScene || !retryWindow) return;
+if (retryIdx >= 0 && GHCFCacheScenes[retryIdx] != retryScene) return;
+// v43.7：这扇窗重建后还卡 0、门控已停手——重试也不推（等用户手动恢复／看门狗接手）。
+if (retryIdx >= 0 && retryIdx < GHCFAppCount && GHCFRestoreGaveUp[retryIdx]) return;
+@try {
+// v72：重试只在准备中（1）时推 foreground；卡在 0 不推（24.log 证明推 0
+// 没用，卡 0 的交给门控重建）；锁着也不推（等解锁回调推）。
+if ([retryScene contentState] == 1 && !GHCFScreenLocked) {
+[retryScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+}];
+char rbuf[128];
+snprintf(rbuf, sizeof(rbuf), "v57 foreground retry contentState=%lu", (unsigned long)[retryScene contentState]);
+GHCFLogLine(rbuf);
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground retry failed");
+}
+});
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+char cbuf[160];
+snprintf(cbuf, sizeof(cbuf), "v57 foreground retry2 check contentState=%lu minimized=%d", (unsigned long)(retryScene ? [retryScene contentState] : 0), (retryIdx >= 0 && GHCFCacheMinimized[retryIdx]) ? 1 : 0);
+GHCFLogLine(cbuf);
+if (!retryScene || !retryWindow) return;
+if (retryIdx >= 0 && GHCFCacheScenes[retryIdx] != retryScene) return;
+// v43.7：这扇窗重建后还卡 0、门控已停手——重试也不推（等用户手动恢复／看门狗接手）。
+if (retryIdx >= 0 && retryIdx < GHCFAppCount && GHCFRestoreGaveUp[retryIdx]) return;
+@try {
+// v72：同上（只在 1 时推、锁着不推）。
+if ([retryScene contentState] == 1 && !GHCFScreenLocked) {
+[retryScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+}];
+char rbuf[128];
+snprintf(rbuf, sizeof(rbuf), "v57 foreground retry2 contentState=%lu", (unsigned long)[retryScene contentState]);
+GHCFLogLine(rbuf);
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground retry2 failed");
+}
+});
+// v72：新窗建好时 scene 还没就绪——盖占位等它（不要有任何 App 一开就是黑窗）。
+//（就绪的直接显示，不用门控；窗已显示，走已显示窗模式——只盖占位、就绪淡出占位。
+// 卡 0 满约 2 秒走同一个重建，v43.22 熔斷。）
+{
+NSUInteger newCS = 2;
+if (scene) {
+@try { newCS = [scene contentState]; } @catch (NSException *e) { (void)e; newCS = 2; }
+}
+if (newCS != 2 && newCacheIdx >= 0 && newCacheIdx < GHCFAppCount) {
+GHCFShowPlaceholderForIndex(newCacheIdx);
+GHCFRestoreGateActive = YES;
+GHCFRestoreGateScene = scene;
+GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
+GHCFRestoreGateRebuilt = NO;
+GHCFRestoreGateStuckLogged = NO;
+GHCFRestoreGateTimeoutDeferredLogged = NO;
+GHCFRestoreGateTimeoutDeferCount = 0;
+if (newCacheIdx >= 0 && newCacheIdx < GHCFAppCount) GHCFRestoreGaveUp[newCacheIdx] = NO; // v43.7：新 scene 是新的尝试，清掉停手旗标。
+GHCFRestoreGateMode = 1;
+GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
+if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
+GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：新窗也要過尺寸門。
+GHCFSizeGateMatchedOnce = NO;
+GHCFSizeGateWaitingLogged = NO;
+GHCFLogLine("v72 new window gated until ready");
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+[self showGatedRestoredWindowTick];
+});
+}
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 window failed exception");
+}
+}
+
+// v35 关窗（X）：藏窗、不销毁 scene——只藏窗、不推后台、记最小化。
+// scene 留着，重开同一个 App 直接复用（见 createHostedScene 的
+// 复用守卫），不再建新 scene；固定 ID 一个 SpringBoard 会话里只
+// 建一次，残留撞不到。切走别的 App 时也一样（只藏窗、存缓存，见
+// handleAppButton 的切换路径）；真正销毁只在复用守卫判旧时（进程
+// 死了，见 GHCFDestroyCachedEntryAtIndex）。关窗后窗的状态与最小
+// 化一样（hidden=YES、minimized=YES、scene 保持前景），重开走同一条
+// 恢复路（restoreHostedWindow 推前景）；锁屏回调也一样处理（最小
+// 化着的窗锁屏不藏、解锁不弹，等用户点恢复）。
+// 进程留着不杀（V5_DESIGN.md §2.2 第 19 步的精神：关窗不杀进程）。
+// v40：关窗只影响这个窗（别的窗不动），贴边小卡也收掉（彻底关掉，
+// 不再回来——卡没了、窗藏着，下次从启动器重开直接复用缓存里的 scene）。
+- (void)closeHostedWindow {
+if (!GHCFHostedWindow) return;
+// v71：關窗就取消恢復門控（門控進行中關窗時，tick 看到旗標沒了就回，
+// 不會把已關的窗又顯示出來；關窗本身不動）。
+GHCFRestoreGateActive = NO;
+int idx = GHCFActiveAppIndex;
+BOOL wasMinimized = GHCFHostedMinimized;
+// v70：關窗前先把掛著的窗恢復回來（退出動畫要在看得見的窗上播，掛著是半截出屏的）。
+if (idx >= 0 && idx < GHCFAppCount && GHCFCacheHung[idx]) {
+GHCFRestoreHungWindowForIndex(idx);
+}
+// v54：關窗彈性動畫——先把要存的幾何存好（動畫會改 frame，存完再動；
+// SaveGeometryForIndex 讀的是 w.center／bounds），再用彈簧（damping 0.7）
+// 把窗往滑出方向滑出屏幕、淡出，動畫完才藏窗並把 frame／alpha 還原
+//（幾何不毒化；下次恢復用存過的幾何）。closingWin／startFrame 用局部
+// 變數抓著進動畫塊（不用全域量）。
+UIWindow *closingWin = GHCFHostedWindow;
+CGRect startFrame = closingWin.frame;
+CGFloat startAlpha = closingWin.alpha;
+GHCFHostedMinimized = YES;
+GHCFLogLine("v57 window closed (scene kept)");
+// v53：關窗後不再把 scene 推後台（黑屏修法；恢復時本來就推前景，
+// 關了再推後台只會讓下次恢復多一個黑的機會）。
+if (idx >= 0 && idx < GHCFAppCount) {
+GHCFHideDockPeekForIndex(idx);
+GHCFSaveActiveToCache();
+// v53：只有從完整浮窗關窗才存幾何——關 peek 會存成 112x216，
+// 是毒化（見 16.log／17.log 的 112x216）。
+if (!wasMinimized) GHCFSaveGeometryForIndex(idx);
+}
+GHCFUpdateDimOverlay();
+// v42：重啟恢復清單 + 任務欄跟著關窗更新。
+GHCFSaveRestoreList();
+GHCFUpdateTaskbar();
+// v70：退出動畫——設定 exitAnimation（預設 island＝現有的彈簧滑出＋淡出）。
+// 1 縮小淡出／2 向右滑散／3 下沉淡出是普通 UIView 動畫（0.35 秒）；
+// 4 方块拼散走下面的 closeHostedWindowWithShatter（快照切片＋CAAnimation）。
+// v54：彈簧滑出——往滑出方向（左／右，跟開窗同一邊）滑出屏幕＋淡出，
+// 0.4 秒；動畫完才藏窗、還原 frame／alpha／transform（下次恢復不受影響）。
+// v56：遊戲模式開著時動畫減到最少（0.01 秒直接到位，省電）。
+int exitAnim = GHCFReadExitAnimation();
+// v72：讀完記一行（0–4），下次日誌直接證明讀值有沒有到 dylib。
+{
+char vbuf[64];
+snprintf(vbuf, sizeof(vbuf), "v72 exit anim %d", exitAnim);
+GHCFLogLine(vbuf);
+}
+if (exitAnim == 4) {
+[self closeHostedWindowWithShatter:closingWin startFrame:startFrame startAlpha:startAlpha completion:nil];
+return;
+}
+void (^closeCompletion)(BOOL) = ^(BOOL finished) {
+(void)finished;
+closingWin.hidden = YES;
+closingWin.frame = startFrame;
+closingWin.transform = CGAffineTransformIdentity;
+closingWin.alpha = startAlpha;
+};
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+if (exitAnim == 0) {
+BOOL slideLeft = GHCFIsFloatingWindowSlideLeft();
+CGFloat offX = slideLeft ? (-startFrame.size.width - 20.0) : (screenBounds.size.width + 20.0);
+NSTimeInterval closeAnimDur = 0.7;
+[UIView animateWithDuration:closeAnimDur delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
+closingWin.frame = CGRectMake(offX, startFrame.origin.y, startFrame.size.width, startFrame.size.height);
+closingWin.alpha = 0.0;
+} completion:closeCompletion];
+} else {
+NSTimeInterval closeAnimDur = 0.7;
+CGRect endFrame = startFrame;
+CGAffineTransform endTransform = CGAffineTransformIdentity;
+if (exitAnim == 1) {
+// v70：縮小淡出——縮到 1/10＋淡出（錨點是窗中心，視覺上往中心縮）。
+endTransform = CGAffineTransformMakeScale(0.1, 0.1);
+} else if (exitAnim == 2) {
+// v70：向右滑散——不管開窗是哪邊，統一往右滑出屏幕＋淡出。
+endFrame = CGRectMake(screenBounds.size.width + 20.0, startFrame.origin.y, startFrame.size.width, startFrame.size.height);
+} else {
+// v70：下沉淡出——往下沉出屏幕＋淡出。
+endFrame = CGRectMake(startFrame.origin.x, screenBounds.size.height + 20.0, startFrame.size.width, startFrame.size.height);
+}
+[UIView animateWithDuration:closeAnimDur delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+closingWin.frame = endFrame;
+closingWin.transform = endTransform;
+closingWin.alpha = 0.0;
+} completion:closeCompletion];
+}
+}
+
+// v70：方块拼散——浮窗退出動畫第 5 種：把窗快照下來切成小方塊，往外散＋
+// 旋轉＋淡出（0.55 秒，依離中心距離錯開 0.15 秒），再藏窗。做法是原創：
+// snapshotViewAfterScreenUpdates 抓快照 → render 成 UIImage → 按 58pt
+// 方格 CGImageCreateWithImageInRect 切塊 → 全屏透明 overlay 窗放方塊，
+// 每塊一個 CABasicAnimation（position＋rotation＋opacity）。快照失敗就
+// 退回縮小淡出（關窗不能卡住）；0.8 秒後藏 overlay 窗。
+// 注意：這裡不能用 @""／@()／@[] 字面量——會產生 __cfstring 段（Linux 交叉
+// 工具鏈下會壞，v13 教訓），一律用 [NSString stringWithCString:encoding:]／
+// [NSNumber numberWith…]／[NSArray arrayWithObjects:]。
+- (void)closeHostedWindowWithShatter:(UIWindow *)closingWin startFrame:(CGRect)startFrame startAlpha:(CGFloat)startAlpha completion:(void (^)(void))completion {
+if (!closingWin) return;
+UIView *snap = [closingWin snapshotViewAfterScreenUpdates:YES];
+if (!snap) {
+// 快照失敗：退回縮小淡出（關窗不能卡住）。
+NSTimeInterval dur = 0.7;
+[UIView animateWithDuration:dur delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+closingWin.transform = CGAffineTransformMakeScale(0.1, 0.1);
+closingWin.alpha = 0.0;
+} completion:^(BOOL finished) {
+(void)finished;
+closingWin.hidden = YES;
+closingWin.frame = startFrame;
+closingWin.transform = CGAffineTransformIdentity;
+closingWin.alpha = startAlpha;
+if (completion) completion();
+}];
+return;
+}
+UIGraphicsBeginImageContextWithOptions(snap.bounds.size, NO, 0.0);
+BOOL rendered = [snap drawViewHierarchyInRect:snap.bounds afterScreenUpdates:YES];
+UIImage *snapImage = rendered ? UIGraphicsGetImageFromCurrentImageContext() : nil;
+UIGraphicsEndImageContext();
+if (!snapImage) {
+NSTimeInterval dur = 0.7;
+[UIView animateWithDuration:dur delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+closingWin.transform = CGAffineTransformMakeScale(0.1, 0.1);
+closingWin.alpha = 0.0;
+} completion:^(BOOL finished) {
+(void)finished;
+closingWin.hidden = YES;
+closingWin.frame = startFrame;
+closingWin.transform = CGAffineTransformIdentity;
+closingWin.alpha = startAlpha;
+if (completion) completion();
+}];
+return;
+}
+UIWindowScene *ws = GHCFActiveWindowScene();
+UIWindow *overlayWin = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+overlayWin.windowScene = ws;
+overlayWin.windowLevel = UIWindowLevelAlert - 1.0;
+overlayWin.backgroundColor = [UIColor clearColor];
+overlayWin.userInteractionEnabled = NO;
+overlayWin.hidden = NO;
+CGFloat tile = 58.0;
+CGFloat scale = snapImage.scale;
+NSInteger cols = (NSInteger)ceil(startFrame.size.width / tile);
+NSInteger rows = (NSInteger)ceil(startFrame.size.height / tile);
+CGFloat maxDist = hypot(startFrame.size.width / 2.0, startFrame.size.height / 2.0);
+if (maxDist < 1.0) maxDist = 1.0;
+for (NSInteger r = 0; r < rows; r++) {
+for (NSInteger c = 0; c < cols; c++) {
+CGFloat tx = c * tile;
+CGFloat ty = r * tile;
+CGFloat tw = MIN(tile, startFrame.size.width - tx);
+CGFloat th = MIN(tile, startFrame.size.height - ty);
+if (tw <= 0 || th <= 0) continue;
+CGRect pixelRect = CGRectMake(tx * scale, ty * scale, tw * scale, th * scale);
+CGImageRef piece = CGImageCreateWithImageInRect(snapImage.CGImage, pixelRect);
+if (!piece) continue;
+UIImageView *pieceView = [[UIImageView alloc] initWithImage:[UIImage imageWithCGImage:piece]];
+CGImageRelease(piece);
+pieceView.frame = CGRectMake(startFrame.origin.x + tx, startFrame.origin.y + ty, tw, th);
+[overlayWin addSubview:pieceView];
+CGPoint pieceCenter = pieceView.center;
+CGPoint winCenter = CGPointMake(CGRectGetMidX(startFrame), CGRectGetMidY(startFrame));
+CGFloat dx = pieceCenter.x - winCenter.x;
+CGFloat dy = pieceCenter.y - winCenter.y;
+CGFloat len = hypot(dx, dy);
+if (len < 1.0) { dx = 0; dy = -1; len = 1.0; }
+CGFloat dist = len / maxDist;
+CGFloat push = 110.0 + (CGFloat)arc4random_uniform(140);
+CGPoint endCenter = CGPointMake(pieceCenter.x + dx / len * push, pieceCenter.y + dy / len * push);
+CGFloat rot = ((CGFloat)arc4random_uniform(240) - 120.0) / 100.0;
+NSTimeInterval delay = 0.15 * dist;
+NSTimeInterval dur = 0.55;
+CABasicAnimation *posAnim = [CABasicAnimation animationWithKeyPath:[NSString stringWithCString:"position" encoding:NSUTF8StringEncoding]];
+posAnim.fromValue = [NSValue valueWithCGPoint:pieceCenter];
+posAnim.toValue = [NSValue valueWithCGPoint:endCenter];
+posAnim.duration = dur;
+posAnim.beginTime = CACurrentMediaTime() + delay;
+posAnim.fillMode = kCAFillModeForwards;
+posAnim.removedOnCompletion = NO;
+[pieceView.layer addAnimation:posAnim forKey:[NSString stringWithCString:"shatterPos" encoding:NSUTF8StringEncoding]];
+CABasicAnimation *rotAnim = [CABasicAnimation animationWithKeyPath:[NSString stringWithCString:"transform.rotation.z" encoding:NSUTF8StringEncoding]];
+rotAnim.fromValue = [NSNumber numberWithDouble:0.0];
+rotAnim.toValue = [NSNumber numberWithDouble:(double)rot];
+rotAnim.duration = dur;
+rotAnim.beginTime = CACurrentMediaTime() + delay;
+rotAnim.fillMode = kCAFillModeForwards;
+rotAnim.removedOnCompletion = NO;
+[pieceView.layer addAnimation:rotAnim forKey:[NSString stringWithCString:"shatterRot" encoding:NSUTF8StringEncoding]];
+CABasicAnimation *fadeAnim = [CABasicAnimation animationWithKeyPath:[NSString stringWithCString:"opacity" encoding:NSUTF8StringEncoding]];
+fadeAnim.fromValue = [NSNumber numberWithDouble:1.0];
+fadeAnim.toValue = [NSNumber numberWithDouble:0.0];
+fadeAnim.duration = dur;
+fadeAnim.beginTime = CACurrentMediaTime() + delay;
+fadeAnim.fillMode = kCAFillModeForwards;
+fadeAnim.removedOnCompletion = NO;
+[pieceView.layer addAnimation:fadeAnim forKey:[NSString stringWithCString:"shatterFade" encoding:NSUTF8StringEncoding]];
+}
+}
+closingWin.hidden = YES;
+closingWin.frame = startFrame;
+closingWin.transform = CGAffineTransformIdentity;
+closingWin.alpha = startAlpha;
+// v72：收尾回調（關窗路傳 nil；拖去收小卡路在這裡取消隱藏＋調 minimize，
+// 顯示 peek 不是藏窗——要在 overlay 藏掉之前跑，碎片還在飛時 peek 就位）。
+if (completion) completion();
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+overlayWin.hidden = YES;
+});
+}
+
+// v35：destroyHostedScene 已删——会话内永不销毁 scene（见文件头 v35
+// 节）。唯一剩下的销毁在 GHCFDestroyCachedEntryAtIndex（只在复用
+// 守卫判旧、进程死了时调）。切走与关窗只藏窗（见 handleAppButton
+// 的切换路径与 closeHostedWindow）。启动器层级不用这里复位：
+// showLauncher 每次按活动窗有没有定层级（有窗 Alert - 1、没窗
+// Alert - 3），销毁只发生在没有活动窗的旧 scene 上。
+
+// v72：拖去收小卡也按退出動畫播一次（只改手動拖去貼邊收起這一處——
+// handleTitleDrag Ended 的 shouldDock 分支；自動 peek／遊戲模式／
+// 點窗外收起不走這裡）。0 island＝現有行為不動（呼叫處直接調
+// minimizeHostedWindow，不進這裡）；1 縮小淡出／2 向右滑散／3 下沉淡出
+// 是 0.35 秒 UIView 動畫，播完還原 frame／alpha／transform 再走現有
+// minimize（存幾何在還原之後才對）；4 方块拼散複用
+// closeHostedWindowWithShatter，completion 裡取消隱藏＋調 minimize
+// （顯示 peek 不是藏窗；shatter 本身會把窗 hidden=YES，ShowDockPeek
+// 不取消隱藏，不補這行 peek 會隱形；碎片飛的 0.7 秒裡 peek 已經就位）。
+// 動畫中途有人先把這扇窗收了（per-App 的 GHCFCacheMinimized）或活動窗
+// 換了（GHCFHostedWindow 不是這扇窗），completion 只還原視覺
+// （transform／alpha），不動 frame、不再調 minimize（免得把別人的窗收了／
+// 把已縮成 peek 的窗框還原成大窗）。shatter 失敗退路那條 completion 裡
+// 還要重算一次 peek 排布（退路會把 frame 還原成大窗尺寸）。遊戲模式
+// 開著時動畫 0.01 秒（跟 closeHostedWindow 同一套：4 在遊戲模式走下沉）。
+- (void)minimizeHostedWindowWithExitAnimation:(int)exitAnim fromFrame:(CGRect)startFrame startAlpha:(CGFloat)startAlpha {
+UIWindow *closingWin = GHCFHostedWindow;
+if (!closingWin) return;
+if (exitAnim == 4) {
+[self closeHostedWindowWithShatter:closingWin startFrame:startFrame startAlpha:startAlpha completion:^{
+int cidx = GHCFAppIndexForWindow(closingWin);
+BOOL selfMin = (cidx >= 0 && cidx < GHCFAppCount && GHCFCacheMinimized[cidx]);
+if (selfMin || GHCFHostedWindow == closingWin) closingWin.hidden = NO;
+if (!selfMin && GHCFHostedWindow == closingWin) {
+[self minimizeHostedWindow];
+} else if (selfMin) {
+GHCFLayoutDockPeeks();
+}
+}];
+return;
+}
+NSTimeInterval dockAnimDur = 0.35;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGRect endFrame = startFrame;
+CGAffineTransform endTransform = CGAffineTransformIdentity;
+if (exitAnim == 1) {
+// v70：縮小淡出——縮到 1/10＋淡出（錨點是窗中心，視覺上往中心縮）。
+endTransform = CGAffineTransformMakeScale(0.1, 0.1);
+} else if (exitAnim == 2) {
+// v70：向右滑散——不管開窗是哪邊，統一往右滑出屏幕＋淡出。
+endFrame = CGRectMake(screenBounds.size.width + 20.0, startFrame.origin.y, startFrame.size.width, startFrame.size.height);
+} else {
+// v70：下沉淡出——往下沉出屏幕＋淡出（遊戲模式下 4 也走這裡，跟關窗路一致）。
+endFrame = CGRectMake(startFrame.origin.x, screenBounds.size.height + 20.0, startFrame.size.width, startFrame.size.height);
+}
+[UIView animateWithDuration:dockAnimDur delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+closingWin.frame = endFrame;
+closingWin.transform = endTransform;
+closingWin.alpha = 0.0;
+} completion:^(BOOL finished) {
+(void)finished;
+closingWin.transform = CGAffineTransformIdentity;
+closingWin.alpha = startAlpha;
+int cidx = GHCFAppIndexForWindow(closingWin);
+BOOL selfMin = (cidx >= 0 && cidx < GHCFAppCount && GHCFCacheMinimized[cidx]);
+if (selfMin || GHCFHostedWindow != closingWin) return;
+closingWin.frame = startFrame;
+[self minimizeHostedWindow];
+}];
+}
+
+- (void)minimizeHostedWindow {
+if (!GHCFHostedWindow || GHCFHostedMinimized) return;
+int idx = GHCFActiveAppIndex;
+// v70：收起前先清懸掛狀態（點按層拿掉、旗標清掉；窗接著就縮成 peek，不用還原 frame）。
+if (idx >= 0 && idx < GHCFAppCount) GHCFClearHungStateForIndex(idx);
+GHCFHostedMinimized = YES;
+GHCFMinimizeTime = [NSDate timeIntervalSinceReferenceDate];
+// v50：收成小卡時震一下（ARC 震動反饋開關，預設開；自動 peek 切窗
+// 不走這裡，不會每次切窗都震）。
+if (GHCFReadARCHaptics()) {
+@try {
+UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+[haptic impactOccurred];
+} @catch (NSException *e) {
+(void)e;
+}
+}
+GHCFLogLine("v57 window minimized");
+// v49：最小化不再把 scene 推回後台——peek 要露活內容，後台化的
+// scene 停止合成，peek 就是黑的（v41 改成活內容 peek 卻留著推後台，
+// v42.3 自動 peek 讓黑小窗到處出現）。鎖屏安全不受影響：鎖屏回調
+// 本來就會把全部 scene 推後台，且 peek 窗層級在鎖屏之下，不攔密碼觸摸。
+// v41：最小化改成貼邊 peek（圖 1 的樣子）：窗本身縮到邊緣（112x242，
+// 露出一截活內容，上下疊著排），點那截恢復窗；scene 活著（只縮窗、
+// 不推後台、不銷毀，peek 保持前景才有活內容）。收起前的位置/大小先存
+// （縮窗之後再存會存成 peek 的尺寸）。
+if (idx >= 0 && idx < GHCFAppCount) {
+GHCFSaveGeometryForIndex(idx);
+GHCFSaveActiveToCache();
+GHCFShowDockPeekForIndex(idx);
+}
+GHCFUpdateDimOverlay();
+// v42：重啟恢復清單 + 任務欄跟著收起更新。
+GHCFSaveRestoreList();
+GHCFUpdateTaskbar();
+}
+
+// v74：靜態佔位內容——App 圖標＋App 名（不轉圈）。圖標拿不到就畫灰色圓角方塊代替（不崩）。
+// parent 是已定好尺寸的佔位 view；圖標 64pt 置中偏上、名字在圖標下方。
+static void GHCFAddStaticAppIconAndName(UIView *parent, const char *bundleID, const char *name) {
+if (!parent) return;
+CGSize bs = parent.bounds.size;
+CGFloat iconSize = 64.0;
+CGFloat iconY = bs.height / 2.0 - 44.0;
+UIImage *icon = nil;
+if (bundleID && bundleID[0] != '\0') icon = GHCFAppIcon(bundleID);
+if (icon) {
+UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
+iv.frame = CGRectMake((bs.width - iconSize) / 2.0, iconY, iconSize, iconSize);
+iv.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+iv.layer.cornerRadius = 14.0;
+iv.layer.masksToBounds = YES;
+[parent addSubview:iv];
+} else {
+UIView *box = [[UIView alloc] initWithFrame:CGRectMake((bs.width - iconSize) / 2.0, iconY, iconSize, iconSize)];
+box.backgroundColor = [UIColor colorWithWhite:0.35 alpha:1.0];
+box.layer.cornerRadius = 14.0;
+box.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+[parent addSubview:box];
+}
+if (name && name[0] != '\0') {
+UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, bs.height / 2.0 + 30.0, bs.width, 20)];
+label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+label.text = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
+label.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.85];
+label.font = [UIFont systemFontOfSize:13];
+label.textAlignment = NSTextAlignmentCenter;
+[parent addSubview:label];
+}
+}
+
+// v72：载入占位——深灰底＋靜態 App 圖標＋App 名（v74 起不再轉圈），绝不是全黑。盖在 container 最上面
+//（内容区之上；点按层／调尺寸手柄提到它上面，点按拖动不受影响；
+// userInteractionEnabled=NO，细条拖动与内容点按照常穿过）。
+// 每窗一个，存在 GHCFGatePlaceholders 数组里（跟窗一起缩放／移动；
+// 销毁缓存项时清掉指针，见 GHCFDestroyCachedEntryAtIndex）。
+static void GHCFShowPlaceholderForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+UIView *container = GHCFCacheContainers[idx];
+if (!container) return;
+// v43.22：有凍結快照就繼續顯示它，不蓋深灰佔位（凍結幀是最後一幀活內容，
+// 比深灰好看；點不動，載入提示已在快照上；點按層／調尺寸手柄照舊提到它上面）。
+// v43.23：第 7 件——dock 快照平時是藏著的（hidden=YES，不蓋活內容），
+// 佔位要顯示時才在這裡打開它（scene 掉 0 時小卡顯示最後一幀）。
+UIView *frozen = GHCFGateFrozenSnaps[idx];
+if (frozen && frozen.superview == container) {
+frozen.hidden = NO;
+[container bringSubviewToFront:frozen];
+if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
+if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+return;
+}
+// v43.23：第 7 件——dock 快照：scene 掉 0 時小卡顯示 dock 當下抓的最後一幀，
+// 而不是深灰佔位（97 的 C 只蓋主窗恢復門控，小卡沒有自己的幀）。快照平時藏著，
+// 這裡才打開；點按層／調尺寸手柄照舊提到它上面。
+UIView *dockSnap = GHCFPeekDockSnaps[idx];
+if (dockSnap && dockSnap.superview == container) {
+GHCFLogLine("v43.24 placeholder showing dock snapshot");
+dockSnap.hidden = NO;
+[container bringSubviewToFront:dockSnap];
+if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
+if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+return;
+}
+UIView *ph = GHCFGatePlaceholders[idx];
+if (ph) {
+[container bringSubviewToFront:ph];
+if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
+if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+return;
+}
+ph = [[UIView alloc] initWithFrame:container.bounds];
+ph.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+ph.userInteractionEnabled = NO;
+// 深灰（0.16），不是黑——一眼能看出「在载入」而不是黑窗。
+ph.backgroundColor = [UIColor colorWithRed:0.16 green:0.16 blue:0.18 alpha:1.0];
+// v74：冷啟動等著時不再轉圈——靜態 App 圖標＋App 名（看起來像 App 在開）。
+GHCFAddStaticAppIconAndName(ph, GHCFCacheBundleIDs[idx], GHCFAppNames[idx]);
+[container addSubview:ph];
+if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
+if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+GHCFGatePlaceholders[idx] = ph;
+GHCFLogLine("v74 static placeholder shown");
+}
+
+// v72：拿掉占位（0.2 秒淡出；没有占位就直接回，不重复淡）。
+// v43.22：佔位拿掉時凍結快照一起拿掉（活內容出來了，不再需要凍結幀）。
+// v43.23：第 7 件——dock 快照只藏回去（hidden=YES），不拿掉：小卡還收著，
+// scene 下次再掉 0 還要靠它顯示最後一幀；小卡恢復／關掉時由
+// GHCFHideDockPeekForIndex／銷毀入口清掉。
+static void GHCFHidePlaceholderForIndex(int idx) {
+if (idx < 0 || idx >= GHCFAppCount) return;
+UIView *frozen = GHCFGateFrozenSnaps[idx];
+if (frozen) {
+GHCFGateFrozenSnaps[idx] = nil;
+[frozen removeFromSuperview];
+}
+UIView *dockSnap = GHCFPeekDockSnaps[idx];
+if (dockSnap) dockSnap.hidden = YES;
+UIView *ph = GHCFGatePlaceholders[idx];
+if (!ph) return;
+GHCFGatePlaceholders[idx] = nil;
+[UIView animateWithDuration:0.35 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+ph.alpha = 0.0;
+} completion:^(BOOL finished) {
+(void)finished;
+[ph removeFromSuperview];
+}];
+}
+
+// v73：尺寸門判斷——scene 內容尺寸對上窗 frame 才算就緒（黑半邊修復）。
+// 比兩樣：(a) 最後一次推給 scene 的 frame 尺寸 vs 現在窗該有的 frame 尺寸（誤差 3pt）；
+// (b) 內容區 sublayerTransform 的縮放 vs 該有的縮放（誤差 0.03）——恢復時 transform
+// 還停在小卡縮放（0.27）就是 1.0.72 影片裡黑半邊的樣子。layer-host 路 scene frame
+// 恆為屏幕尺寸，(a) 用屏幕尺寸比、(b) 用顯示 scale 比。沒推過 frame（Valid=NO）算不對上。
+static BOOL GHCFHostedSceneSizeMatchesWindow(void) {
+if (!GHCFHostedScene || !GHCFHostedContentView) return YES;
+if (!GHCFHostedSceneFrameSizeValid) return NO;
+CGSize contentSize = GHCFHostedContentView.bounds.size;
+if (contentSize.width <= 0 || contentSize.height <= 0) return YES;
+CGSize screenSize = [UIScreen mainScreen].bounds.size;
+CGSize expectedFrame;
+CGFloat expectedScale;
+if (GHCFHostedPresenter && GHCFHostedPresenter.presentationView) {
+CGFloat scale = GHCFHostedScaleRatio;
+if (scale < 0.5) scale = 0.5;
+if (scale > 2.0) scale = 2.0;
+expectedFrame = GHCFSceneFrameSizeForContentSizeAndScale(contentSize, scale);
+expectedScale = scale;
+} else {
+expectedFrame = screenSize;
+expectedScale = GHCFLayerHostDisplayScaleForContentSizeAndBundleID(contentSize, GHCFHostedBundleID);
+}
+if (fabs(GHCFHostedSceneFrameSize.width - expectedFrame.width) > 3.0) return NO;
+if (fabs(GHCFHostedSceneFrameSize.height - expectedFrame.height) > 3.0) return NO;
+CGFloat actualScale = GHCFHostedContentView.layer.sublayerTransform.m11;
+if (actualScale <= 0) actualScale = 1.0;
+if (fabs(actualScale - expectedScale) > 0.03) return NO;
+return YES;
+}
+
+// v73：拖調尺寸鬆手後——scene 還沒重畫到新尺寸之前，窗上蓋佔位等它（不然放大那一下
+// 右半邊是黑的）。只對看得見的主窗；小卡（已收起）不走這裡（peek 尺寸由 peek 縮放路管，
+// 內容永遠貼合）；門控已在跑時不重設（恢復／切換的門控優先）。
+- (void)armSizeGateForResize {
+if (GHCFRestoreGateActive) return;
+if (!GHCFHostedWindow || GHCFHostedWindow.hidden || GHCFHostedMinimized) return;
+if (!GHCFHostedScene) return;
+int idx = GHCFActiveAppIndex;
+if (idx < 0 || idx >= GHCFAppCount) return;
+GHCFShowPlaceholderForIndex(idx);
+GHCFRestoreGateActive = YES;
+GHCFRestoreGateScene = GHCFHostedScene;
+GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
+GHCFRestoreGateRebuilt = NO;
+GHCFRestoreGateStuckLogged = NO;
+GHCFRestoreGateTimeoutDeferredLogged = NO;
+GHCFRestoreGateTimeoutDeferCount = 0;
+if (idx >= 0 && idx < GHCFAppCount) GHCFRestoreGaveUp[idx] = NO; // v43.7：拖调尺寸是新的尝试，清掉停手旗标。
+GHCFRestoreGateMode = 1;
+GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
+if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
+GHCFSizeGatePreMatched = NO;
+GHCFSizeGateMatchedOnce = NO;
+GHCFSizeGateWaitingLogged = NO;
+GHCFLogLine("v73 resize gated until size matches");
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+[self showGatedRestoredWindowTick];
+});
+}
+
+// v72：恢复门控 tick v2——不要有任何 App 闪黑边，每 0.5 秒看一次。
+// 就绪（contentState==2）就再等多一帧（约 80ms）才淡入／淡出占位，让第一帧画好；
+// 还没就绪：窗继续盖占位等，绝不直接显示黑窗；卡在 0 超过约 2 秒就重建 scene
+//（v43.22 熔斷，只針對 cs==0；尺寸門仍是 5 秒）
+//（只重建一次；重建后还是 0 就继续等，占位一直盖着）。
+// 取消条件：窗／scene 没了、scene 换了、恢复中又被收起（这时把窗放出来，
+// 让 peek 看得见，占位由看门狗管）。门控只管显示，不管 resize（还是走 v65 的延后链）。
+- (void)showGatedRestoredWindowTick {
+if (!GHCFRestoreGateActive) return;
+if (!GHCFHostedWindow || !GHCFHostedScene) {
+GHCFRestoreGateActive = NO;
+if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) GHCFHidePlaceholderForIndex(GHCFActiveAppIndex);
+return;
+}
+if (GHCFHostedScene != GHCFRestoreGateScene) { GHCFRestoreGateActive = NO; return; }
+if (GHCFRestoreGateMode == 0) {
+// 恢复模式：窗已显示出来、盖着占位等就绪（cs==2 将要显示那一下窗还藏着，
+// tick 的就绪分支会把它显示出来；锁着时窗也被藏着，等解锁）。
+// v43.24：第 1 件——被收起不取消（熔斷照樣重建、重建好的 scene 留快取；
+// 就緒分支的 80ms 塊看到收著會靜靜結束，不彈大窗；點小卡恢復時再重新設門）。
+} else {
+// 已显示窗模式（promote／新窗）：窗应该看得见；被藏起来就取消
+//（占位留着，看门狗会在 scene 就绪时拿掉）。
+// v43.24：第 1 件——被收起不取消（同模式 0；就緒分支的 80ms 塊看到收著會靜靜結束）。
+if (GHCFHostedWindow.hidden) { GHCFRestoreGateActive = NO; return; }
+}
+NSUInteger cs = 2;
+@try { cs = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
+NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+if (cs == 2) {
+if (GHCFScreenLocked) {
+// 锁着——先不显示，等解锁（解锁回调会推前景＋盖占位，门控继续等）。
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+[self showGatedRestoredWindowTick];
+});
+return;
+}
+    // v43.24：第 1 件——收著時尺寸門直接算過（小卡不彈大窗；就緒分支的 80ms 塊
+    // 看到收著會靜靜結束門控，點小卡恢復時再重新設門）。
+    if (GHCFHostedMinimized) {
+        GHCFRestoreGateActive = NO;
+        return;
+    }
+    // v73：尺寸門——scene 內容尺寸對上窗 frame 才算就緒（黑半邊修復）。
+    // 尺寸還沒對上：重推一次 resize（立即改 bounds＋transform，frame 防抖推），
+    // 佔位繼續蓋著，0.5 秒後再看；卡滿 5 秒還對不上就重建 scene（跟 cs==0 同一路）。
+    // 尺寸對上了：第一次對上先記一行、再等一個 tick（半秒）讓 scene 把新尺寸畫出來；
+    // 決策時就對上、或上個 tick 已對上，就直接走 80ms 顯示。
+    if (!GHCFHostedSceneSizeMatchesWindow()) {
+        GHCFSizeGateMatchedOnce = NO;
+        if (!GHCFSizeGateWaitingLogged) {
+            GHCFSizeGateWaitingLogged = YES;
+            GHCFLogLine("v73 size gate waiting");
+        }
+        if (GHCFHostedContentView) {
+            [self resizeHostedSceneToContentSize:GHCFHostedContentView.bounds.size];
+        }
+        if (now >= GHCFRestoreGateDeadline && !GHCFRestoreGateRebuilt) {
+            GHCFLogLine("v73 size gate timeout, rebuilding scene");
+            [self rebuildStuckHostedScene];
+            return;
+        }
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self showGatedRestoredWindowTick];
+        });
+        return;
+    }
+    if (!GHCFSizeGatePreMatched && !GHCFSizeGateMatchedOnce) {
+        GHCFSizeGateMatchedOnce = YES;
+        GHCFLogLine("v73 size gate matched");
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self showGatedRestoredWindowTick];
+        });
+        return;
+    }
+    // 就绪——再等多一帧（约 80ms）才显示，让第一帧画好（2d）。
+GHCFRestoreGateActive = NO;
+int idx = GHCFActiveAppIndex;
+CGFloat targetAlpha = GHCFRestoreGateTargetAlpha;
+if (targetAlpha <= 0.01) targetAlpha = 1.0;
+FBScene *readyScene = GHCFHostedScene;
+UIWindow *readyWindow = GHCFHostedWindow;
+int readyMode = GHCFRestoreGateMode;
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.08 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+// 80ms 内窗被关／被收／scene 换了——不显示。
+if (!readyWindow || readyWindow != GHCFHostedWindow) return;
+if (!readyScene || readyScene != GHCFHostedScene) return;
+if (GHCFHostedMinimized) return;
+if (readyMode == 0) {
+// 恢复：窗还藏着——拿掉占位，淡入显示。
+if (idx >= 0 && idx < GHCFAppCount) GHCFHidePlaceholderForIndex(idx);
+readyWindow.alpha = 0.0;
+readyWindow.hidden = NO;
+[UIView animateWithDuration:0.4 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+readyWindow.alpha = targetAlpha;
+} completion:nil];
+GHCFLogLine("v72 restore shown after ready");
+} else {
+// 已显示窗：窗本来就看得见——只把占位淡出。
+if (idx >= 0 && idx < GHCFAppCount) GHCFHidePlaceholderForIndex(idx);
+GHCFLogLine("v72 promote shown after ready");
+}
+GHCFUpdateDimOverlay();
+});
+return;
+}
+// 还没就绪——绝不直接显示黑窗，继续等。
+if (cs == 0 && now >= GHCFRestoreGateStart + GHCFRestoreGateStuckZeroTimeout) {
+if (!GHCFRestoreGateRebuilt) {
+// v43.12：门控超时先读真实锁屏状态——锁屏通知会乱跳（31.log：锁→解→锁→解
+// 连跑几轮，旗标 GHCFScreenLocked 停在假的 YES 上，门控永远 defer、重建永不
+// 发生）。notify_get_state 读实时状态，不是锁就走重建；只有实时真是锁才 defer。
+// defer 满 6 次（约 3 秒）scene 还是 0 也直接重建——真锁着时重建也只是再得
+// 一个 0、走现成的 gave-up 路，不比卡住更坏。
+uint64_t liveLockState = 0;
+notify_get_state(lockToken, &liveLockState);
+if (GHCFScreenLocked && liveLockState == 1) {
+GHCFRestoreGateTimeoutDeferCount++;
+if (GHCFRestoreGateTimeoutDeferCount >= 6) {
+char dbuf[128];
+snprintf(dbuf, sizeof(dbuf), "v43.12 restore gate defer cap reached, rebuilding scene (defer %d)", GHCFRestoreGateTimeoutDeferCount);
+GHCFLogLine(dbuf);
+[self rebuildStuckHostedScene];
+return;
+}
+if (!GHCFRestoreGateTimeoutDeferredLogged) {
+GHCFRestoreGateTimeoutDeferredLogged = YES;
+char lbuf[160];
+snprintf(lbuf, sizeof(lbuf), "v72 restore gate timeout deferred, screen locked (live state %llu)", (unsigned long long)liveLockState);
+GHCFLogLine(lbuf);
+}
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+[self showGatedRestoredWindowTick];
+});
+return;
+}
+// 卡在 0 超过约 2 秒——重建 scene（v43.22 熔斷；鎖屏時仍先 defer，滿 6 次才重建）。
+GHCFLogLine("v72 restore gate timeout, rebuilding scene");
+[self rebuildStuckHostedScene];
+return;
+}
+// v43.7：重建一次还是 0——停手，不再门控、不再重试（28.log：重建后还卡 0、
+// 门控一直转，随后 SpringBoard 重启）。静态占位留着盖住黑窗；用户下次
+// 手动点这扇窗恢复时（restoreHostedWindow 入口）再清旗标重新尝试。
+if (!GHCFRestoreGateStuckLogged) {
+GHCFRestoreGateStuckLogged = YES;
+GHCFLogLine("v72 restore gave up after rebuild, placeholder kept");
+}
+GHCFRestoreGateActive = NO;
+if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
+GHCFRestoreGaveUp[GHCFActiveAppIndex] = YES;
+GHCFShowPlaceholderForIndex(GHCFActiveAppIndex);
+}
+return;
+}
+if (cs == 1) {
+// 准备中——再推一次前景帮它一把。0 不推：24.log 证明推 0 没用（时针案
+// 重试／恢复／解锁／看门狗全推过，一直是 0）。
+@try {
+[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+} @catch (NSException *e) {
+(void)e;
+}
+}
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+[self showGatedRestoredWindowTick];
+});
+}
+
+- (void)rebuildStuckHostedScene {
+    // v72：scene 卡在 contentState==0 超过约 2 秒——只有销毁重建能让它重新就绪
+    //（v43.22 熔斷；v35「session 内永不销毁」在此开例外，只对卡死 case；24.log 时钟案：
+    // 建时 state=1、推完 foreground 读 0，之后重试／恢复／解锁／看门狗全推过，
+    // 一直是 0——不重建永远是黑窗）。重建后重新设门（新 scene 可能还在准备），
+    // 只重建一次；重建后还是 0 就继续等，占位一直盖着。
+    int idx = GHCFActiveAppIndex;
+    if (idx < 0 || idx >= GHCFAppCount) return;
+    const char *bid = GHCFCacheBundleIDs[idx];
+    const char *nm = GHCFAppNames[idx];
+    if (!bid || bid[0] == '\0') return;
+    char bidCopy[128];
+    char nameCopy[128];
+    strncpy(bidCopy, bid, sizeof(bidCopy) - 1);
+    bidCopy[sizeof(bidCopy) - 1] = '\0';
+    strncpy(nameCopy, nm ? nm : "", sizeof(nameCopy) - 1);
+    nameCopy[sizeof(nameCopy) - 1] = '\0';
+    int mode = GHCFRestoreGateMode;
+    CGFloat targetAlpha = GHCFRestoreGateTargetAlpha;
+    // v43.24：第 1 件——記下重建前是不是收著的（收著時重建後要重新 dock 成小卡，
+    // 不能彈出大窗；重建好的 scene 留快取，點小卡恢復時再重新設門）。
+    BOOL wasMinimized = GHCFHostedMinimized;
+    // 取消当前门控（tick 链停掉；重建后重新设门）。
+    GHCFRestoreGateActive = NO;
+    // 占位先拿掉（旧窗要销毁了；新窗重建后按需再盖）。
+    GHCFHidePlaceholderForIndex(idx);
+    GHCFSuppressSlideInOnce = YES; // 重建不滑入，直接出现在原位。
+    GHCFDestroyCachedEntryAtIndex(idx); // 藏窗、清缓存＋活动量。
+    [self createHostedSceneForBundleID:bidCopy name:nameCopy];
+    GHCFLogLine("v72 scene rebuilt after stuck 0");
+    if (!GHCFHostedWindow || !GHCFHostedScene) return;
+    // v43.24：第 1 件——重建前是收著的：重新 dock 成小卡（不彈大窗），
+    // 重建好的 scene 留在快取裡；還沒就緒就重新設門（下面跳過藏窗／佔位那兩支）。
+    if (wasMinimized) {
+        [self minimizeHostedWindow];
+        GHCFLogLine("v43.24 rebuilt scene re-docked to peek");
+    }
+    NSUInteger cs = 2;
+    @try { cs = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
+    if (cs == 2) {
+        // 新 scene 直接就绪——窗已经显示了（create 时显示的），不用再门控。
+        return;
+    }
+    // 新 scene 还没就绪——重新设门（不再重建第二次）。
+    // v43.24：第 1 件——收著時不藏窗（小卡要看得見）、不蓋佔位（小卡走 dock 快照／看門狗）。
+    if (mode == 0) {
+        if (!wasMinimized) GHCFHostedWindow.hidden = YES;
+    } else {
+        if (!wasMinimized) {
+            int nidx = GHCFActiveAppIndex;
+            if (nidx >= 0 && nidx < GHCFAppCount) GHCFShowPlaceholderForIndex(nidx);
+        }
+    }
+    GHCFRestoreGateActive = YES;
+    GHCFRestoreGateScene = GHCFHostedScene;
+    GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+    GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
+    GHCFRestoreGateRebuilt = YES;
+    GHCFRestoreGateStuckLogged = NO;
+    GHCFRestoreGateTimeoutDeferredLogged = NO;
+    GHCFRestoreGateTimeoutDeferCount = 0;
+    GHCFRestoreGateMode = mode;
+    GHCFRestoreGateTargetAlpha = targetAlpha;
+    GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：重建後現算一次（新 scene 建在正確尺寸上，通常已對上）。
+    GHCFSizeGateMatchedOnce = NO;
+    GHCFSizeGateWaitingLogged = NO;
+    GHCFLogLine("v72 restore gated until ready");
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self showGatedRestoredWindowTick];
+    });
+}
+
+- (void)animateRestoreSnapshotFromFrame:(CGRect)fromFrame toFrame:(CGRect)toFrame ready:(BOOL)ready completion:(void (^)(void))completion {
+    // v72：丝滑化——恢复先播快照动画（活内容就绪时是真快照；v74：没就绪也先试真快照，
+    // 拍不到才播靜態佔位）。v43.6：真快照优先用恢复前预抓的那张——改尺寸之前抓的，
+    // scene 还在小卡尺寸上合成，layer 里是小卡最后一帧；改完尺寸再现抓会是黑的。
+    // 活窗尺寸一次定好（restore 里已设好），动画只动快照的 center＋transform
+    //（GPU 合成，不触发布局／scene 重排），播完换回真窗。
+    UIWindow *hosted = GHCFHostedWindow;
+    if (!hosted) { if (completion) completion(); return; }
+    // v43.6：优先用预抓的快照；预抓是 nil（没抓到／这次恢复没走预抓）才走现抓；
+    // 现抓也是 nil 才走下面的静态占位（深灰＋图标＋名）。用完就清，不留着。
+    UIView *snap = GHCFRestorePreSnap;
+    GHCFRestorePreSnap = nil;
+    if (!snap) {
+    @try { snap = [hosted snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; snap = nil; }
+    }
+    if (!ready && snap) GHCFLogLine("v74 restore snapshot used");
+    UIWindowScene *ws = GHCFActiveWindowScene();
+    UIWindow *overlay = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    overlay.windowLevel = GHCF_HOSTED_FRONT_LEVEL;
+    overlay.backgroundColor = [UIColor clearColor];
+    if (ws) overlay.windowScene = ws;
+    UIViewController *vc = [[UIViewController alloc] init];
+    vc.view.backgroundColor = [UIColor clearColor];
+    overlay.rootViewController = vc;
+    UIView *animView = snap;
+    BOOL isRealSnap = (snap != nil); // v43.22：是不是真快照（不是就是下面的深灰靜態塊）。
+    if (!animView) {
+        // 没活内容可拍——播一个深灰靜態块（App 圖標＋App 名，不轉圈），绝不播黑块。
+        // 布局按目标框（toFrame）算，transform 会把它压回小卡尺寸。
+        animView = [[UIView alloc] initWithFrame:toFrame];
+        animView.backgroundColor = [UIColor colorWithRed:0.16 green:0.16 blue:0.18 alpha:1.0];
+        const char *fbBid = (GHCFHostedBundleID[0] != '\0') ? GHCFHostedBundleID : NULL;
+        const char *nm = (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) ? GHCFAppNames[GHCFActiveAppIndex] : NULL;
+        GHCFAddStaticAppIconAndName(animView, fbBid, nm);
+        GHCFLogLine("v74 restore snapshot missing, placeholder");
+    }
+    animView.layer.cornerRadius = GHCFReadCornerRadius();
+    animView.layer.masksToBounds = YES;
+    // 快照放在目标框上，再用 center＋transform 把它压回小卡位置／尺寸——
+    // 动画只动这两个（GPU 合成），播完回到恒等。
+    animView.frame = toFrame;
+    animView.center = CGPointMake(CGRectGetMidX(fromFrame), CGRectGetMidY(fromFrame));
+    CGFloat s = (toFrame.size.width > 0) ? fromFrame.size.width / toFrame.size.width : 1.0;
+    if (s <= 0 || s > 1.0) s = 1.0;
+    animView.transform = CGAffineTransformMakeScale(s, s);
+    [vc.view addSubview:animView];
+    overlay.hidden = NO;
+    GHCFSnapshotAnimWindow = overlay;
+    [UIView animateWithDuration:0.7 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+        animView.transform = CGAffineTransformIdentity;
+        animView.center = CGPointMake(CGRectGetMidX(toFrame), CGRectGetMidY(toFrame));
+    } completion:^(BOOL finished) {
+        (void)finished;
+        // v43.22：沒就緒且是真快照——不要丟掉，留在窗上當凍結幀（門控等待期間
+        // 顯示最後一幀活內容，不換深灰佔位；就緒或沒真快照就照舊丟掉）。
+        // 凍結幀點不動（userInteractionEnabled=NO），底部帶一個細微的載入提示。
+        BOOL keepFrozen = (!ready && isRealSnap && GHCFHostedWindow && !GHCFHostedMinimized
+            && GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount);
+        int fidx = GHCFActiveAppIndex;
+        UIView *fcontainer = (keepFrozen && fidx >= 0 && fidx < GHCFAppCount) ? GHCFCacheContainers[fidx] : nil;
+        if (keepFrozen && fcontainer) {
+            UIView *oldFrozen = GHCFGateFrozenSnaps[fidx];
+            if (oldFrozen && oldFrozen != animView) [oldFrozen removeFromSuperview];
+            animView.transform = CGAffineTransformIdentity;
+            animView.frame = fcontainer.bounds;
+            animView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            animView.userInteractionEnabled = NO;
+            UILabel *lz = [[UILabel alloc] initWithFrame:CGRectMake(0, fcontainer.bounds.size.height - 34.0, fcontainer.bounds.size.width, 20.0)];
+            lz.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+            lz.text = [NSString stringWithCString:"載入中..." encoding:NSUTF8StringEncoding];
+            lz.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.75];
+            lz.font = [UIFont systemFontOfSize:12];
+            lz.textAlignment = NSTextAlignmentCenter;
+            lz.userInteractionEnabled = NO;
+            [animView addSubview:lz];
+            [fcontainer addSubview:animView];
+            GHCFGateFrozenSnaps[fidx] = animView;
+            GHCFLogLine("v43.22 frozen snapshot kept during gate");
+        } else {
+            [animView removeFromSuperview];
+        }
+        overlay.hidden = YES;
+        if (GHCFSnapshotAnimWindow == overlay) GHCFSnapshotAnimWindow = nil;
+        if (completion) completion();
+    }];
+}
+
+- (void)runRestoreGateDecision {
+    // v72：恢复的门控决策（快照动画播完时跑）：scene 就绪就走 tick 的就绪分支
+    //（80ms 延迟＋淡入显示）；没就绪就把窗显示出来、盖占位、设门等。
+    // 调用前 restoreHostedWindow 已把窗藏好、frame 一次定好、前景推好、
+    // GHCFRestoreGateTargetAlpha 已记好。
+    // v72：动画 0.25 秒里窗可能被关／被收／活动窗换了——先验证，不符合就作废。
+    if (!GHCFHostedWindow || !GHCFHostedScene) return;
+    if (GHCFHostedMinimized) return;
+    if (GHCFRestoreGateScene && GHCFHostedScene != GHCFRestoreGateScene) return;
+    int idx = GHCFActiveAppIndex;
+    NSUInteger cs = 2;
+    @try { cs = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
+    if (cs == 2) {
+        // 就绪——设门后直接跑一次 tick，tick 的就绪分支会等 80ms 再淡入显示。
+        GHCFRestoreGateActive = YES;
+        GHCFRestoreGateScene = GHCFHostedScene;
+        GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+        GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
+        GHCFRestoreGateRebuilt = NO;
+        GHCFRestoreGateStuckLogged = NO;
+        GHCFRestoreGateTimeoutDeferredLogged = NO;
+        GHCFRestoreGateTimeoutDeferCount = 0;
+        GHCFRestoreGateMode = 0;
+        GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：決策時尺寸已對上就不用再等一輪 grace。
+        GHCFSizeGateMatchedOnce = NO;
+        GHCFSizeGateWaitingLogged = NO;
+        [self showGatedRestoredWindowTick];
+        return;
+    }
+    // 没就绪——窗显示出来、盖占位、设门等（绝不显示黑窗）。
+    if (idx >= 0 && idx < GHCFAppCount) GHCFShowPlaceholderForIndex(idx);
+    CGFloat targetAlpha = GHCFRestoreGateTargetAlpha;
+    if (targetAlpha <= 0.01) targetAlpha = 1.0;
+    GHCFHostedWindow.alpha = targetAlpha;
+    GHCFHostedWindow.hidden = NO;
+    GHCFRestoreGateActive = YES;
+    GHCFRestoreGateScene = GHCFHostedScene;
+    GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+    GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
+    GHCFRestoreGateRebuilt = NO;
+    GHCFRestoreGateStuckLogged = NO;
+    GHCFRestoreGateTimeoutDeferredLogged = NO;
+    GHCFRestoreGateTimeoutDeferCount = 0;
+    GHCFRestoreGateMode = 0;
+    GHCFSizeGatePreMatched = NO; // v73：還沒就緒，尺寸門等 tick 裡再判斷。
+    GHCFSizeGateMatchedOnce = NO;
+    GHCFSizeGateWaitingLogged = NO;
+    GHCFLogLine("v72 restore gated until ready");
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self showGatedRestoredWindowTick];
+    });
+    GHCFUpdateDimOverlay();
+}
+
+- (void)restoreHostedWindow {
+if (!GHCFHostedWindow || !GHCFHostedMinimized) return;
+// v71：恢复门控——之前恢复（见下面）先把上一次没跑完的门控取消
+//（新恢复自己重新设门；旧 tick 看到旗標没了就直接回，不会乱显示）。
+// v72：同时记下这次恢复盯着的 scene（快照动画播完时门控决策拿它验证——
+// 动画里活动窗换了，这次恢复就作废）。
+GHCFRestoreGateActive = NO;
+GHCFRestoreGateScene = GHCFHostedScene;
+int idx = GHCFActiveAppIndex;
+// v43.7：手动恢复重新尝试——清掉这扇窗的“重建后还卡 0、已停手”旗标。
+if (idx >= 0 && idx < GHCFAppCount) GHCFRestoreGaveUp[idx] = NO;
+// v72：快照动画的起点——恢复前先记下小卡当下的框（动画从这里长到目标框）。
+CGRect restoreFromFrame = GHCFHostedWindow.frame;
+// v43.6：恢复前先抓快照——这时窗还在小卡尺寸、scene 还在小卡尺寸上合成，
+// layer 里是小卡最后一帧活内容；等下面把窗／容器改到大窗尺寸、推 scene
+// resize 之后再抓，抓到的 layer 树是黑的（20:37 影片：微信从小卡恢复整窗黑 0.7 秒）。
+// 抓不到就是 nil，动画里再走现抓／静态占位。
+GHCFRestorePreSnap = nil;
+@try { GHCFRestorePreSnap = [GHCFHostedWindow snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; GHCFRestorePreSnap = nil; }
+// v71：恢复门控——恢复先把窗藏起来（小卡点一下就消失，正常）；
+// frame 照旧长到目标尺寸、前景照旧推，等 scene 就绪再淡入显示
+//（见下面门控判断）。目标 alpha 先记下来，淡入要回到原来的值，不是 1.0。
+GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
+if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
+GHCFHostedWindow.hidden = YES;
+// v72：目标框先记在局部量里（几何块算出来后填；快照动画与门控决策在方法尾用）。
+CGRect restoreTargetFrame = CGRectZero;
+BOOL restoreHasTargetFrame = NO;
+// v41：從 peek 恢復——先把窗的尺寸從存過的位置/大小還原（收起時縮
+// 成了 112x216；存的是窗中心 + 尺寸 + scale），再把容器/內容區的
+// 尺寸也還原（系統可能在縮窗時改了容器尺寸），點按層藏起來，
+if (idx >= 0 && idx < GHCFAppCount) {
+GHCFHideDockPeekForIndex(idx);
+// v53：恢復一定要回到全尺寸，絕不能留在 peek 尺寸（皇上 23:43 重點）。
+// 目標尺寸＝存過的幾何（夾到預設）；沒存過幾何（固定
+// 中心開著時本來就不存位置、或從來沒存過）就走
+// 預設尺寸；固定中心開著時位置居中、不讀存過的 X/Y（存的可能是舊的）。
+CGFloat geoCX, geoCY, geoW, geoH, geoScale;
+BOOL hasGeo = GHCFRestoreGeometryForIndex(idx, &geoCX, &geoCY, &geoW, &geoH, &geoScale);
+CGFloat presetW, presetH;
+GHCFPresetSizeForBundleID(GHCFHostedBundleID, &presetW, &presetH);
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat targetW, targetH, targetCX, targetCY;
+// v63：尺寸固定——存過的 W/H 不再採用，目標尺寸一律是固定尺寸
+//（presetW/H 已按固定尺寸算好；計算器是自己的 320x693）；只恢復位置（中心）。
+if (hasGeo) {
+GHCFHostedScaleRatio = geoScale;
+}
+targetW = presetW;
+targetH = presetH;
+if (GHCFReadCenterOnOpen() || !hasGeo) {
+targetCX = screenBounds.size.width / 2.0;
+targetCY = screenBounds.size.height / 2.0;
+} else {
+targetCX = geoCX;
+targetCY = geoCY;
+}
+CGFloat minCX = targetW / 2.0 + 8.0;
+CGFloat maxCX = screenBounds.size.width - targetW / 2.0 - 8.0;
+CGFloat minCY = GHCFReadSafeDistance() + targetH / 2.0;
+CGFloat maxCY = screenBounds.size.height - targetH / 2.0 - 8.0;
+if (targetCX < minCX) targetCX = minCX;
+if (targetCX > maxCX) targetCX = maxCX;
+if (targetCY < minCY) targetCY = minCY;
+if (targetCY > maxCY) targetCY = maxCY;
+// v72：丝滑化——活窗尺寸一次定好（下面直接设 frame，不播窗框动画；
+// 视觉上的生长由快照动画播，快照只动 center＋transform，不触发布局／
+// scene 重排）。先推前景让进程醒，再看 contentState：就绪照旧立即推
+// resize；没就绪先不推，1 秒后再看（醒了就推；还 0 就 2.5 秒再看一次，
+// 还 0 就推并记 still not ready）。
+restoreTargetFrame = CGRectMake(targetCX - targetW / 2.0, targetCY - targetH / 2.0, targetW, targetH);
+restoreHasTargetFrame = YES;
+CGRect restoreTargetContentFrame = CGRectMake(0, 0, targetW, targetH);
+CGRect restoreTargetStripFrame = CGRectMake(0, 0, targetW, GHCF_HOSTED_STRIP_H);
+GHCFHostedWindow.frame = restoreTargetFrame;
+if (GHCFHostedContainer) GHCFHostedContainer.frame = restoreTargetContentFrame;
+if (GHCFHostedContentView) GHCFHostedContentView.frame = restoreTargetContentFrame;
+if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = restoreTargetStripFrame;
+// v42.3：恢復時把 scene frame 也推回滿窗尺寸（不只改 bounds + transform）。
+// 小窗拖調尺寸時松手推過一次小 frame（resizeHostedSceneToContentSize）；
+// 只推 bounds 不推 frame 的話，scene 還以為自己是小窗，恢復後大窗裡
+// 會只顯示一小塊內容。沒拖過小窗時推的值跟原來一樣（無操作）；
+// layer-host 的窗 ApplyScale 裡本來就不推 frame，不受影響。
+NSUInteger restoreCS = 2;
+if (GHCFHostedScene) {
+@try { restoreCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; restoreCS = 2; }
+}
+if (restoreCS != 0) {
+[self resizeHostedSceneToContentSize:CGSizeMake(targetW, targetH)];
+} else {
+FBScene *deferredScene = GHCFHostedScene;
+CGSize deferredSize = CGSizeMake(targetW, targetH);
+GHCFLogLine("v68 restore scene not ready, resize deferred");
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+if (!deferredScene || deferredScene != GHCFHostedScene || GHCFHostedMinimized) return;
+NSUInteger cs2 = 2;
+@try { cs2 = [deferredScene contentState]; } @catch (NSException *e) { (void)e; }
+if (cs2 != 0) {
+[self resizeHostedSceneToContentSize:deferredSize];
+} else {
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+if (!deferredScene || deferredScene != GHCFHostedScene || GHCFHostedMinimized) return;
+[self resizeHostedSceneToContentSize:deferredSize];
+NSUInteger cs3 = 2;
+@try { cs3 = [deferredScene contentState]; } @catch (NSException *e) { (void)e; }
+if (cs3 == 0) GHCFLogLine("v68 restore scene still not ready");
+});
+}
+});
+}
+{
+char gbuf[256];
+snprintf(gbuf, sizeof(gbuf), "v57 window restored frame %dx%d@%d,%d geo %dx%d preset %dx%d", (int)targetW, (int)targetH, (int)(targetCX - targetW / 2.0), (int)(targetCY - targetH / 2.0), hasGeo ? (int)geoW : -1, hasGeo ? (int)geoH : -1, (int)presetW, (int)presetH);
+GHCFLogLine(gbuf);
+}
+}
+GHCFHostedMinimized = NO;
+GHCFBringWindowToFront(GHCFHostedWindow);
+GHCFLogLine("v57 window restored from peek");
+// v30：最小化后锁屏再解锁、恢复窗时内容是黑的——锁屏把 scene 的
+// foreground 状态弄丢了，只取消 hidden 不够；恢复时也要把
+// foreground=YES 再推一遍（建窗时同一个已证明能用的做法），
+// 单独包 @try/@catch，出错只记日志、继续恢复。
+// v72：scene 卡在 0 时不推——24.log 证明推 0 没用（时针案重试／恢复／
+// 解锁／看门狗全推过，一直是 0）；卡 0 的交给门控重建。
+NSUInteger restorePreCS = 2;
+if (GHCFHostedScene) {
+@try { restorePreCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; restorePreCS = 2; }
+}
+if (restorePreCS == 0) {
+GHCFLogLine("v72 foreground push on restore skipped, scene stuck 0");
+} else {
+@try {
+if (GHCFHostedScene) {
+[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+settings.foreground = YES;
+// v31：把 backgrounded 也推回 NO（最小化/锁屏时推过 YES），
+// 和 foreground 一起恢复；setter 不存在就跳过，不崩。
+if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
+settings.backgrounded = NO;
+}
+}];
+char fbuf[128];
+snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on restore contentState=%lu", (unsigned long)[GHCFHostedScene contentState]);
+GHCFLogLine(fbuf);
+}
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 foreground push on restore failed");
+}
+}
+// v72：恢复门控判断——前景刚推完，读一次 contentState：
+// 先播 0.7 秒快照动画（就绪播真快照；v74：没就绪也试真快照——v43.6 起优先用恢复前预抓的，拍不到才播靜態佔位），播完跑门控决策
+//（runRestoreGateDecision：就绪 80ms 后淡入显示；没就绪显示窗＋盖占位＋设门等）。
+// 没有目标框（idx 无效）时不播动画，直接跑门控决策。
+{
+NSUInteger gateCS = 2;
+if (GHCFHostedScene) {
+@try { gateCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; gateCS = 2; }
+}
+if (restoreHasTargetFrame) {
+[self animateRestoreSnapshotFromFrame:restoreFromFrame toFrame:restoreTargetFrame ready:(gateCS == 2 && GHCFHostedSceneSizeMatchesWindow()) completion:^{ // v43.6：动画优先用恢复前预抓的快照（小卡最后一帧，不会黑）；预抓 nil 才现抓，现抓不到才播静态占位。
+[self runRestoreGateDecision];
+}];
+} else {
+GHCFRestorePreSnap = nil; // v43.6：没目标框就不播动画，预抓的快照不用了，清掉。
+[self runRestoreGateDecision];
+}
+}
+// v40：恢复完把状态存回缓存、更新阴影背景（窗又看得见了）。
+if (idx >= 0 && idx < GHCFAppCount) {
+GHCFSaveActiveToCache();
+}
+GHCFUpdateDimOverlay();
+// v42：重啟恢復清單 + 任務欄跟著恢復更新。
+GHCFSaveRestoreList();
+GHCFUpdateTaskbar();
+}
+
+
+// v38：拖缩放滑杆——0.5–2.0，步进 0.01（UISlider 没有步进，handler
+// 里四舍五入到 0.01：(int)(v*100+0.5)/100，不用 math.h）。改
+// scaleRatio，走同一条反向耦合路径（立即改 transform、0.05 秒防抖
+// 改 frame），百分比同步到滑杆条右边的 label，缓存里的 scaleRatio
+// 也立即同步（不然切走再切回来会读回旧值）。
+- (void)handleScaleSlider:(UISlider *)sender {
+if (!sender) return;
+// v40：多窗——先切活动量到滑杆所在的窗（scaleRatio 是活动窗的）。
+GHCFSetActiveToWindow(GHCFWindowForView(sender));
+CGFloat v = sender.value;
+v = (CGFloat)((int)(v * 100.0 + 0.5)) / 100.0;
+if (v < 0.5) v = 0.5;
+if (v > 2.0) v = 2.0;
+sender.value = v;
+GHCFHostedScaleRatio = v;
+if (GHCFHostedScaleLabel) {
+char pbuf[32];
+snprintf(pbuf, sizeof(pbuf), "%d%%", (int)(v * 100.0));
+GHCFHostedScaleLabel.text = [NSString stringWithCString:pbuf encoding:NSUTF8StringEncoding];
+}
+if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
+GHCFCacheScaleRatios[GHCFActiveAppIndex] = v;
+}
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 scale changed to %d%%", (int)(v * 100.0));
+GHCFLogLine(buf);
+GHCFApplyScaleToHostedWindow(YES);
+}
+
+// v40：滑杆松手（拖动结束）——存一次位置/大小/缩放（第 6 项）。
+// ValueChanged 拖动中一直在触发，每动一下都写 prefs 太费；
+// 松手才存一次（TouchUpInside/Outside）。
+- (void)handleScaleSliderEnded:(UISlider *)sender {
+(void)sender;
+if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
+GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+}
+}
+
+// 拖标题栏移动窗口（参考实现的 moveWindow 做法：取位移、
+// 加到中心点上、位移清零；位置夹在屏幕里，不让窗丢出去）。
+// v40：多窗——拖哪个窗就动哪个窗（recognizer.view 所在的 window，
+// 不是只动 GHCFHostedWindow 这个单一静态，不然拖 B 窗会动到 A 窗）；
+// 细条 24pt（皇上 11:34：v39 的 16pt 细条太细、太透明，找不到地方抓）。
+// 拖到右邊緣贴边收起（主关掉路徑，像影片一樣）：放手时窗中心进了右缘
+// 60pt 内，窗收成一张贴边小卡（跟最小化一样，scene 活着）；没拖到
+// 那么边、放手就停在原地（但窗不能半截出屏，放手夹回全可见）。
+// 安全距离（设定页，默认 50）：拖窗时窗顶离刘海（屏幕顶缘）不到这个
+// 值就自动回弹（夹住位置，让窗顶至少离顶缘这个距离；旧 minY=100 是
+// 夹中心，顶缘能出屏——v40 改成夹窗顶）。
+- (void)handleTitleDrag:(UIPanGestureRecognizer *)recognizer {
+UIWindow *dragWindow = GHCFWindowForView(recognizer.view);
+if (!dragWindow) dragWindow = GHCFHostedWindow;
+if (!dragWindow) return;
+GHCFSetActiveToWindow(dragWindow);
+// v41：收起的 peek 窗不拖（點整截是恢復，拖動沒有意義；peek 上的
+// 點按層本來就擋住了細條，這裡是兜底）。
+int dragIdx = GHCFAppIndexForWindow(dragWindow);
+if (dragIdx >= 0 && dragIdx < GHCFAppCount && GHCFCacheMinimized[dragIdx]) return;
+// v40：拖动一开始读一次设定（贴边收起往哪边、安全距离），拖动中
+// 不变——每动一下都读 prefs 太费（CFPreferencesAppSynchronize）。
+if (recognizer.state == UIGestureRecognizerStateBegan) {
+// v41：浮窗拖動手勢開關（調度窗口設置，預設開）——關了這次拖動
+// 不動（Began 讀一次，之後的事件看旗標，不每動一下讀 prefs）。
+GHCFDragDisabled = !GHCFReadWindowDragEnabled();
+if (GHCFDragDisabled) {
+GHCFLogLine("v57 window drag disabled");
+return;
+}
+GHCFDragDockLeft = GHCFIsWindowPositionLeft();
+GHCFDragSafeDistance = GHCFReadSafeDistance();
+GHCFDragFlickUpThreshold = GHCFReadFlickUpVelocityThreshold();
+GHCFLogLine("v57 window dragged");
+}
+if (GHCFDragDisabled) return;
+if (recognizer.state == UIGestureRecognizerStateCancelled || recognizer.state == UIGestureRecognizerStateFailed) {
+return;
+}
+BOOL dockLeft = GHCFDragDockLeft;
+CGFloat safeDistance = GHCFDragSafeDistance;
+// v68：跟手修法——translation 不能量在會動的浮窗上（同款毛病）。
+// 改拿固定不動的邊條窗當參考座標，只換這兩行，其餘夾取／門檻邏輯不動。
+UIView *fixedRefView = GHCFStripWindow ? (UIView *)GHCFStripWindow : dragWindow;
+CGPoint point = [recognizer translationInView:fixedRefView];
+[recognizer setTranslation:CGPointZero inView:fixedRefView];
+CGPoint center = dragWindow.center;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat winW = dragWindow.bounds.size.width;
+CGFloat winH = dragWindow.bounds.size.height;
+// 横向：贴边那侧放寬到 20（才拖得到贴边收起的门槛——中心进那侧缘
+// 60pt 内），另一侧还是 80。右側：minX 80、maxX 屏宽 - 20；
+// 左側：minX 20、maxX 屏宽 - 80。
+CGFloat minX = dockLeft ? 20.0 : 80.0;
+CGFloat maxX = dockLeft ? (screenBounds.size.width - 80.0) : (screenBounds.size.width - 20.0);
+// 纵向：窗顶离顶缘至少安全距离（设定页 safeDistance，默认 50），
+// 中心 = 安全距离 + 窗高/2；底边夹在屏高 - 100（中心）。
+CGFloat minY = safeDistance + winH / 2.0;
+CGFloat maxY = screenBounds.size.height - 100.0;
+CGFloat newX = center.x + point.x;
+CGFloat newY = center.y + point.y;
+if (newX < minX) newX = minX;
+if (newX > maxX) newX = maxX;
+if (newY < minY) newY = minY;
+if (newY > maxY) newY = maxY;
+dragWindow.center = CGPointMake(newX, newY);
+if (recognizer.state == UIGestureRecognizerStateEnded) {
+// 放手：窗中心进了贴边那侧的缘 60pt 内——贴边收起（主关掉路徑，
+// 像影片一樣）。右側：中心进右缘 60pt 内；左側：中心进左缘 60pt 内。
+BOOL shouldDock = dockLeft ? (newX <= GHCF_DOCK_DRAG_THRESHOLD) : (screenBounds.size.width - newX <= GHCF_DOCK_DRAG_THRESHOLD);
+// v43.3：往上快速一甩也收起——速度超过阈值（设定值 ×25 pt/s，
+// 预设 40 → 1000），跟拖到贴边同一条路（含退出动画）。
+CGPoint flickVel = [recognizer velocityInView:fixedRefView];
+BOOL flickUpDock = (flickVel.y <= -GHCFDragFlickUpThreshold);
+if (shouldDock || flickUpDock) {
+GHCFLogLine(flickUpDock ? "v43.3 window flicked up, docking" : "v57 window docked by drag");
+// v72：拖去收小卡也按退出動畫播一次（0 island＝現有行為不動，
+// 直接收；1–4 先播動畫再收，播完還原幾何才走 minimize；遊戲模式
+// 開著時新方法裡面自己用 0.01 秒）。讀值記一行，證明設定有沒有到。
+int dockExitAnim = GHCFReadExitAnimation();
+{
+char dbuf[64];
+snprintf(dbuf, sizeof(dbuf), "v72 dock exit anim %d", dockExitAnim);
+GHCFLogLine(dbuf);
+}
+if (dockExitAnim == 0) {
+[self minimizeHostedWindow];
+} else {
+[self minimizeHostedWindowWithExitAnimation:dockExitAnim fromFrame:dragWindow.frame startAlpha:dragWindow.alpha];
+}
+return;
+}
+// v42：貼邊吸附（放手才吸，不拖著就跳）：拖到頂部（窗頂拖到安全距離
+// 線）放大到全屏尺寸；拖到左右邊緣（窗邊離屏邊不到 24pt）吸住對齊
+// （留 8pt）。v49：門檻從
+// safeDistance+24 改成 safeDistance——中窗居中時窗頂本來就在 69.5pt，
+// 舊門檻 74pt 讓隨便拖一下就放大。
+// v63：尺寸固定——拖到頂部不再放大到全屏（拉大拉小後續再做）；
+// 掉下來走下面正常的夾取＋存位置。
+if ((newY - winH / 2.0) <= safeDistance) {
+GHCFLogLine("v68 fullscreen snap disabled, fixed size");
+}
+if (newX - winW / 2.0 <= 24.0) newX = winW / 2.0 + 8.0;
+else if (screenBounds.size.width - (newX + winW / 2.0) <= 24.0) newX = screenBounds.size.width - winW / 2.0 - 8.0;
+// 没拖到那么边：放手停在原地，但窗不能半截出屏——夹回全可见
+//（左右留 8pt、顶留安全距离、底留 8pt）。
+CGFloat minCX = winW / 2.0 + 8.0;
+CGFloat maxCX = screenBounds.size.width - winW / 2.0 - 8.0;
+CGFloat minCY = safeDistance + winH / 2.0;
+CGFloat maxCY = screenBounds.size.height - winH / 2.0 - 8.0;
+CGFloat snapX = newX, snapY = newY;
+if (snapX < minCX) snapX = minCX;
+if (snapX > maxCX) snapX = maxCX;
+if (snapY < minCY) snapY = minCY;
+if (snapY > maxCY) snapY = maxCY;
+dragWindow.center = CGPointMake(snapX, snapY);
+// v40：拖动结束存一次位置/大小/缩放（第 6 项）——下次开同一 App
+// 恢复到这次的位置和大小（贴边收起时 minimizeHostedWindow 里已存）。
+if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
+GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+}
+}
+}
+
+// v38：点窗顶上的细条——展开／收起缩放滑杆条。
+// v60：标题栏拿掉，± 钮没了，点细条直接开／关滑杆条（展开时把
+// 滑杆值同步到当前 scale，跟以前 ± 钮同一套逻辑）。
+// v40：多窗——点哪个窗的细条，就切活动量到那个窗、把它带到
+// 最前（层级升到最前），再展开／收起它的滑杆条。
+- (void)handleTopStripTap:(UITapGestureRecognizer *)recognizer {
+UIWindow *tapWindow = GHCFWindowForView(recognizer.view);
+if (tapWindow) {
+GHCFSetActiveToWindow(tapWindow);
+GHCFBringWindowToFront(tapWindow);
+}
+// v63：尺寸固定——點細條不再開縮放滑桿條（拉大拉小後續再做）；
+// 點細條只剩帶到最前（上面已做）。滑桿條本來就是 hidden=YES 建的，
+// 唯一開它的路就是這裡，拿掉後它永遠不出現，裡面的小／中／大鈕也跟著沒用。
+GHCFLogLine("v68 scale bar disabled, fixed size");
+}
+
+// ── v42 新方法（窗控制／手勢／任務欄／配對／鍵盤） ──
+
+// v42：把活動窗改到指定 frame（尺寸預設、放大、手勢「放大」共用）：
+// 窗 + 容器/內容區/細條/滑桿條/手柄都跟著改，scene frame 重推，
+// 位置/大小存一次（下次開同一 App 恢復）。
+- (void)resizeActiveWindowToFrame:(CGRect)frame {
+if (!GHCFHostedWindow || !GHCFHostedContainer || !GHCFHostedContentView) return;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat newW = frame.size.width;
+CGFloat newH = frame.size.height;
+if (newW < 200.0) newW = 200.0;
+if (newW > screenBounds.size.width - 16.0) newW = screenBounds.size.width - 16.0;
+if (newH < 300.0) newH = 300.0;
+if (newH > screenBounds.size.height - 120.0) newH = screenBounds.size.height - 120.0;
+CGFloat newX = frame.origin.x;
+CGFloat newY = frame.origin.y;
+if (newX < 8.0) newX = 8.0;
+if (newY < GHCFReadSafeDistance()) newY = GHCFReadSafeDistance();
+if (newX + newW > screenBounds.size.width - 8.0) newX = screenBounds.size.width - 8.0 - newW;
+if (newY + newH > screenBounds.size.height - 8.0) newY = screenBounds.size.height - 8.0 - newH;
+GHCFHostedWindow.frame = CGRectMake(newX, newY, newW, newH);
+if (GHCFHostedContainer) GHCFHostedContainer.frame = CGRectMake(0, 0, newW, newH);
+if (GHCFHostedContentView) GHCFHostedContentView.frame = CGRectMake(0, 0, newW, newH);
+if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = CGRectMake(0, 0, newW, GHCF_HOSTED_STRIP_H);
+if (GHCFHostedScaleSliderBar) {
+GHCFHostedScaleSliderBar.frame = CGRectMake(0, GHCF_HOSTED_STRIP_H, newW, 72);
+for (UIView *sub in GHCFHostedScaleSliderBar.subviews) {
+if ([sub isKindOfClass:[UIButton class]] && sub.tag >= 100 && sub.tag <= 102) {
+int sp = (int)sub.tag - 100;
+sub.frame = CGRectMake(newW - 140 + sp * 44, 39, 40, 28);
+}
+}
+}
+if (GHCFHostedScaleSlider) GHCFHostedScaleSlider.frame = CGRectMake(10, 3, newW - 70, 30);
+if (GHCFHostedScaleLabel) GHCFHostedScaleLabel.frame = CGRectMake(newW - 56, 3, 46, 30);
+if (GHCFHostedResizeHandle) GHCFHostedResizeHandle.frame = CGRectMake(newW - 36, newH - 36, 36, 36);
+[self resizeHostedSceneToContentSize:CGSizeMake(newW, newH)];
+if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
+GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+}
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 window resized to %dx%d", (int)newW, (int)newH);
+GHCFLogLine(buf);
+[self armSizeGateForResize]; // v73：拖調尺寸鬆手後，尺寸沒對上之前蓋佔位等 scene 重畫。
+}
+
+// v42：手勢動作分派（手勢自定義；v60 釘選鈕沒了，pin 只剩手勢）：pin 釘選/取消、
+// dock 收起貼邊、close 關掉、cycle 輪切主窗、maximize 放大到全屏尺寸。
+// v43.24：第 4 件——截屏：截當前浮窗（浮窗渲染，存相冊）；沒有浮窗／渲染失敗
+// 就截整屏。浮窗是 SpringBoard 進程裡的 UIWindow，drawViewHierarchyInRect 抓它
+// 的視圖層；layer-host 的 scene 內容不一定進視圖層，抓不到活內容時退回整屏。
+- (void)takeScreenshotOfHostedWindowOrScreen {
+UIImage *img = nil;
+UIWindow *hosted = GHCFHostedWindow;
+if (hosted && !hosted.hidden) {
+CGSize size = hosted.bounds.size;
+if (size.width > 0 && size.height > 0) {
+UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
+BOOL rendered = [hosted drawViewHierarchyInRect:hosted.bounds afterScreenUpdates:NO];
+if (rendered) img = UIGraphicsGetImageFromCurrentImageContext();
+UIGraphicsEndImageContext();
+}
+}
+if (!img) {
+UIView *screenSnap = nil;
+@try { screenSnap = [[UIScreen mainScreen] snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; screenSnap = nil; }
+if (screenSnap) {
+CGSize size = screenSnap.bounds.size;
+if (size.width > 0 && size.height > 0) {
+UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
+BOOL rendered = [screenSnap drawViewHierarchyInRect:screenSnap.bounds afterScreenUpdates:NO];
+if (rendered) img = UIGraphicsGetImageFromCurrentImageContext();
+UIGraphicsEndImageContext();
+}
+}
+}
+if (img) {
+UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil);
+GHCFLogLine("v43.24 screenshot saved to photos");
+} else {
+GHCFLogLine("v43.24 screenshot failed");
+}
+}
+
+- (void)performGestureAction:(const char *)action {
+if (!action) return;
+// v43.24：第 4 件——截屏先於浮窗檢查（沒有浮窗也要能截整屏）。
+if (strcmp(action, "screenshot") == 0) {
+[self takeScreenshotOfHostedWindowOrScreen];
+return;
+}
+if (!GHCFHostedWindow) return;
+if (strcmp(action, "pin") == 0) {
+if (GHCFHostedBundleID[0] == '\0') return;
+BOOL pinned = GHCFIsWindowPinned(GHCFHostedBundleID);
+NSMutableArray *ids = [NSMutableArray arrayWithArray:GHCFReadIDList("pinnedWindowIDs")];
+NSString *bidStr = [NSString stringWithCString:GHCFHostedBundleID encoding:NSUTF8StringEncoding];
+[ids removeObject:bidStr];
+if (!pinned) [ids insertObject:bidStr atIndex:0];
+GHCFWriteIDList("pinnedWindowIDs", ids);
+GHCFBringWindowToFront(GHCFHostedWindow);
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 window %s %s", GHCFHostedBundleID, !pinned ? "pinned" : "unpinned");
+GHCFLogLine(buf);
+} else if (strcmp(action, "dock") == 0) {
+[self minimizeHostedWindow];
+} else if (strcmp(action, "close") == 0) {
+[self closeHostedWindow];
+} else if (strcmp(action, "cycle") == 0) {
+[self cycleMainWindow];
+} else if (strcmp(action, "maximize") == 0) {
+// v63：尺寸固定——maximize 手勢停用（拉大拉小後續再做）。
+GHCFLogLine("v68 maximize gesture disabled, fixed size");
+}
+}
+
+// v42：尺寸預設鈕（小/中/大，tag 100/101/102）——窗立刻變那個尺寸
+//（保持窗中心不動），同時寫回預設（下次開窗也用這個尺寸）。
+- (void)handleSizePresetButton:(UIButton *)sender {
+int preset = (int)sender.tag - 100;
+if (preset < 0 || preset > 2 || !GHCFHostedWindow) return;
+GHCFWritePrefsCString("windowSizePreset", preset == 0 ? "small" : (preset == 2 ? "large" : "medium"));
+// v53：計算器不跟預設走（永遠 320x693；prefs 照寫，建窗／恢復共用同一個 helper）。
+CGFloat presetW, presetH;
+GHCFPresetSizeForBundleID(GHCFHostedBundleID, &presetW, &presetH);
+CGSize size = CGSizeMake(presetW, presetH);
+CGRect frame = GHCFHostedWindow.frame;
+CGFloat cx = frame.origin.x + frame.size.width / 2.0;
+CGFloat cy = frame.origin.y + frame.size.height / 2.0;
+[self resizeActiveWindowToFrame:CGRectMake(cx - size.width / 2.0, cy - size.height / 2.0, size.width, size.height)];
+if (GHCFHostedScaleSliderBar) {
+for (UIView *sub in GHCFHostedScaleSliderBar.subviews) {
+if ([sub isKindOfClass:[UIButton class]] && sub.tag >= 100 && sub.tag <= 102) {
+BOOL current = ((int)sub.tag - 100 == preset);
+sub.layer.borderWidth = current ? 2.0 : 1.0;
+sub.layer.borderColor = current ? [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0].CGColor : [[UIColor whiteColor] colorWithAlphaComponent:0.3].CGColor;
+}
+}
+}
+char buf[64];
+snprintf(buf, sizeof(buf), "v57 window size preset %d", preset);
+GHCFLogLine(buf);
+}
+
+// v42：手勢自定義（細條上的手勢；動作走設定，沒設回預設：
+// 三擊=釘選、上下滑=收起貼邊、左右滑=關掉、雙指點=放大全屏
+//（放大全屏從 v68 起停用＝無動作）。
+- (void)handleGestureTripleTap:(UITapGestureRecognizer *)recognizer {
+UIWindow *w = GHCFWindowForView(recognizer.view);
+if (w) GHCFSetActiveToWindow(w);
+char *action = GHCFReadPrefsCString("gestureTripleTap");
+const char *a = action ? action : "pin";
+[self performGestureAction:a];
+if (action) free(action);
+GHCFLogLine("v57 gesture triple tap");
+}
+- (void)handleGestureSwipeVertical:(UISwipeGestureRecognizer *)recognizer {
+UIWindow *w = GHCFWindowForView(recognizer.view);
+if (w) GHCFSetActiveToWindow(w);
+char *action = GHCFReadPrefsCString("gestureSwipeV");
+const char *a = action ? action : "dock";
+[self performGestureAction:a];
+if (action) free(action);
+GHCFLogLine("v57 gesture swipe vertical");
+}
+- (void)handleGestureSwipeHorizontal:(UISwipeGestureRecognizer *)recognizer {
+UIWindow *w = GHCFWindowForView(recognizer.view);
+if (w) GHCFSetActiveToWindow(w);
+char *action = GHCFReadPrefsCString("gestureSwipeH");
+const char *a = action ? action : "close";
+[self performGestureAction:a];
+if (action) free(action);
+GHCFLogLine("v57 gesture swipe horizontal");
+}
+- (void)handleGestureTwoFingerTap:(UITapGestureRecognizer *)recognizer {
+UIWindow *w = GHCFWindowForView(recognizer.view);
+if (w) GHCFSetActiveToWindow(w);
+char *action = GHCFReadPrefsCString("gestureTwoFingerTap");
+const char *a = action ? action : "maximize";
+[self performGestureAction:a];
+if (action) free(action);
+GHCFLogLine("v57 gesture two finger tap");
+}
+
+// v53：懸浮球三個 handler 已整個拿掉（只留一個觸發鈕按鈕）。
+// v42：底部任務欄點圖標——切到那個窗（收著的從 peek 恢復）。
+- (void)handleTaskbarButton:(UIButton *)sender {
+NSInteger idx = sender.tag;
+if (idx == 99) {
+int docked = GHCFDockAllVisibleWindows(NO);
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 taskbar dock all %d windows", docked);
+GHCFLogLine(buf);
+GHCFUpdateTaskbar();
+return;
+}
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheWindows[idx]) return;
+[self promoteWindowToMainIndex:(int)idx];
+GHCFUpdateTaskbar();
+}
+
+// v43.20：長按芯片直接關窗——不彈菜單。最小化（小卡）的項直接關，不先
+// promote／恢復成大窗（不會閃黑窗）；可見主窗走現有關窗路。關完芯片消失。
+- (void)closeCachedEntryAtIndex:(int)idx {
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheWindows[idx]) return;
+// v43.20：先裝回活動量再關——closeHostedWindow 只認活動窗；裝回不顯示
+//（LoadCacheToActive 只搬指針，不推前景、不恢復），所以小卡不會閃回大窗。
+GHCFLoadCacheToActive(idx);
+[self closeHostedWindow];
+// v43.20：把項從緩存拿掉（scene 留著——進程繼續跑，重開再托管現有 scene），
+// 任務欄只給非空緩存項畫芯片，拿掉芯片就消失。
+GHCFDropCachedEntryKeepingScene(idx);
+GHCFSaveRestoreList();
+GHCFUpdateDimOverlay();
+GHCFUpdateTaskbar();
+}
+
+// v43.20：芯片長按＝直接關掉那個 App，不彈菜單。
+// 只在 Began 認出一次；長按認出會取消按鈕觸摸，不會誤觸切主窗。
+- (void)handleTaskbarChipLongPress:(UILongPressGestureRecognizer *)recognizer {
+if (recognizer.state != UIGestureRecognizerStateBegan) return;
+NSInteger idx = recognizer.view.tag;
+if (idx < 0 || idx >= GHCFAppCount) return;
+if (!GHCFCacheWindows[idx]) return;
+[self closeCachedEntryAtIndex:(int)idx];
+char buf[96];
+snprintf(buf, sizeof(buf), "v43.20 taskbar long press close chip %d", (int)idx);
+GHCFLogLine(buf);
+}
+
+// v42：ARC 裡的「設置」——收起 ARC，開浮窗設定卡片。
+
+
+
+
+// ── v43.33（1.0.108，路線 A 探針）：鍵盤彈出時打當前 presentation 的圖層樹 ──
+// 背景：皇上的決定性測試已證明 presenter 路本身分不開鍵盤（scene 346×749、
+// 100% 縮放，系統鍵盤按整屏 430×359 排、超出 scene 被窗口裁掉）。FV 最可能
+// 的做法（路線 A）是 SpringBoard 側把鍵盤窗的 context 另外託管成一個獨立
+// 全寬窗口——鍵盤窗（UIRemoteKeyboardWindow／_UITextEffectsWindowHosted）
+// 有自己的 CAContext（自己的 context ID），機械上能另外託管，但前提是
+// SpringBoard 側拿得到這個 context ID。這個探針就是驗這個前提。
+// 只記日誌，不改任何行為：不藏、不動、不託管任何東西；不改任何 frame；
+// 不改鍵盤行為。開關 kbProbeEnabled（Keyboard.plist，預設開）。
+// 節流：一次彈出 WillShow 會連發幾次，2 秒內只打一次樹（鍵盤 hide 不清
+// 旗標——hide 可能漏，時間節流自己會恢復）。
+// 讀 contextId：CALayer 的私有方法，用 objc_msgSend＋sel_registerName 叫
+// （跟 GHCFAppIcon 一樣的寫法，不連結私有框架）；拿不到就回 0。
+// CALayerHost 認法：NSClassFromString 拿類、isKindOfClass 比。
+// 屏幕坐標：window.layer convertRect:fromLayer:（管 transform）；算不出就留空。
+static double GHCFKbProbeLastDump = 0;
+static int GHCFKbProbeNodeCount = 0;
+static int GHCFKbProbeHostCount = 0;
+static int GHCFKbProbeKbCount = 0;
+static unsigned int GHCFKbProbeContextIdForLayer(CALayer *layer) {
+if (!layer) return 0;
+unsigned int ctxId = 0;
+@try {
+SEL sel = sel_registerName("contextId");
+if ([layer respondsToSelector:sel]) {
+unsigned int (*msgSendCtx)(id, SEL) = (unsigned int (*)(id, SEL))objc_msgSend;
+ctxId = msgSendCtx(layer, sel);
+}
+} @catch (NSException *e) {
+(void)e;
+ctxId = 0;
+}
+return ctxId;
+}
+static void GHCFKbProbeDumpLayer(CALayer *layer, int depth, CALayer *windowLayer, CGRect windowFrame) {
+if (!layer || depth > 5 || GHCFKbProbeNodeCount >= 60) return;
+GHCFKbProbeNodeCount++;
+const char *cls = class_getName([layer class]);
+CGRect f = layer.frame;
+unsigned int ctxId = GHCFKbProbeContextIdForLayer(layer);
+BOOL isHost = NO;
+Class hostClass = NSClassFromString([NSString stringWithCString:"CALayerHost" encoding:NSUTF8StringEncoding]);
+if (hostClass && [layer isKindOfClass:hostClass]) isHost = YES;
+if (isHost) GHCFKbProbeHostCount++;
+// KB?：寬約 430、高約 359、在 scene 下半——就是鍵盤窗的樣子。
+BOOL kbMaybe = (f.size.width >= 400.0 && f.size.width <= 460.0 && f.size.height >= 300.0 && f.size.height <= 400.0 && f.origin.y >= 500.0);
+if (kbMaybe) GHCFKbProbeKbCount++;
+char sbuf[640];
+if (windowLayer) {
+CGRect scr = CGRectZero;
+BOOL scrOK = NO;
+@try {
+scr = [windowLayer convertRect:layer.bounds fromLayer:layer];
+scrOK = YES;
+} @catch (NSException *e) {
+(void)e;
+scrOK = NO;
+}
+if (scrOK) {
+snprintf(sbuf, sizeof(sbuf), "v43.33 kb-probe d=%d %s frame=%d,%d %dx%d scr=%d,%d %dx%d ctx=%u%s%s%s", depth, cls, (int)f.origin.x, (int)f.origin.y, (int)f.size.width, (int)f.size.height, (int)(scr.origin.x + windowFrame.origin.x), (int)(scr.origin.y + windowFrame.origin.y), (int)scr.size.width, (int)scr.size.height, ctxId, isHost ? " HOST" : "", kbMaybe ? " KB?" : "", layer.hidden ? " hidden" : "");
+} else {
+snprintf(sbuf, sizeof(sbuf), "v43.33 kb-probe d=%d %s frame=%d,%d %dx%d scr=? ctx=%u%s%s%s", depth, cls, (int)f.origin.x, (int)f.origin.y, (int)f.size.width, (int)f.size.height, ctxId, isHost ? " HOST" : "", kbMaybe ? " KB?" : "", layer.hidden ? " hidden" : "");
+}
+} else {
+snprintf(sbuf, sizeof(sbuf), "v43.33 kb-probe d=%d %s frame=%d,%d %dx%d scr=? ctx=%u%s%s%s", depth, cls, (int)f.origin.x, (int)f.origin.y, (int)f.size.width, (int)f.size.height, ctxId, isHost ? " HOST" : "", kbMaybe ? " KB?" : "", layer.hidden ? " hidden" : "");
+}
+GHCFLogLine(sbuf);
+NSArray *subs = [layer.sublayers copy];
+for (CALayer *sub in subs) {
+GHCFKbProbeDumpLayer(sub, depth + 1, windowLayer, windowFrame);
+}
+}
+static void GHCFKbProbeDumpOnKeyboardShow(CGFloat kbHeight, const char *bid) {
+CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+if (now - GHCFKbProbeLastDump < 2.0) return;
+GHCFKbProbeLastDump = now;
+UIView *pv = (GHCFHostedPresenter && GHCFHostedPresenter.presentationView) ? GHCFHostedPresenter.presentationView : nil;
+UIView *lh = GHCFHostedLayerHostView;
+CGRect winFrame = GHCFHostedWindow ? GHCFHostedWindow.frame : CGRectZero;
+char hbuf[256];
+snprintf(hbuf, sizeof(hbuf), "v43.33 kb-probe show bid=%s kb=%d path=%s win=%d,%d %dx%d", (bid && bid[0] != '\0') ? bid : "-", (int)kbHeight, (pv && lh) ? "both" : (pv ? "presenter" : (lh ? "layerhost" : "none")), (int)winFrame.origin.x, (int)winFrame.origin.y, (int)winFrame.size.width, (int)winFrame.size.height);
+GHCFLogLine(hbuf);
+GHCFKbProbeNodeCount = 0;
+GHCFKbProbeHostCount = 0;
+GHCFKbProbeKbCount = 0;
+CALayer *windowLayer = GHCFHostedWindow ? GHCFHostedWindow.layer : nil;
+if (pv) GHCFKbProbeDumpLayer(pv.layer, 0, windowLayer, winFrame);
+if (lh) GHCFKbProbeDumpLayer(lh.layer, 0, windowLayer, winFrame);
+char fbuf[128];
+snprintf(fbuf, sizeof(fbuf), "v43.33 kb-probe done nodes=%d host=%d kb=%d", GHCFKbProbeNodeCount, GHCFKbProbeHostCount, GHCFKbProbeKbCount);
+GHCFLogLine(fbuf);
+}
+// v42：鍵盤彈出時浮窗自動上移（探針：鍵盤通知是 App 進程發的，
+// SpringBoard 這邊可能收不到——收到了才上移，收不到就不動，見 §115）。
+// 上移只動活動窗（鍵盤擋住它的底才移，移多少看鍵盤高度），收起回原位。
+// v54：彈出方式分內／外（keyboardPopupMode）：內彈出走老路上移；外彈出
+// 浮窗不動（鍵盤在浮窗外），橫屏時試著給鍵盤加拖動（見上）；
+// 收起時不再關窗（v43.22：關窗分支＋開關整個刪掉，Lee 點頭）。
+// v43.5：鍵盤彈出／收起共用邏輯（舊 NSNotification 路徑＋Darwin 橋接共用）。
+// kbHeight：鍵盤高度（pt）；bid：發通知的 App 包名，NULL 表示不比對
+//（舊路徑沒有包名）。只對活動浮窗動作；橫屏放大不認「自動上移」開關，
+// 上移／關窗照舊認各自開關。
+- (void)ghcfHandleKeyboardShowHeight:(CGFloat)kbHeight bundleID:(const char *)bid {
+if (!GHCFHostedWindow || GHCFHostedMinimized) return;
+if (bid && bid[0] != '\0' && strcmp(bid, GHCFHostedBundleID) != 0) return;
+if (kbHeight <= 0) return;
+// v43.33（1.0.108，路線 A 探針）：鍵盤彈出時打一遍當前 presentation 的
+// 圖層樹（只記日誌，2 秒節流；開關 kbProbeEnabled 預設開）。
+if (GHCFReadKbProbeEnabled()) GHCFKbProbeDumpOnKeyboardShow(kbHeight, bid);
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+BOOL landscape = screenBounds.size.width > screenBounds.size.height;
+int mode = GHCFReadKeyboardPopupModeForOrientation(landscape);
+// v43.18：放大改走模式分流（取代橫屏放大不分內外先 return）——
+// 內置：豎屏看 enlargeOnKeyboardPortrait、橫屏看 landscapeEnlargeOnKeyboard；
+// 外置：看 enlargeOnExternalKeyboard。放大完 return（不上移，照現況）；
+// 外置且放大關著，照現況直接回（不放大不上移）。
+if (mode == 1) {
+if (GHCFReadEnlargeOnExternalKeyboard()) {
+[self ghcfEnlargeWindowForKeyboardHeight:kbHeight];
+} else {
+GHCFLogLine("v43.5 keyboard show outer mode no shift");
+}
+return;
+}
+if ((!landscape && GHCFReadEnlargeOnKeyboardPortrait()) || (landscape && GHCFReadLandscapeEnlargeOnKeyboard())) {
+[self ghcfEnlargeWindowForKeyboardHeight:kbHeight];
+return;
+}
+if (!GHCFReadKeyboardAvoidEnabled()) return;
+if (GHCFKeyboardShifted) return;
+CGRect winFrame = GHCFHostedWindow.frame;
+CGFloat winBottom = winFrame.origin.y + winFrame.size.height;
+CGFloat kbTop = screenBounds.size.height - kbHeight;
+if (winBottom <= kbTop) return;
+GHCFKeyboardSavedFrame = winFrame;
+CGFloat shift = winBottom - kbTop;
+CGFloat newY = winFrame.origin.y - shift;
+CGFloat minY = GHCFReadSafeDistance();
+if (newY < minY) newY = minY;
+GHCFHostedWindow.frame = CGRectMake(winFrame.origin.x, newY, winFrame.size.width, winFrame.size.height);
+GHCFKeyboardShifted = YES;
+char buf[128];
+snprintf(buf, sizeof(buf), "v43.5 window shifted up for keyboard %dpt mode=inner", (int)shift);
+GHCFLogLine(buf);
+}
+// v43.5：橫屏鍵盤彈起放大浮窗——把活動窗放大到鍵盤上方空位，收起恢復原尺寸。
+// 用 resizeActiveWindowToFrame（走現成夾取＋scene 改尺寸＋尺寸門）；
+// 放大前原尺寸存靜態量，收起時同一條路縮回去，存的幾何也跟著回去。
+// v43.23：第 9 件——放大不改寬度（40.log §413）：targetW 用當前窗口寬度，
+// 不再用屏寬−32（398）。寬度不變，webview 視口寬度就不變，鍵盤收起縮回
+// 346×749 時頁面不會橫向偏、左邊不再被切。只改高度／位置：targetH＝
+// 屏高−鍵盤高−60（530）不變，窗口居中在鍵盤上方空位；X 跟著當前窗口中心走，
+// 不拉回屏幕中心（Lee 拖過的位置不動）。守衛也跟著改：以前是「寬高任一
+// 會變大才動」，寬度固定後那個條件在正常情況（749→530）會誤擋——現在只看
+// 窗底是不是已經在鍵盤上方，已經在上面就不用動。
+- (void)ghcfEnlargeWindowForKeyboardHeight:(CGFloat)kbHeight {
+if (GHCFKeyboardEnlarged || !GHCFHostedWindow || GHCFHostedMinimized) return;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGRect winFrame = GHCFHostedWindow.frame;
+CGFloat targetW = winFrame.size.width;
+CGFloat targetH = screenBounds.size.height - kbHeight - 60.0;
+CGFloat kbTop = screenBounds.size.height - kbHeight;
+if (winFrame.origin.y + winFrame.size.height <= kbTop) return;
+CGFloat cx = winFrame.origin.x + winFrame.size.width / 2.0;
+CGFloat cy = (screenBounds.size.height - kbHeight) / 2.0;
+GHCFKeyboardEnlargedSavedFrame = winFrame;
+GHCFKeyboardEnlarged = YES;
+[self resizeActiveWindowToFrame:CGRectMake(cx - targetW / 2.0, cy - targetH / 2.0, targetW, targetH)];
+char buf[128];
+snprintf(buf, sizeof(buf), "v43.5 window enlarged for keyboard %dx%d", (int)targetW, (int)targetH);
+GHCFLogLine(buf);
+}
+- (void)ghcfRestoreEnlargedWindowForKeyboard {
+if (!GHCFKeyboardEnlarged || !GHCFHostedWindow) return;
+GHCFKeyboardEnlarged = NO;
+[self resizeActiveWindowToFrame:GHCFKeyboardEnlargedSavedFrame];
+GHCFLogLine("v43.5 window restored after keyboard hide (enlarge)");
+}
+- (void)ghcfHandleKeyboardHideBundleID:(const char *)bid {
+// v43.10：最小化守衛（跟 show 路對稱）——鍵盤彈起上移後窗被收成小卡，
+// shift 旗標還在；收起時不能把滿窗框推到小卡窗上（內容還停在小卡縮放，
+// 其餘全黑，半黑）。直接清旗標走人，不要動窗框。
+if (!GHCFHostedWindow || GHCFHostedMinimized) { GHCFKeyboardShifted = NO; return; }
+if (bid && bid[0] != '\0' && strcmp(bid, GHCFHostedBundleID) != 0) return;
+// v43.22：記一行來源（Darwin 橋接帶包名；NSNotification 舊路徑 bid 是 NULL），
+// 以後不用猜 hide 是哪個通道送的。
+{
+char hbuf[192];
+snprintf(hbuf, sizeof(hbuf), "v43.22 keyboard hide src=%s", (bid && bid[0] != '\0') ? bid : "NSNotification");
+GHCFLogLine(hbuf);
+}
+// v43.22：hide 去重——一次收鍵盤可能兩個通道各送一次（Darwin＋NSNotification），
+// 1 秒內同一 bundle 的第二次 hide 直接忽略（37.log L133 恢復後緊接 L134 關窗）。
+// 關窗分支整個刪掉了（Lee 點頭），去重照做：第二次不能再有副作用。
+{
+NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+const char *keyBid = (bid && bid[0] != '\0') ? bid : GHCFHostedBundleID;
+if (keyBid && keyBid[0] != '\0' && GHCFKeyboardHideLastBid[0] != '\0'
+    && strcmp(keyBid, GHCFKeyboardHideLastBid) == 0
+    && (now - GHCFKeyboardHideLastTime) < 1.0) {
+GHCFLogLine("v43.22 keyboard hide ignored, duplicate within 1s");
+return;
+}
+if (keyBid && keyBid[0] != '\0') {
+strncpy(GHCFKeyboardHideLastBid, keyBid, sizeof(GHCFKeyboardHideLastBid) - 1);
+GHCFKeyboardHideLastBid[sizeof(GHCFKeyboardHideLastBid) - 1] = '\0';
+}
+GHCFKeyboardHideLastTime = now;
+}
+// 放大中先恢復尺寸（放大時 shift 沒跑，恢復尺寸就夠了，不關窗）。
+if (GHCFKeyboardEnlarged) {
+[self ghcfRestoreEnlargedWindowForKeyboard];
+return;
+}
+if (!GHCFKeyboardShifted) return;
+GHCFHostedWindow.frame = GHCFKeyboardSavedFrame;
+GHCFKeyboardShifted = NO;
+GHCFLogLine("v43.5 window restored after keyboard hide");
+}
+// v42：鍵盤監聽舊路徑（NSNotificationCenter——鍵盤通知由 App 行程發，
+// SpringBoard 這邊可能收不到；收到了走上面共用邏輯。Darwin 橋接見下面
+// notify_register_dispatch，那條才是 1.0.80 的主路）。
+- (void)handleKeyboardWillShow:(NSNotification *)note {
+NSDictionary *info = note.userInfo;
+NSValue *frameValue = info ? [info objectForKey:UIKeyboardFrameEndUserInfoKey] : nil;
+CGFloat kbHeight = 0;
+if (frameValue) {
+CGRect kf = [frameValue CGRectValue];
+kbHeight = kf.size.height;
+}
+[self ghcfHandleKeyboardShowHeight:kbHeight bundleID:NULL];
+}
+- (void)handleKeyboardWillHide:(NSNotification *)note {
+(void)note;
+[self ghcfHandleKeyboardHideBundleID:NULL];
+}
+
+// v42：任意文字的通知橫幅（低電量收窗提示用；v72 起「已打開 <App>」
+// 那條拿掉了，只剩低電量提示走這裡）。
+- (void)showNotificationBannerWithText:(const char *)text {
+if (!GHCFReadNotificationBanner()) return;
+if (!text) text = "";
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat w = screenBounds.size.width - 64.0;
+CGFloat h = 44.0;
+if (!GHCFNotificationBannerWindow) {
+GHCFNotificationBannerWindow = [[UIWindow alloc] initWithFrame:CGRectMake(32, GHCFReadSafeDistance() + 8, w, h)];
+GHCFNotificationBannerWindow.windowLevel = UIWindowLevelAlert - 0.25;
+GHCFNotificationBannerWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *bannerScene = GHCFActiveWindowScene();
+if (bannerScene) GHCFNotificationBannerWindow.windowScene = bannerScene;
+UIViewController *vc = [[UIViewController alloc] init];
+UIView *pill = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, h)];
+pill.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
+pill.layer.cornerRadius = 22.0;
+// v54 (a)：點橫幅叫回浮窗（開關關著就不動，見 handleBannerTap:）。
+UITapGestureRecognizer *bannerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleBannerTap:)];
+[pill addGestureRecognizer:bannerTap];
+vc.view = pill;
+UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(12, 0, w - 24, h)];
+label.tag = 99;
+label.textColor = [UIColor whiteColor];
+label.font = [UIFont systemFontOfSize:15];
+label.textAlignment = NSTextAlignmentCenter;
+[pill addSubview:label];
+GHCFNotificationBannerWindow.rootViewController = vc;
+}
+GHCFNotificationBannerWindow.frame = CGRectMake(32, GHCFReadSafeDistance() + 8, w, h);
+UILabel *label = (UILabel *)[GHCFNotificationBannerWindow.rootViewController.view viewWithTag:99];
+if (label) label.text = [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
+GHCFNotificationBannerWindow.hidden = NO;
+double duration = GHCFReadBannerDuration();
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+GHCFNotificationBannerWindow.hidden = YES;
+});
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 notification banner text %s", text);
+GHCFLogLine(buf);
+}
+
+// v54 (a)：點插件自己的通知橫幅 → 把浮窗叫回來（開關 bannerOpensFloatingWindow
+// 關著就不動）。叫回順序：最小化著的 peek 優先恢復；沒有 peek 就把
+// 快取裡第一個藏著的窗重開；都沒有就只記 log。
+- (void)handleBannerTap:(UITapGestureRecognizer *)recognizer {
+(void)recognizer;
+if (!GHCFReadBannerOpensFloatingWindow()) {
+GHCFLogLine("v57 banner tap ignored, switch off");
+return;
+}
+for (int k = 0; k < GHCFAppCount; k++) {
+int i = GHCFFrontOrder[k];
+if (GHCFCacheWindows[i] && GHCFCacheMinimized[i] && !GHCFCacheWindows[i].hidden) {
+GHCFLogLine("v57 banner tap restoring peek");
+[self promoteWindowToMainIndex:i];
+return;
+}
+}
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheWindows[i] && GHCFCacheWindows[i].hidden && GHCFCacheScenes[i]) {
+const char *bid = GHCFCacheBundleIDs[i];
+if (bid && bid[0] != '\0') {
+char name[128];
+GHCFAppNameForBundleID(bid, name, sizeof(name));
+char buf[192];
+snprintf(buf, sizeof(buf), "v57 banner tap reopening %s", bid);
+GHCFLogLine(buf);
+[self launchHostedApp:bid name:name];
+return;
+}
+}
+}
+GHCFLogLine("v57 banner tap no window to open");
+}
+
+// v54 (b)：從橫幅窗認是哪個 App（探針）：(1) rootViewController 的
+// bannerContext.bundleID（有的話）；(2) 窗裡的 UILabel 文字反查 App 名
+//（恰好一個 App 對上才認）。都認不到回 NO。
+static BOOL GHCFBannerAppForWindow(UIWindow *bannerWin, char *outBid, size_t outSize) {
+if (!bannerWin || !outBid || outSize == 0) return NO;
+outBid[0] = '\0';
+@try {
+id vc = bannerWin.rootViewController;
+if (vc) {
+NSString *ctxKey = [NSString stringWithCString:"bannerContext" encoding:NSUTF8StringEncoding];
+id ctx = [vc valueForKey:ctxKey];
+if (ctx) {
+NSString *bidKey = [NSString stringWithCString:"bundleID" encoding:NSUTF8StringEncoding];
+id bidVal = [ctx valueForKey:bidKey];
+if (bidVal && [bidVal isKindOfClass:[NSString class]]) {
+const char *b = [(NSString *)bidVal UTF8String];
+if (b && b[0] != '\0') {
+strncpy(outBid, b, outSize - 1);
+outBid[outSize - 1] = '\0';
+return YES;
+}
+}
+}
+}
+} @catch (NSException *e) { (void)e; }
+@try {
+NSMutableArray *labels = [NSMutableArray array];
+NSMutableArray *stack = [NSMutableArray arrayWithObject:bannerWin];
+while ([stack count] > 0) {
+UIView *v = [stack lastObject];
+[stack removeLastObject];
+if ([v isKindOfClass:[UILabel class]]) {
+NSString *t = [(UILabel *)v text];
+if (t) [labels addObject:t];
+}
+for (UIView *sub in [v subviews]) [stack addObject:sub];
+}
+char found[128] = {0};
+int foundCount = 0;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFAppBundleIDs[i][0] == '\0') continue;
+char name[128];
+GHCFAppNameForBundleID(GHCFAppBundleIDs[i], name, sizeof(name));
+if (name[0] == '\0') continue;
+NSString *nameStr = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
+for (id t in labels) {
+if ([(NSString *)t isEqualToString:nameStr]) {
+if (foundCount == 0) strncpy(found, GHCFAppBundleIDs[i], sizeof(found) - 1);
+foundCount++;
+break;
+}
+}
+}
+if (foundCount == 1) {
+strncpy(outBid, found, outSize - 1);
+outBid[outSize - 1] = '\0';
+return YES;
+}
+} @catch (NSException *e) { (void)e; }
+return NO;
+}
+
+// v54 (b)：系統橫幅探針——2 秒輪詢一輪，看 SpringBoard 的窗裡有沒有
+// 類名含 Banner 的窗新出現；有就認 App、開關開著就為它開浮窗。
+// 沒有可靠 hook 點（這套代碼不用 Logos hook，SpringBoard 橫幅呈現也沒有
+// 通知可聽），所以用輪詢＋認 App 兩步探針；認不到 App 就只記 log 不開窗。
+static BOOL GHCFSystemBannerSeen = NO;
+static void GHCFCheckSystemBanner(void) {
+if (!GHCFReadBannerOpensFloatingWindow()) {
+GHCFSystemBannerSeen = NO;
+return;
+}
+UIApplication *app = [UIApplication sharedApplication];
+if (!app) return;
+UIWindow *bannerWin = nil;
+for (id sc in [app connectedScenes]) {
+if (![sc isKindOfClass:[UIWindowScene class]]) continue;
+for (UIWindow *w in [(UIWindowScene *)sc windows]) {
+const char *cls = class_getName([w class]);
+if (cls && strstr(cls, "Banner")) { bannerWin = w; break; }
+}
+if (bannerWin) break;
+}
+if (bannerWin && !GHCFSystemBannerSeen) {
+GHCFSystemBannerSeen = YES;
+char bid[128] = {0};
+if (GHCFBannerAppForWindow(bannerWin, bid, sizeof(bid))) {
+char buf[256];
+snprintf(buf, sizeof(buf), "v57 system banner for %s, opening window (probe)", bid);
+GHCFLogLine(buf);
+if (GHCFLauncherShared) {
+char name[128];
+GHCFAppNameForBundleID(bid, name, sizeof(name));
+[GHCFLauncherShared launchHostedApp:bid name:name];
+}
+} else {
+GHCFLogLine("v57 system banner appeared, app unknown (probe)");
+}
+} else if (!bannerWin) {
+GHCFSystemBannerSeen = NO;
+}
+}
+
+
+// 拖右下角手柄改窗大小：拖动时只改窗与视图（live）；
+// 松手时才调 scene 的 frame（V5_DESIGN.md §2.2：改尺寸防抖，
+// 拖动时不要每次移动都调一次）。
+- (void)handleResizeDrag:(UIPanGestureRecognizer *)recognizer {
+// v40：多窗——先切活动量到缩放手柄所在的窗（不切的话改的是活动窗，
+// 可能是别的窗的尺寸）。
+UIWindow *resizeWindow = GHCFWindowForView(recognizer.view);
+if (resizeWindow) {
+GHCFSetActiveToWindow(resizeWindow);
+}
+if (!GHCFHostedWindow || !GHCFHostedContainer || !GHCFHostedContentView) return;
+// v42.3：小窗（peek）也在右下角拖著調尺寸——走下面那條分支（最小
+// 112x242、最大滿窗；放手超過滿窗 80% 就升為大窗、剛才的大窗縮成 peek）。
+if (GHCFHostedMinimized) {
+[self handlePeekResizeDrag:recognizer];
+return;
+}
+// v63：尺寸固定——大窗拖角落縮放停用（拉大拉小後續再做）；手柄在大窗上
+// 是藏著的（見建窗處），這裡是兜底。小窗（peek）調尺寸不受影響（上面已分流）。
+GHCFLogLine("v68 window resize disabled, fixed size");
+return;
+CGPoint point = [recognizer translationInView:GHCFHostedContainer];
+[recognizer setTranslation:CGPointZero inView:GHCFHostedContainer];
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGRect frame = GHCFHostedWindow.frame;
+CGFloat newW = frame.size.width + point.x;
+CGFloat newH = frame.size.height + point.y;
+if (newW < 200.0) newW = 200.0;
+if (newW > screenBounds.size.width - 16.0) newW = screenBounds.size.width - 16.0;
+if (newH < 300.0) newH = 300.0;
+if (newH > screenBounds.size.height - 120.0) newH = screenBounds.size.height - 120.0;
+// v38：没有标题栏了，内容区就是整个窗——拖动时只改窗与视图（live）；
+// 松手时才调 scene 的 frame（V5_DESIGN.md §2.2：改尺寸防抖，
+// 拖动时不要每次移动都调一次）。细条 24pt、滑杆条在细条下面
+// （y=24），都跟着窗宽走。
+GHCFHostedWindow.frame = CGRectMake(frame.origin.x, frame.origin.y, newW, newH);
+GHCFHostedContainer.frame = CGRectMake(0, 0, newW, newH);
+if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = CGRectMake(0, 0, newW, GHCF_HOSTED_STRIP_H);
+GHCFHostedContentView.frame = CGRectMake(0, 0, newW, newH);
+// v38：滑杆条跟着窗宽走（在细条下面）。
+if (GHCFHostedScaleSliderBar) GHCFHostedScaleSliderBar.frame = CGRectMake(0, GHCF_HOSTED_STRIP_H, newW, 36);
+if (GHCFHostedScaleSlider) GHCFHostedScaleSlider.frame = CGRectMake(10, 3, newW - 70, 30);
+if (GHCFHostedScaleLabel) GHCFHostedScaleLabel.frame = CGRectMake(newW - 56, 3, 46, 30);
+if (recognizer.state == UIGestureRecognizerStateEnded) {
+char rbuf[128];
+snprintf(rbuf, sizeof(rbuf), "v57 window resized to %dx%d", (int)newW, (int)newH);
+GHCFLogLine(rbuf);
+[self resizeHostedSceneToContentSize:CGSizeMake(newW, newH)];
+// v40：调尺寸结束存一次位置/大小/缩放（第 6 项）——下次开同一 App
+// 恢复到这次的位置和大小。
+if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
+GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+}
+}
+}
+
+// v42.3：拖小窗（peek）右下角手柄調尺寸（皇上 2026-11-14 18:22：小的浮窗
+// 也要能縮大縮小，跟 FV 一樣）。中心不動（貼邊小窗往外拖會出屏，左右貼邊
+// 都一樣處理）；尺寸夾在 [112x242, 滿窗]（滿窗 = 存過的位置/大小，沒存過
+// 走預設 350x757／計算器 320x693）。拖動時只改窗與視圖（跟大窗一樣 live）；
+// 松手時才調 scene（resizeHostedSceneToContentSize，現成的 sublayerTransform／
+// scale 機制，不動 scene frame 的邏輯本身）。放手時寬高都超過滿窗 80% →
+// 直接升為大窗（restoreHostedWindow，帶到最前時中央規則把剛才的大窗縮成
+// peek）；否則留在小窗、記住該 App 的小窗尺寸（PeekW/PeekH）、整疊 peek 重排。
+- (void)handlePeekResizeDrag:(UIPanGestureRecognizer *)recognizer {
+if (!GHCFHostedWindow || !GHCFHostedContainer || !GHCFHostedContentView) return;
+int idx = GHCFActiveAppIndex;
+if (idx < 0 || idx >= GHCFAppCount) return;
+// v68：跟手修法——translation 不能量在會動的容器上（同款毛病，
+// 容器原點跟著尺寸動，穩態約 2/3 速度）。改拿固定不動的邊條窗當參考
+// 座標，只換這兩行，其餘夾取／升大窗邏輯不動。
+UIView *fixedRefView = GHCFStripWindow ? (UIView *)GHCFStripWindow : (UIView *)GHCFHostedContainer;
+CGPoint point = [recognizer translationInView:fixedRefView];
+[recognizer setTranslation:CGPointZero inView:fixedRefView];
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGRect frame = GHCFHostedWindow.frame;
+if (recognizer.state == UIGestureRecognizerStateBegan) {
+char bbuf[128];
+snprintf(bbuf, sizeof(bbuf), "v57 peek resize start %s %dx%d", GHCFCacheBundleIDs[idx], (int)frame.size.width, (int)frame.size.height);
+GHCFLogLine(bbuf);
+}
+CGFloat fullW, fullH;
+GHCFFullSizeForIndex(idx, &fullW, &fullH);
+CGFloat newW = frame.size.width + point.x;
+CGFloat newH = frame.size.height + point.y;
+if (newW < GHCF_DOCK_PEEK_W) newW = GHCF_DOCK_PEEK_W;
+if (newW > fullW) newW = fullW;
+if (newH < GHCF_DOCK_PEEK_H) newH = GHCF_DOCK_PEEK_H;
+if (newH > fullH) newH = fullH;
+CGFloat newX = frame.origin.x + (frame.size.width - newW) / 2.0;
+CGFloat newY = frame.origin.y + (frame.size.height - newH) / 2.0;
+if (newX < 2.0) newX = 2.0;
+if (newX + newW > screenBounds.size.width - 2.0) newX = screenBounds.size.width - 2.0 - newW;
+if (newY < 2.0) newY = 2.0;
+if (newY + newH > screenBounds.size.height - 2.0) newY = screenBounds.size.height - 2.0 - newH;
+GHCFHostedWindow.frame = CGRectMake(newX, newY, newW, newH);
+GHCFHostedContainer.frame = CGRectMake(0, 0, newW, newH);
+GHCFHostedContentView.frame = CGRectMake(0, 0, newW, newH);
+if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = CGRectMake(0, 0, newW, GHCF_HOSTED_STRIP_H);
+// 點按層跟著小窗走（不然放大後露出的地方點了會直接碰到 App 內容）。
+if (GHCFPeekTapOverlays[idx]) GHCFPeekTapOverlays[idx].frame = CGRectMake(0, 0, newW, newH);
+// 手柄排版是關掉的（None），手動跟到右下角。
+if (GHCFHostedResizeHandle) GHCFHostedResizeHandle.frame = CGRectMake(newW - 36, newH - 36, 36, 36);
+BOOL ended = (recognizer.state == UIGestureRecognizerStateEnded);
+BOOL cancelled = (recognizer.state == UIGestureRecognizerStateCancelled);
+if (!ended && !cancelled) return;
+char ebuf[128];
+snprintf(ebuf, sizeof(ebuf), "v57 peek resize end %s %dx%d", GHCFCacheBundleIDs[idx], (int)newW, (int)newH);
+GHCFLogLine(ebuf);
+if (ended && newW >= fullW * 0.8 && newH >= fullH * 0.8) {
+// 放手時已接近滿窗 → 直接升為大窗（恢復到存過的滿窗尺寸；帶到最前時
+// 中央規則把剛才的大窗縮成 peek，來回切就這麼換）。
+GHCFLogLine("v57 peek resized to full, promoting to main");
+[self restoreHostedWindow];
+return;
+}
+// 留在小窗：記住這次的小窗尺寸（下次收成 peek 就用這個尺寸），
+// 內容按新尺寸重排（現成的調尺寸路徑），再重排整疊 peek。
+GHCFSavePeekSizeForIndex(idx, newW, newH);
+[self resizeHostedSceneToContentSize:CGSizeMake(newW, newH)];
+GHCFLayoutDockPeeks();
+}
+
+// 松手后把新内容尺寸告诉 scene（只在松手时调一次）。
+- (void)resizeHostedSceneToContentSize:(CGSize)size {
+if (!GHCFHostedScene) return;
+@try {
+// v38：反向耦合（所有 App 都一样）——内容区已经是新尺寸了（
+// handleResizeDrag 里改过），直接调同一条缩放路径：立即改
+// presenterView 的 bounds + sublayerTransform，0.05 秒防抖后推
+// 新 frame（= 新内容尺寸 ÷ scale）+ 重设安全区 insets（第 3 项）。
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 scene resized %d,%d", (int)size.width, (int)size.height);
+GHCFLogLine(buf);
+GHCFApplyScaleToHostedWindow(YES);
+} @catch (NSException *e) {
+(void)e;
+GHCFLogLine("v57 scene resize failed");
+}
+}
+
+
+- (void)handleBackgroundTap:(UITapGestureRecognizer *)recognizer {
+GHCFLogLine("v57 background tapped, dismissing launcher");
+[self dismissLauncher];
+}
+
+// v55：點覆蓋層空處收起（tap 掛在內容區；delegate 已把 UIButton 的觸摸
+// 讓過去，點圖標不會走到這裡；點到圖標上的狀態點也不會——點的
+// userInteractionEnabled 是 NO）。
+- (void)handleLauncherOverlayTap:(UITapGestureRecognizer *)recognizer {
+(void)recognizer;
+GHCFLogLine("v57 launcher overlay tapped, dismissing");
+[self dismissLauncher];
+}
+
+- (void)showLauncher {
+// v53：分屏關著時 ARC 不再觸發（開關關了就真的停用）。
+if (!GHCFReadEnabled()) {
+GHCFLogLine("v57 launcher blocked, splitscreen disabled");
+return;
+}
+// v54 F／G：開 ARC 前先按 prefs 槽位重載 App 清單（設定頁剛選的 App
+// 立刻看得到；dylib 記憶體的清單只在啟動時載過，否則是 stale 的）。
+GHCFLoadCustomApps();
+if (GHCFLauncherVisible) {
+GHCFLogLine("v57 launcher already open");
+return;
+}
+// v40：每次打开都重建（设定页的 App 开关、左右位置可能改了，重建
+// 才能立刻生效；窗很轻（几个视图），重建不贵）。旧窗先放掉。
+// v43.39：崩窗口逐行日志（1.0.112）——trollfan 第 4 次开死在 built 到
+// opened 之间；每步一行，下次再崩直接定位到步，不用猜。
+GHCFLogLine("v43.39 showLauncher enter");
+GHCFLauncherWindow = nil;
+[self buildLauncherWindow];
+GHCFLogLine("v43.39 showLauncher build returned");
+GHCFLogLine("v43.39 showLauncher strip update begin");
+// v40：感应带跟小窗位置设定走（设定改了，下次开启动器时带子就跟到
+// 对的边；觸發鈕一直在右邊，永遠能開啟動器）。
+GHCFUpdateStripPosition();
+GHCFLogLine("v43.39 showLauncher strip update done");
+// v55：層級固定在建窗時（覆蓋層 1999.25、背景 1999，都在浮窗之上、
+// 鎖屏之下），不再按有沒有窗切換。背景窗先顯示、覆蓋層後顯示。
+GHCFLogLine("v43.39 showLauncher unhide begin");
+GHCFLauncherBackdropWindow.hidden = NO;
+GHCFLauncherWindow.hidden = NO;
+GHCFLogLine("v43.39 showLauncher unhide done");
+GHCFLauncherVisible = YES;
+// v43.2：啟動器背景暗度跟樣式走——圓環 0.65（S2 那種明顯變暗），格狀照舊
+// 0.55。每次打開都重設（關閉四散動畫會把背景根視圖 alpha 收到 0，
+// 這裡順手復原，免得下次打開背景是透明的）。
+GHCFLogLine("v43.39 showLauncher dim reset begin");
+if (GHCFLauncherBackdropWindow) {
+UIView *bgRoot = GHCFLauncherBackdropWindow.rootViewController.view;
+if (bgRoot) {
+CGFloat dimAlpha = GHCFReadLauncherStyleRadial() ? 0.65 : 0.55;
+bgRoot.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:dimAlpha];
+bgRoot.alpha = 1.0;
+}
+}
+GHCFLogLine("v43.39 showLauncher dim reset done");
+GHCFLogLine("v43.39 showLauncher before opened");
+GHCFLogLine("v57 launcher opened");
+// v41：叫出 ARC 時給一下震動（ARC 設置的震動反饋開關，預設開）。
+if (GHCFReadARCHaptics()) {
+@try {
+UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+[haptic impactOccurred];
+} @catch (NSException *e) {
+(void)e;
+}
+}
+// v43.42（1.0.115，表盘启动器）：表盘打开时悬浮钮隐藏——中心钮就是
+// 觸發鈕钮本人（表盘里画一颗）；关掉时放回原位（见 dismissLauncher）。
+if (GHCFReadLauncherStyleDial() && GHCFReadDialModeEnabled() && GHCFFlyTriggerButtonWindow) {
+GHCFFlyTriggerButtonWindow.hidden = YES;
+GHCFDialHidFlyTriggerButton = YES;
+}
+}
+
+// v43.19：遞迴收啟動器裡的按鈕——新樣式的按鈕在 scroll view／面板裡面，
+// 不是 contentView 的直接子視圖；面板容器（9101 側邊欄／9102 抽屜／
+// 9103 輪盤 scroll view／9104 磁貼卡／9105 輪盤圓點／9106 表盘圆盘）一起淡出。
+static void GHCFCollectLauncherFlyers(UIView *view, NSMutableArray *flyers, NSMutableArray *panels) {
+for (UIView *sub in view.subviews) {
+if ([sub isKindOfClass:[UIButton class]]) {
+[flyers addObject:sub];
+} else {
+if (sub.tag == 9101 || sub.tag == 9102 || sub.tag == 9103 || sub.tag == 9104 || sub.tag == 9105 || sub.tag == 9106) [panels addObject:sub];
+GHCFCollectLauncherFlyers(sub, flyers, panels);
+}
+}
+}
+
+- (void)dismissLauncher {
+if (!GHCFLauncherVisible) return;
+GHCFLauncherVisible = NO;
+// v43.42（1.0.115，表盘启动器）：表盘打开时藏了悬浮钮，关掉时放回来
+//（钮位是用户拖好的 prefs，不动；只恢复显示）。
+if (GHCFDialHidFlyTriggerButton) {
+// v43.43：開關關著時不放回（邊緣滑動也能叫出表盤，關掉時同樣藏過鈕）。
+if (GHCFFlyTriggerButtonWindow && GHCFReadFlyTriggerButtonEnabled()) GHCFFlyTriggerButtonWindow.hidden = NO;
+GHCFDialHidFlyTriggerButton = NO;
+}
+// v43.37（1.0.110，扇形轉盤）：轉盤狀態清空——圖標按鈕跟著舊窗走，
+// 靜態陣列不留著它們（不然每次打開都漏 25 顆按鈕）；弱引用跟著歸 nil。
+GHCFDialButtons = nil;
+GHCFDialRadii = nil;
+GHCFDialAngles = nil;
+GHCFDialTotal = 0;
+GHCFDialRotation = 0;
+GHCFDialPanView = nil;
+// v43.2：關閉動畫——圖標往外四散飛走（S2 關啟動器那樣），不是直接消失。
+// 四散方向是各圖標相對屏幕中心的方向（圓環／格狀都適用），140pt 外＋縮 0.6＋淡出，0.35 秒。
+// 動畫跑完才藏窗；中途重開的話 completion 只藏舊窗（指標比對＋
+// GHCFLauncherVisible 守衛），不會把新開的啟動器藏掉。
+NSMutableArray *flyers = nil;
+NSMutableArray *panels = nil;
+if (GHCFLauncherContentView) {
+flyers = [NSMutableArray array];
+panels = [NSMutableArray array];
+GHCFCollectLauncherFlyers(GHCFLauncherContentView, flyers, panels);
+}
+UIWindow *dismissWin = GHCFLauncherWindow;
+UIWindow *dismissBgWin = GHCFLauncherBackdropWindow;
+UIView *dismissBgRoot = dismissBgWin ? dismissBgWin.rootViewController.view : nil;
+if (!flyers || [flyers count] == 0) {
+GHCFLauncherWindow.hidden = YES;
+if (dismissBgWin) dismissBgWin.hidden = YES;
+GHCFLogLine("v57 launcher dismissed");
+return;
+}
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGPoint scatterCenter = CGPointMake(screenBounds.size.width / 2.0, screenBounds.size.height / 2.0);
+[UIView animateWithDuration:0.35 delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+for (UIButton *btn in flyers) {
+CGPoint c = btn.center;
+CGFloat dx = c.x - scatterCenter.x;
+CGFloat dy = c.y - scatterCenter.y;
+CGFloat len = sqrt(dx * dx + dy * dy);
+if (len < 1.0) { dx = 0.0; dy = -1.0; len = 1.0; }
+btn.center = CGPointMake(c.x + dx / len * 140.0, c.y + dy / len * 140.0);
+btn.alpha = 0.0;
+btn.transform = CGAffineTransformMakeScale(0.6, 0.6);
+}
+for (UIView *panel in panels) panel.alpha = 0.0;
+if (dismissBgRoot) dismissBgRoot.alpha = 0.0;
+} completion:^(BOOL finished) {
+(void)finished;
+if (!GHCFLauncherVisible) {
+if (GHCFLauncherWindow == dismissWin) GHCFLauncherWindow.hidden = YES;
+if (dismissBgWin) dismissBgWin.hidden = YES;
+}
+if (dismissBgRoot) dismissBgRoot.alpha = 1.0;
+for (UIView *panel in panels) panel.alpha = 1.0;
+GHCFLogLine("v57 launcher dismissed");
+}];
+}
+
+
+// 建啟動器窗：v55——ARC 改成只有 App 圖標的透明覆蓋層（皇上 03:18：
+//「按鈕進去都是 APP 選項，點擊 APP 才有浮窗」）。兩扇窗：
+// (1) 背景窗（全屏、Alert-1=1999、暗背景 0.55，點外收起）；
+// (2) 覆蓋層窗（全屏透明、Alert-0.75=1999.25，浮窗之上、鎖屏之下），
+// 內容區是全屏 clear UIView，圖標按同心弧排（見 addARCIconsForBids），
+// 空處點按收起（tap 手勢掛在內容區，delegate 把 UIButton 的觸摸讓過去，
+// 圖標點按不受影響）。沒有面板、沒有手柄、沒有拖動、沒有遊戲開關／
+// 設置／X——那些都在系統設定頁裡。
+- (void)buildLauncherWindow {
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+// 背景窗（只建一次，會話裡留著；層級 1999，在浮窗之上、覆蓋層之下）。
+if (!GHCFLauncherBackdropWindow) {
+GHCFLauncherBackdropWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+GHCFLauncherBackdropWindow.windowLevel = UIWindowLevelAlert - 1.0;
+GHCFLauncherBackdropWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *bgScene = GHCFActiveWindowScene();
+if (bgScene) GHCFLauncherBackdropWindow.windowScene = bgScene;
+UIViewController *bgVC = [[UIViewController alloc] init];
+UIView *bgRoot = [[UIView alloc] initWithFrame:screenBounds];
+bgRoot.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.55];
+UITapGestureRecognizer *bgTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleBackgroundTap:)];
+[bgRoot addGestureRecognizer:bgTap];
+bgVC.view = bgRoot;
+GHCFLauncherBackdropWindow.rootViewController = bgVC;
+} else if (!GHCFLauncherBackdropWindow.windowScene) {
+// v43.2：背景窗只建一次——第一次建時若 scene 是 nil（建窗太早），背景就
+// 永遠不顯示（Lee 說啟動器「不變暗」可能就是這個）；下次打開時補上 scene。
+UIWindowScene *bgSceneRetry = GHCFActiveWindowScene();
+if (bgSceneRetry) GHCFLauncherBackdropWindow.windowScene = bgSceneRetry;
+}
+// 覆蓋層窗（每次打開都重建；全屏透明，圖標直接按屏幕座標排）。
+GHCFLauncherWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+GHCFLauncherWindow.windowLevel = UIWindowLevelAlert - 0.75;
+GHCFLauncherWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *launcherScene = GHCFActiveWindowScene();
+if (launcherScene) {
+GHCFLauncherWindow.windowScene = launcherScene;
+GHCFLogLine("v57 launcher scene found");
+} else {
+GHCFLogLine("v57 launcher scene nil");
+}
+UIViewController *launcherVC = [[UIViewController alloc] init];
+UIView *contentView = [[UIView alloc] initWithFrame:screenBounds];
+contentView.backgroundColor = [UIColor clearColor];
+UITapGestureRecognizer *overlayTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleLauncherOverlayTap:)];
+overlayTap.delegate = self;
+[contentView addGestureRecognizer:overlayTap];
+launcherVC.view = contentView;
+GHCFLauncherContentView = contentView;
+GHCFLauncherWindow.rootViewController = launcherVC;
+[self rebuildARCContent];
+GHCFLogLine("v57 launcher built");
+}
+
+//（每次打開、置頂變了、選完 App 後都調）：v55——啟動器只剩 App 圖標
+//（皇上 03:18：點觸發鈕進去都是 App 選項，點 App 才開浮窗）。
+// 順序不變：置頂→最近→全部；層數 arcLayerCount 不變；圖標按同心弧排
+//（見 addARCIconsForBids，弧心錨在側邊緣）。遊戲開關／設置／
+// X 都拿掉——都在系統設定頁裡（Root 遊戲布局）。
+// v52：搜索框拿掉，不再有搜索字分支。
+- (void)rebuildARCContent {
+// v54 F／G：重建 ARC 內容前先按 prefs 槽位重載 App 清單（跟 showLauncher
+// 同一條路；設定頁剛選的 App 下次開 ARC 立刻看得到）。
+GHCFLoadCustomApps();
+if (!GHCFLauncherContentView) return;
+for (UIView *sub in [GHCFLauncherContentView.subviews copy]) [sub removeFromSuperview];
+// v43.19：橫向輪盤的靜態指標清掉（舊 scroll view 已拆掉，下次重建再填）。
+GHCFCarouselScrollView = nil;
+GHCFCarouselCards = nil;
+GHCFCarouselPageControl = nil;
+CGFloat iconSize = GHCFReadARCIconSize();
+// 順序：置頂／最近／全部（只顯示啟動器裡開著的 App；置頂的不在
+// 最近裡重複，最近的不在全部裡重複）。
+NSArray *pinned = GHCFReadIDList("pinnedAppIDs");
+NSArray *recent = GHCFReadIDList("recentAppIDs");
+NSMutableArray *pinnedInLauncher = [NSMutableArray array];
+NSMutableArray *recentInLauncher = [NSMutableArray array];
+NSMutableArray *allRest = [NSMutableArray array];
+for (id item in pinned) {
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+int idx = bid ? GHCFAppIndexForBundleID(bid) : -1;
+if (idx >= 0 && GHCFIsAppEnabled(idx)) [pinnedInLauncher addObject:item];
+}
+for (id item in recent) {
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+int idx = bid ? GHCFAppIndexForBundleID(bid) : -1;
+if (idx >= 0 && GHCFIsAppEnabled(idx) && ![pinnedInLauncher containsObject:item]) [recentInLauncher addObject:item];
+}
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFAppBundleIDs[i][0] == '\0' || !GHCFIsAppEnabled(i)) continue;
+NSString *bidStr = [NSString stringWithCString:GHCFAppBundleIDs[i] encoding:NSUTF8StringEncoding];
+if ([pinnedInLauncher containsObject:bidStr]) continue;
+if ([recentInLauncher containsObject:bidStr]) continue;
+[allRest addObject:bidStr];
+}
+// 弧區：三段合併成一個順序（置頂→最近→全部），按層數分同心弧。
+NSMutableArray *ordered = [NSMutableArray array];
+[ordered addObjectsFromArray:pinnedInLauncher];
+[ordered addObjectsFromArray:recentInLauncher];
+[ordered addObjectsFromArray:allRest];
+if ([ordered count] == 0) {
+GHCFLogLine("v57 launcher no apps");
+return;
+}
+// v43.4：啟動器裡的工具鈕已拿掉（皇上 2026-11-18 說沒必要留），
+// 只排 App 圖標。
+GHCFLogLine("v43.4 launcher no tool buttons");
+// v43.19：啟動器樣式七檔——0 圓環（預設，見 addRadialARCIconsForBids）、
+// 1 側邊欄、2 抽屜、3 橫向輪盤、4 磁貼（見下面四個新函數）、5 扇形轉盤
+//（1.0.110：同一套圓環排布＋轉盤手勢，見 handleDialPan:）、6 表盘启动器
+//（1.0.115，見 addDialLauncherIconsForBids）。grid 已刪，
+// 讀值處已把 "grid"／未知值當 radial（見 GHCFReadLauncherStyle）。
+// v72：樣式分支記一行，下次日誌證明讀值有沒有到。
+int launcherStyle = GHCFReadLauncherStyle();
+{
+const char *styleName = "radial";
+if (launcherStyle == 1) styleName = "sidebar";
+else if (launcherStyle == 2) styleName = "drawer";
+else if (launcherStyle == 3) styleName = "carousel";
+else if (launcherStyle == 4) styleName = "tile";
+else if (launcherStyle == 5) styleName = "trollfan";
+else if (launcherStyle == 6) styleName = "dial";
+char sbuf[64];
+snprintf(sbuf, sizeof(sbuf), "v43.19 launcher style %s", styleName);
+GHCFLogLine(sbuf);
+}
+if (launcherStyle == 1) {
+[self addSidebarLauncherIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
+} else if (launcherStyle == 2) {
+[self addDrawerLauncherIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
+} else if (launcherStyle == 3) {
+[self addCarouselLauncherIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
+} else if (launcherStyle == 4) {
+[self addTileLauncherIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
+} else if (launcherStyle == 6) {
+// v43.42（1.0.115，表盘启动器）：第 7 档；表盘模式关了就回落圆环。
+if (GHCFReadDialModeEnabled()) {
+[self addDialLauncherIconsForBids:ordered iconSize:GHCFReadDialIconSize() action:@selector(handleAppButton:)];
+} else {
+[self addRadialARCIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
+}
+} else {
+[self addRadialARCIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
+}
+// v43.37（1.0.110，扇形轉盤；v43.42 表盘启动器也走同一套）：trollfan／
+// 表盘才裝轉盤手勢——手指在啟動器上撥動，圖標沿弧線轉著切頁；
+// radial（0）走回靜態圓環，不裝。
+// contentView 每次打開都重建，弱引用守衛保證一個視圖只裝一次
+//（重建時舊視圖已釋放，弱引用自動歸 nil）。
+if ((launcherStyle == 5 || launcherStyle == 6) && GHCFReadCarouselEnabled() && !GHCFIsARCSlideBottom() && GHCFDialTotal > 0 && GHCFDialPanView != GHCFLauncherContentView) {
+UIPanGestureRecognizer *dialPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleDialPan:)];
+[GHCFLauncherContentView addGestureRecognizer:dialPan];
+GHCFDialPanView = GHCFLauncherContentView;
+}
+GHCFLogLine("v57 launcher icons only");
+}
+
+// v41：ARC 裡一列圖標（bids 是 bundleID 字串的陣列；
+// 啟動器裡的 App 用槽位下標當 tag，點了走 handleAppButton:）。
+// v54 L+M：ARC 圖標排成同心弧圈（不再是一列）：弧心在面板外緣中點
+//（右側面板 (320,320)、左側 (0,320)，捲動內容座標；手柄 28pt 已扣掉，
+// 弧心 y 取 320，頂圈圖標不撞手柄）；張角 ±78° 朝面板內；半徑
+// R_k = 104 + k*(278-104)/(E-1)（E=1 時單圈 R=278）；每圈容量按弧長算
+//（pitch 68pt，夾到 ≥56）；分層權重 1:2:3:4＋最大餘數法，
+// effectiveLayers = min(L, N) 不留空層；超量放最外層、最外層超量就縮
+// pitch。圖標按置頂→最近→全部順序分層（內層少、外層多）。分段標籤拿掉
+//（順序＋★＋綠點保留，名字不寫——弧圈裡名字會疊到下一圈圖標上）。
+// 返回弧區底（最外圈圖標底＋12），下面的行接著排。
+- (CGFloat)addARCIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
+if (!bids || [bids count] == 0) return 8.0;
+NSInteger N = (NSInteger)[bids count];
+int L = GHCFReadARCLayerCount();
+// v58（§152）：記原始值——下次日誌一眼看出設定檔裡到底是 "3" 還是沒寫進去。
+char *rawLayer = GHCFReadPrefsCString("arcLayerCount");
+int E = (L < N) ? L : (int)N;
+if (E < 1) E = 1;
+// v63：層數最高 5 層——四個陣列全是 [5]（weights {1,2,3,4,5}；
+// L=5、E=5 時 [4] 會越界讀寫、壞棧）。半徑公式不動（E=5 時最外圈仍是 278）。
+int weights[5] = {1, 2, 3, 4, 5};
+int totalW = 0;
+for (int k = 0; k < E; k++) totalW += weights[k];
+int counts[5] = {0, 0, 0, 0, 0};
+int assigned = 0;
+double rems[5] = {0, 0, 0, 0, 0};
+for (int k = 0; k < E; k++) {
+double exact = (double)N * weights[k] / totalW;
+counts[k] = (int)exact;
+rems[k] = exact - counts[k];
+assigned += counts[k];
+}
+while (assigned < N) {
+int best = 0;
+for (int k = 1; k < E; k++) if (rems[k] > rems[best]) best = k;
+counts[best]++;
+rems[best] = -1;
+assigned++;
+}
+CGFloat radii[5] = {278.0, 278.0, 278.0, 278.0, 278.0};
+for (int k = 0; k < E; k++) {
+radii[k] = (E == 1) ? 278.0 : (104.0 + k * (278.0 - 104.0) / (E - 1));
+}
+// v55：弧心錨到側邊緣（arcSlideSide：左 0／右 screenW，預設右），
+// 開口朝屏幕內；cy 是觸發鈕中心或邊緣滑動的手指 Y
+//（GHCFLauncherAnchorY），沒錨點就屏幕中間。掃掠按安全區不對稱收窄，
+// 保證最外圈圖標整顆在屏幕內（錨點靠頂時扇面往下開，靠底時往上開）。
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat screenW = screenBounds.size.width;
+CGFloat screenH = screenBounds.size.height;
+BOOL slideLeft = GHCFIsARCSlideLeft();
+CGFloat cx = slideLeft ? 0.0 : screenW;
+CGFloat cy = GHCFLauncherAnchorY;
+if (cy < 0) cy = screenH / 2.0;
+CGFloat topInset = GHCFScreenSafeTopInset();
+CGFloat topLimit = topInset + size / 2.0 + 4.0;
+CGFloat botLimit = screenH - 34.0 - size / 2.0 - 4.0;
+if (cy < topLimit) cy = topLimit;
+if (cy > botLimit) cy = botLimit;
+CGFloat Rmax = radii[E - 1];
+double sinLo = (double)((topLimit - cy) / Rmax);
+double sinHi = (double)((botLimit - cy) / Rmax);
+if (sinLo < -1.0) sinLo = -1.0;
+if (sinLo > 1.0) sinLo = 1.0;
+if (sinHi < -1.0) sinHi = -1.0;
+if (sinHi > 1.0) sinHi = 1.0;
+double angLo = asin(sinLo);
+double angHi = asin(sinHi);
+double sweepLo = -78.0 * 3.14159265358979 / 180.0;
+double sweepHi = 78.0 * 3.14159265358979 / 180.0;
+if (angLo < sweepLo) angLo = sweepLo;
+if (angHi > sweepHi) angHi = sweepHi;
+if (angHi - angLo < 0.35) {
+// 錨點太靠邊、掃掠塌了——弧心回中間，全掃掠。
+cy = (topLimit + botLimit) / 2.0;
+angLo = sweepLo;
+angHi = sweepHi;
+}
+CGFloat sweep = (CGFloat)(angHi - angLo);
+NSInteger cursor = 0;
+CGFloat maxBottom = 8.0;
+for (int k = 0; k < E; k++) {
+int m = counts[k];
+if (m <= 0) continue;
+CGFloat R = radii[k];
+CGFloat arcLen = R * sweep;
+CGFloat pitch = 68.0;
+if (arcLen / pitch < m) pitch = arcLen / m;
+if (pitch < 56.0) pitch = 56.0;
+for (int j = 0; j < m; j++) {
+if (cursor >= N) break;
+id item = [bids objectAtIndex:cursor++];
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+double ang = (m == 1) ? (angLo + angHi) / 2.0 : angLo + j * (sweep / (m - 1));
+CGFloat dir = slideLeft ? 1.0 : -1.0;
+CGFloat ix = cx + dir * R * cos(ang);
+CGFloat iy = cy + R * sin(ang);
+char name[128];
+GHCFAppNameForBundleID(bid, name, sizeof(name));
+NSInteger tag = GHCFAppIndexForBundleID(bid);
+if (tag < 0) continue;
+UIButton *btn = [self arcIconButtonForBundleID:bid name:name tag:tag action:action atCenter:CGPointMake(ix, iy) size:size withName:NO];
+[GHCFLauncherContentView addSubview:btn];
+CGFloat bottom = iy + size / 2.0;
+if (bottom > maxBottom) maxBottom = bottom;
+}
+}
+char buf[192];
+snprintf(buf, sizeof(buf), "v58 arc layers=%d icons=%d effLayers=%d side=%s anchorY=%d raw=%s", L, (int)N, E, slideLeft ? "left" : "right", (int)cy, rawLayer ? rawLayer : "none");
+if (rawLayer) free(rawLayer);
+GHCFLogLine(buf);
+return maxBottom + 12.0;
+}
+
+// v43.2：圓環排布——給定圖標尺寸，算環半徑與每環容量（環半徑 R1＝齒輪半徑＋
+// 圖標半徑＋16；環距＝圖標＋14；最外環不超過 Rmax＝min(屏寬,屏高)/2 −
+// 圖標/2）。回傳總容量；radii／caps 只填用到的環，其餘清 0。
+// v43.8：Rmax 改成硬邊（原來再減 12pt 邊距）：單圈那條路自己另取 12pt
+// 邊距；多圈 fallback 時 25 個 App 要開到第 3 圈（半徑 182，40pt 圖標時
+// 硬邊是 187，12pt 邊距只到 175，第 3 圈會被攔住，25 個裝不下）。
+static int GHCFRadialRingLayout(CGFloat iconSize, CGFloat gearSize, CGFloat radii[6], int caps[6]) {
+for (int i = 0; i < 6; i++) { radii[i] = 0; caps[i] = 0; }
+CGRect sb = [UIScreen mainScreen].bounds;
+CGFloat Rmax = MIN(sb.size.width, sb.size.height) / 2.0 - iconSize / 2.0;
+CGFloat R1 = gearSize / 2.0 + iconSize / 2.0 + 16.0;
+CGFloat pitch = iconSize + 14.0;
+int total = 0;
+for (int r = 0; r < 6; r++) {
+CGFloat radius = R1 + r * pitch;
+if (radius > Rmax) break;
+radii[r] = radius;
+caps[r] = (int)(2.0 * M_PI * radius / pitch);
+if (caps[r] < 1) caps[r] = 1;
+total += caps[r];
+}
+return total;
+}
+
+// v43.2：環形啟動器重做——跟格狀版同一套輸入（ordered 陣列、同一兩個放圖標
+// helper），只換位置：圓心屏幕中心，圖標按環容量同心圓密排（不再用層數權重
+// 分環：每環能放幾個由環周長／圖標間距定，內環先填滿；圖標太多放不下時
+// 自適應縮小圖標，最小 40pt；有多少 App 排多少，不寫死 40 個）。
+// 中間一個大設定齒輪（76pt，點了開系統設定）。每環圖標均分 360°、從頂部
+// （−90°）開始，相鄰環錯半格（看起來更密）。
+// v43.8：单圈优先——全部图标先排 ONE 个圆圈（圆心屏幕中心、半径取 Rmax、
+// 从顶部 -90° 开始均分 360°；中央 76pt 大齿轮不动）。图标大小走 arcIconSize
+// 设定值；装不下就往小缩（每次减 4，最小 40pt，跟以前一样）；缩到 40pt
+// 还装不下（单圈约 20 个）才开多圈——多圈走原来的同心圆环逻辑
+//（GHCFRadialRingLayout），25 个 App 时是 3 圈（2 圈在 40pt 下只装得下 22 个）。
+// v43.23：第 3 件——滑出方向選「從底部出」時圓心改跟觸發位置走（貼底緣），
+// 圖標只排上半扇、按半圓弧長重算每環容量；左／右兩檔圓心仍是屏幕中心。
+- (CGFloat)addRadialARCIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
+if (!bids || bids.count == 0) return 0;
+NSInteger total = bids.count;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGPoint center = CGPointMake(screenBounds.size.width / 2.0, screenBounds.size.height / 2.0);
+CGFloat gearSize = 76.0;
+// v43.23：第 3 件——從底部出：圓心不再是屏幕中心，改跟觸發位置走
+//（邊緣滑動手指的 X／觸發鈕中心 X），貼在底緣上方；左／右兩檔不動。
+BOOL slideBottom = GHCFIsARCSlideBottom();
+if (slideBottom) {
+CGFloat ax = GHCFLauncherAnchorX;
+if (ax < 0) ax = screenBounds.size.width / 2.0;
+CGFloat axMargin = 76.0;
+if (ax < axMargin) ax = axMargin;
+if (ax > screenBounds.size.width - axMargin) ax = screenBounds.size.width - axMargin;
+center = CGPointMake(ax, screenBounds.size.height - 76.0);
+}
+CGFloat icon = size;
+if (icon < 40.0) icon = 40.0;
+if (icon > 72.0) icon = 72.0;
+// v43.37（1.0.110，扇形轉盤）：轉盤狀態重建——trollfan 才記，
+// 每次重排都清空、轉角歸零（slideBottom 扇形不轉，循環裡不記；
+// radial（0）靜態圓環，不進這裡）。
+if (GHCFReadLauncherStyleTrollFan()) {
+GHCFDialButtons = [NSMutableArray array];
+GHCFDialRadii = [NSMutableArray array];
+GHCFDialAngles = [NSMutableArray array];
+GHCFDialCenter = center;
+GHCFDialRotation = 0;
+GHCFDialLastTickRotation = 0;
+GHCFDialTotal = (int)total;
+}
+// v43.32：ARC 触发方式时转盘按扇形排（起始角＋扇角，Trigger.plist）；
+// 扇角 360 就是全圆（只转个起始方向）；其他方式／底部扇形保持全圆。
+// （偏离 7a5734b 一处：7a5734b 时转盘挂在 radial 上，这里转盘已是独立第 6 档，
+// 所以多一道 trollfan 門——radial（0）靜態圓環一行都不動，扇形排只改轉盤。）
+BOOL arcFanMode = GHCFReadLauncherStyleTrollFan() && !slideBottom && GHCFReadTriggerModeIsARC() && GHCFReadARCFanAngle() < 360.0;
+double arcStart = -GHCFReadARCStartAngle() * M_PI / 180.0;
+double arcSpan = GHCFReadARCFanAngle() * M_PI / 180.0;
+GHCFDialSlot = (arcFanMode && total > 1) ? arcSpan / (double)(total - 1) : 2.0 * M_PI / (double)total;
+// v43.8 单圈优先：半径取 Rmax（留 12pt 边距），容量＝周长／间距；
+// 装不下就往小缩（每次减 4，最小 40），缩到底还装不下就不走单圈。
+CGFloat radii[6] = {0, 0, 0, 0, 0, 0};
+int caps[6] = {0, 0, 0, 0, 0, 0};
+int rings = 0;
+while (YES) {
+CGFloat rmax = MIN(screenBounds.size.width, screenBounds.size.height) / 2.0 - icon / 2.0 - 12.0;
+CGFloat pitch = icon + 14.0;
+int cap = (int)(2.0 * M_PI * rmax / pitch);
+if (cap >= total) {
+radii[0] = rmax;
+caps[0] = (int)total;
+rings = 1;
+break;
+}
+if (icon <= 40.0) break;
+icon -= 4.0;
+}
+if (rings == 0) {
+// v43.8 fallback：单圈装不下，走原来的多圈同心圆环逻辑。
+GHCFRadialRingLayout(icon, gearSize, radii, caps);
+rings = 0;
+for (int r = 0; r < 6; r++) { if (caps[r] > 0) rings++; else break; }
+if (rings == 0) {
+// 兜底（不該發生）：單環放全部，半徑取 Rmax。
+CGFloat rmax = MIN(screenBounds.size.width, screenBounds.size.height) / 2.0 - icon / 2.0 - 12.0;
+if (rmax < 40.0) rmax = 40.0;
+radii[0] = rmax;
+caps[0] = (int)total;
+rings = 1;
+}
+}
+// v43.14：圆环版吃层数设定——层数＝最多几圈；图标装得下就用更少圈，
+// 不留空圈；缩到 40pt 下限还装不下才多开圈（不为守层数把图标缩到看不见）。
+{
+int maxRings = GHCFReadARCLayerCount();
+if (rings > maxRings) {
+int capMax = 0;
+for (int r = 0; r < maxRings; r++) capMax += caps[r];
+if ((int)total <= capMax) {
+int geomRings = rings;
+for (int r = maxRings; r < 6; r++) { radii[r] = 0; caps[r] = 0; }
+rings = maxRings;
+char cbuf[128];
+snprintf(cbuf, sizeof(cbuf), "v43.14 radial layer cap %d, rings %d -> %d", maxRings, geomRings, rings);
+GHCFLogLine(cbuf);
+}
+}
+}
+// v43.24：第 7 件——從底部出：環按半圓扇面重算（全圓容量在扇面裡會擠成一團）。
+// 半徑從齒輪外緣起、環距＝圖標＋14，扇面弧長／間距＝每環容量；裝不下就把圖標
+// 往小縮（最小 40pt）；縮到底還裝不下就記日誌（不硬塞，剩下的 App 走其他樣式）。
+// 半徑改按縱向空間算（圓心到頂部），橫向空間只收窄扇面角度，不壓半徑：
+// 舊寫法 maxR = min(左右橫向, 縱向)——觸發點靠邊時橫向只剩 76pt，maxR 被壓到
+// 48pt，第一環 rr0=74 > 48，rr==0 兜底把 25 個全塞一圈 48pt 半圓。
+if (slideBottom) {
+CGFloat pitch = icon + 14.0;
+CGFloat topRoom = center.y - GHCFScreenSafeTopInset();
+CGFloat maxR = topRoom - icon / 2.0 - 8.0;
+if (maxR < 40.0) maxR = 40.0;
+CGFloat hRoom = center.x;
+if (screenBounds.size.width - center.x < hRoom) hRoom = screenBounds.size.width - center.x;
+hRoom -= icon / 2.0;
+int rr = 0;
+int capSum = 0;
+CGFloat rr0 = gearSize / 2.0 + icon / 2.0 + 16.0;
+while (rr < 6 && capSum < (int)total) {
+CGFloat r = rr0 + rr * pitch;
+if (r > maxR) break;
+double lim = (double)(hRoom / r);
+if (lim > 1.0) lim = 1.0;
+if (lim < 0.0) lim = 0.0;
+double angleRange = M_PI - 2.0 * acos(lim);
+int fanCap = (int)(r * angleRange / pitch);
+if (fanCap < 1) fanCap = 1;
+radii[rr] = r;
+caps[rr] = fanCap;
+capSum += fanCap;
+rr++;
+}
+if (capSum < (int)total && icon > 40.0) {
+icon = 40.0;
+pitch = icon + 14.0;
+maxR = topRoom - icon / 2.0 - 8.0;
+if (maxR < 40.0) maxR = 40.0;
+hRoom = center.x;
+if (screenBounds.size.width - center.x < hRoom) hRoom = screenBounds.size.width - center.x;
+hRoom -= icon / 2.0;
+rr = 0;
+capSum = 0;
+rr0 = gearSize / 2.0 + icon / 2.0 + 16.0;
+while (rr < 6 && capSum < (int)total) {
+CGFloat r = rr0 + rr * pitch;
+if (r > maxR) break;
+double lim = (double)(hRoom / r);
+if (lim > 1.0) lim = 1.0;
+if (lim < 0.0) lim = 0.0;
+double angleRange = M_PI - 2.0 * acos(lim);
+int fanCap = (int)(r * angleRange / pitch);
+if (fanCap < 1) fanCap = 1;
+radii[rr] = r;
+caps[rr] = fanCap;
+capSum += fanCap;
+rr++;
+}
+}
+// v43.24：第 7 件——rr==0 全塞一圈的兜底與最外環硬塞剩下的都拿掉：
+// 裝不下就記一行日誌（剩下的 App 走其他啟動器樣式），不硬塞。
+if (capSum < (int)total) {
+char obuf[160];
+snprintf(obuf, sizeof(obuf), "v43.24 radial bottom fan overflow, cap=%d total=%d center=%d", capSum, (int)total, (int)center.x);
+GHCFLogLine(obuf);
+}
+rings = rr;
+for (int r = rr; r < 6; r++) { radii[r] = 0; caps[r] = 0; }
+char bbuf[128];
+snprintf(bbuf, sizeof(bbuf), "v43.23 radial bottom fan center=%d,%d rings=%d cap=%d", (int)center.x, (int)center.y, rings, capSum);
+GHCFLogLine(bbuf);
+}
+CGFloat maxBottom = 0;
+NSInteger idx = 0;
+for (int ring = 0; ring < rings; ring++) {
+int count = caps[ring];
+if (count <= 0) continue;
+CGFloat radius = radii[ring];
+for (int j = 0; j < count; j++) {
+if (idx >= total) break;
+id item = [bids objectAtIndex:idx++];
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+double step = (count == 1) ? 0.0 : 2.0 * M_PI / (double)count;
+double stagger = (ring % 2 == 1) ? step / 2.0 : 0.0;
+double angle = -M_PI_2 + stagger + step * (double)j;
+// v43.32：ARC 方式时按扇形排——从起始角起、逆时针跨扇角（奇数环错半格
+// 跟全圆版同一做法）；扇角 360 时上面 arcFanMode 为假，走全圆。
+if (arcFanMode) {
+double fstep = (count == 1) ? 0.0 : arcSpan / (double)(count - 1);
+double fstagger = (ring % 2 == 1) ? fstep / 2.0 : 0.0;
+angle = arcStart - fstep * (double)j + fstagger;
+}
+// v43.23：第 3 件——從底部出：只排上半扇（角度 π..2π，從底緣往上展開），
+// 奇數環錯半格（跟全圓版同一做法，扇面裡也錯開）。
+if (slideBottom) {
+if (count == 1) angle = -M_PI_2;
+else {
+// v43.24：第 7 件——扇面按橫向空間收窄（跟容量同一套角度範圍），不伸出屏外。
+double hRoom = center.x;
+if (screenBounds.size.width - center.x < hRoom) hRoom = screenBounds.size.width - center.x;
+hRoom -= icon / 2.0;
+double lim = hRoom / (double)radius;
+if (lim > 1.0) lim = 1.0;
+if (lim < 0.0) lim = 0.0;
+double lo = M_PI + acos(lim);
+double hi = 2.0 * M_PI - acos(lim);
+double fanStep = (hi - lo) / (double)(count - 1);
+angle = lo + fanStep * (double)j + ((ring % 2 == 1) ? fanStep / 2.0 : 0.0);
+if (angle > hi) angle = hi;
+}
+}
+CGPoint p = CGPointMake(center.x + radius * cos(angle), center.y + radius * sin(angle));
+char name[128];
+GHCFAppNameForBundleID(bid, name, sizeof(name));
+NSInteger tag = GHCFAppIndexForBundleID(bid);
+if (tag < 0) continue;
+UIButton *btn = [self arcIconButtonForBundleID:bid name:name tag:tag action:action atCenter:p size:icon withName:NO];
+[GHCFLauncherContentView addSubview:btn];
+// v43.37（1.0.110，扇形轉盤）：記下半徑／基準角，供轉盤拖動重排
+//（trollfan 才記；slideBottom 扇形不轉，循環裡不記）。
+if (!slideBottom && GHCFReadLauncherStyleTrollFan()) {
+[GHCFDialButtons addObject:btn];
+[GHCFDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
+[GHCFDialAngles addObject:[NSNumber numberWithDouble:angle]];
+}
+CGFloat bottom = p.y + icon / 2.0;
+if (bottom > maxBottom) maxBottom = bottom;
+}
+}
+// 中間大設定齒輪。
+UIButton *gearBtn = [self arcRadialGearButtonAtCenter:center size:gearSize];
+[GHCFLauncherContentView addSubview:gearBtn];
+{
+char sbuf[128];
+snprintf(sbuf, sizeof(sbuf), "v43.2 radial icons=%d size=%d rings=%d", (int)total, (int)icon, rings);
+GHCFLogLine(sbuf);
+}
+return maxBottom + 12.0;
+}
+
+// v43.42（1.0.115，表盘启动器，第 7 档 dial）：照 TrollOpen 参考图／影片
+// 的排布做（只模仿排布与设置项，不抄代码、不拿它的图和素材）：
+// 图标沿圆弧排开、中心钮（觸發鈕）在弧顶、扇形向下展开；
+// 7 圈同心弧，扇区 54°–104°（向下偏右，跟参考图一样；钮在右边缘附近时
+// 镜像成 76°–126°，向下偏左——不然外圈会被右边缘挤成一条缝）；
+// 图标 36pt、间距 8pt；图标个数跟已启用 App 清单走，
+// 按每圈弧长容量比例分圈（最大余数法）；
+// 整个圆弧以按钮位置往上 60pt 为弧顶（皇上 15:46 定；参考最低图标
+// 底边 y≈942 被裁，+60 后 ≈882，离屏底 50pt）。
+// 居中显示开时圆心改屏幕中心、扇区改全圆，圈数按屏幕收成贴合的 3 圈
+//（影片里的居中圆盘形态；默认形态，皇上 16:08 定「表盘不是以觸發鈕视角走」；
+// 紧凑圆盘的精确几何影片里量不出来）。
+// 打开时悬浮钮已由 showLauncher 藏起（关掉时放回）；中心钮点一下收起。
+// 背景沿用 0.55 黑遮罩，另加一面淡白圆盘（透明度走导航台设置）。
+// 指针只画示意短针（形态影片里辨认不出来）；隐藏指针开时不画。
+// 转盘状态照 trollfan 的记法记（GHCFDialButtons／Radii／Angles／
+// Center），拨动＋tick＋吸附走现成的 handleDialPan:；
+// radial（0）／trollfan（5）现有分支一行不动。
+- (CGFloat)addDialLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
+if (!bids || [bids count] == 0) return 0;
+NSInteger total = (NSInteger)[bids count];
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat screenW = screenBounds.size.width;
+CGFloat screenH = screenBounds.size.height;
+CGFloat icon = size;
+if (icon < 28.0) icon = 28.0;
+if (icon > 64.0) icon = 64.0;
+CGFloat spacing = GHCFReadDialElementSpacing();
+CGFloat pitch = icon + spacing;
+if (pitch < icon + 2.0) pitch = icon + 2.0;
+// v43.42 fix（皇上 16:08）：默认居中圆盘（圆心屏幕正中，不锚觸發鈕钮位）；
+// 居中显示关时弧顶才是按钮位置往上 60pt。
+CGPoint center;
+BOOL centered = GHCFReadDialCentered();
+if (centered) {
+center = CGPointMake(screenW / 2.0, screenH / 2.0);
+} else {
+CGFloat ax = GHCFLauncherAnchorX;
+CGFloat ay = GHCFLauncherAnchorY;
+if (ax < 0) ax = (CGFloat)GHCFReadFlyTriggerButtonX();
+if (ay < 0) ay = (CGFloat)GHCFReadFlyTriggerButtonY();
+if (ax < 0) ax = screenW - 28.0;
+if (ay < 0) ay = screenH / 2.0;
+center = CGPointMake(ax, ay - GHCFDialUpShift);
+}
+// 圆心夹在屏幕里（顶留刘海＋钮半径，底留 Home 条＋钮半径）。
+CGFloat topInset = GHCFScreenSafeTopInset();
+CGFloat topLimit = topInset + 28.0 + 4.0;
+CGFloat botLimit = screenH - 34.0 - 28.0 - 4.0;
+if (center.x < 32.0) center.x = 32.0;
+if (center.x > screenW - 32.0) center.x = screenW - 32.0;
+if (center.y < topLimit) center.y = topLimit;
+if (center.y > botLimit) center.y = botLimit;
+// 扇区：居中全圆；扇形一律 54°–104°（向下偏右，跟参考图一样）；
+// 钮在右边缘附近（120pt 内）时镜像成 76°–126°（向下偏左）——
+// 钮贴边时往右下展开会被右边缘挤成一条缝（外圈只剩 15°，25 颗装不下）；
+// 每圈再按左右边收窄（图标整颗在屏幕内），见下面。
+double angLo = 54.0 * M_PI / 180.0;
+double angHi = 104.0 * M_PI / 180.0;
+if (centered) {
+angLo = 0.0;
+angHi = 2.0 * M_PI;
+} else if (center.x > screenW - 120.0) {
+angLo = 76.0 * M_PI / 180.0;
+angHi = 126.0 * M_PI / 180.0;
+}
+double span = angHi - angLo;
+// 圈半径：扇形用参考图实测的 7 圈（36pt 图标时，随图标大小等比缩放）；
+// 居中圆盘用贴合屏幕的圈（外圈不超 min(宽,高)/2−图标/2−12）。
+static const CGFloat baseRadii[7] = {80.0, 150.0, 210.0, 275.0, 340.0, 405.0, 500.0};
+int rings = 7;
+CGFloat radii[7] = {0, 0, 0, 0, 0, 0, 0};
+int caps[7] = {0, 0, 0, 0, 0, 0, 0};
+double ringLo[7] = {0, 0, 0, 0, 0, 0, 0};
+double ringHi[7] = {0, 0, 0, 0, 0, 0, 0};
+int capSum = 0;
+// 先按给定图标算容量；装不下就把图标往小缩（36→32→28），每档重算。
+while (YES) {
+CGFloat scale = icon / 36.0;
+capSum = 0;
+rings = 7;
+if (centered) {
+// 居中圆盘：从齿轮外缘起、环距＝图标＋14，外圈不超屏幕半宽。
+CGFloat maxR = MIN(screenW, screenH) / 2.0 - icon / 2.0 - 12.0;
+CGFloat r0 = 38.0 + icon / 2.0 + 16.0;
+CGFloat step = icon + 14.0;
+rings = 0;
+while (rings < 7) {
+CGFloat r = r0 + rings * step;
+if (r > maxR) break;
+radii[rings] = r;
+rings++;
+}
+if (rings < 1) { radii[0] = maxR; rings = 1; }
+}
+for (int k = 0; k < rings; k++) {
+CGFloat r = centered ? radii[k] : baseRadii[k] * scale;
+if (!centered) radii[k] = r;
+double lo = angLo;
+double hi = angHi;
+if (!centered) {
+// 每圈按左右边收窄扇区（图标整颗在屏幕内；居中全圆不收窄）。
+double hiCos = (double)((screenW - icon / 2.0 - 4.0 - center.x) / r);
+double loCos = (double)((icon / 2.0 + 4.0 - center.x) / r);
+if (hiCos > 1.0) hiCos = 1.0;
+if (hiCos < -1.0) hiCos = -1.0;
+if (loCos > 1.0) loCos = 1.0;
+if (loCos < -1.0) loCos = -1.0;
+double edgeLo = acos(hiCos);
+double edgeHi = acos(loCos);
+if (edgeLo > lo) lo = edgeLo;
+if (edgeHi < hi) hi = edgeHi;
+}
+ringLo[k] = lo;
+ringHi[k] = hi;
+double ringSpan = hi - lo;
+int cap = 0;
+if (ringSpan >= 0.09) {
+cap = (int)(r * ringSpan / pitch);
+if (cap < 1) cap = 1;
+}
+caps[k] = cap;
+capSum += cap;
+}
+if (capSum >= (int)total || icon <= 28.0) break;
+icon = (icon > 32.0) ? 32.0 : 28.0;
+pitch = icon + spacing;
+if (pitch < icon + 2.0) pitch = icon + 2.0;
+}
+// 按容量比例分圈（最大余数法）；图标少于圈数时内圈先各放一颗。
+int counts[7] = {0, 0, 0, 0, 0, 0, 0};
+int assigned = 0;
+if ((int)total <= rings) {
+for (int k = 0; k < rings && assigned < (int)total; k++) {
+if (caps[k] > 0) { counts[k] = 1; assigned++; }
+}
+} else {
+double rems[7] = {0, 0, 0, 0, 0, 0, 0};
+for (int k = 0; k < rings; k++) {
+double exact = (capSum > 0) ? (double)total * caps[k] / capSum : 0;
+counts[k] = (int)exact;
+rems[k] = exact - counts[k];
+assigned += counts[k];
+}
+while (assigned < (int)total) {
+int best = -1;
+for (int k = 0; k < rings; k++) {
+if (caps[k] <= 0) continue;
+if (counts[k] >= caps[k]) continue;
+if (best < 0 || rems[k] > rems[best]) best = k;
+}
+if (best < 0) break;
+counts[best]++;
+rems[best] = -1;
+assigned++;
+}
+}
+// 装不下：剩下的塞最外圈（日志记一笔，不硬塞别的样式）。
+if (assigned < (int)total) {
+int outer = rings - 1;
+while (outer > 0 && caps[outer] <= 0) outer--;
+counts[outer] += (int)total - assigned;
+char obuf[160];
+snprintf(obuf, sizeof(obuf), "v43.42 dial overflow, cap=%d total=%d center=%d,%d", capSum, (int)total, (int)center.x, (int)center.y);
+GHCFLogLine(obuf);
+assigned = (int)total;
+}
+// 保险：最低图标底边不许过 882（效果图上移 60pt 那档的数，离屏底 50pt）。
+// 钮位本身没问题时（参考位置）一动不动；钮被拖到下面时整体再往上抬。
+{
+CGFloat lowest = 0;
+for (int k = 0; k < rings; k++) {
+if (counts[k] <= 0) continue;
+double aMid = M_PI_2;
+if (aMid < ringLo[k]) aMid = ringLo[k];
+if (aMid > ringHi[k]) aMid = ringHi[k];
+CGFloat b = center.y + radii[k] * sin(aMid) + icon / 2.0;
+if (b > lowest) lowest = b;
+}
+if (lowest > 882.0 && center.y > topLimit) {
+CGFloat up = lowest - 882.0;
+if (center.y - up < topLimit) up = center.y - topLimit;
+center.y -= up;
+}
+}
+// 转盘状态重建（跟 trollfan 同一套，拨动＋tick＋吸附走 handleDialPan:）。
+GHCFDialButtons = [NSMutableArray array];
+GHCFDialRadii = [NSMutableArray array];
+GHCFDialAngles = [NSMutableArray array];
+GHCFDialCenter = center;
+GHCFDialRotation = 0;
+GHCFDialLastTickRotation = 0;
+GHCFDialTotal = (int)total;
+GHCFDialSlot = (centered && total > 1) ? 2.0 * M_PI / (double)total : ((total > 1) ? span / (double)(total - 1) : 2.0 * M_PI);
+// 淡白圆盘（在图标下面；渐变开时上亮下淡，关时平色）。
+if (GHCFReadDialCircleBg()) {
+CGFloat discR = radii[rings - 1] + icon / 2.0 + 12.0;
+UIView *disc = [[UIView alloc] initWithFrame:CGRectMake(center.x - discR, center.y - discR, discR * 2.0, discR * 2.0)];
+disc.tag = 9106;
+disc.userInteractionEnabled = NO;
+disc.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:(CGFloat)GHCFReadDialCircleBgOpacity()];
+disc.layer.cornerRadius = discR;
+disc.layer.masksToBounds = YES;
+if (GHCFReadDialGradientBg()) {
+CAGradientLayer *grad = [CAGradientLayer layer];
+grad.frame = disc.bounds;
+grad.colors = [NSArray arrayWithObjects:(id)[[UIColor whiteColor] colorWithAlphaComponent:0.28].CGColor, (id)[[UIColor whiteColor] colorWithAlphaComponent:0.04].CGColor, nil];
+grad.startPoint = CGPointMake(0.5, 0.0);
+grad.endPoint = CGPointMake(0.5, 1.0);
+[disc.layer addSublayer:grad];
+}
+[GHCFLauncherContentView addSubview:disc];
+// 指针（示意短针：圆心到第一圈，中角方向；隐藏指针开时不画）。
+if (!GHCFReadDialHidePointer()) {
+double midA = centered ? -M_PI_2 : (angLo + angHi) / 2.0;
+CGFloat px0 = center.x + 30.0 * cos(midA);
+CGFloat py0 = center.y + 30.0 * sin(midA);
+CGFloat px1 = center.x + radii[0] * cos(midA);
+CGFloat py1 = center.y + radii[0] * sin(midA);
+UIBezierPath *path = [UIBezierPath bezierPath];
+[path moveToPoint:CGPointMake(px0 - center.x + discR, py0 - center.y + discR)];
+[path addLineToPoint:CGPointMake(px1 - center.x + discR, py1 - center.y + discR)];
+CAShapeLayer *needle = [CAShapeLayer layer];
+needle.path = path.CGPath;
+needle.strokeColor = [[UIColor whiteColor] colorWithAlphaComponent:0.85].CGColor;
+needle.lineWidth = 2.0;
+needle.lineCap = kCALineCapRound;
+[disc.layer addSublayer:needle];
+}
+}
+CGFloat maxBottom = 0;
+NSInteger idx = 0;
+for (int ring = 0; ring < rings; ring++) {
+int count = counts[ring];
+if (count <= 0) continue;
+CGFloat radius = radii[ring];
+double lo = ringLo[ring];
+double hi = ringHi[ring];
+// 不加半步错开——那半步会把最后一颗顶出扇区、被夹回后两颗图标
+// 只剩约 30pt 间距（36pt 图标会重叠）；各圈图标数不同，径向本来就不会整齐对上。
+// 步进：扇形两端各落一颗（span/(c−1)）；居中全圆按周长均分（span/c），
+// 不然最后一颗落在 2π、跟第一颗 0° 重叠在同一个点上。
+double step;
+if (count == 1) step = 0.0;
+else if (centered) step = (hi - lo) / (double)count;
+else step = (hi - lo) / (double)(count - 1);
+for (int j = 0; j < count; j++) {
+if (idx >= total) break;
+id item = [bids objectAtIndex:idx++];
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+double angle = (count == 1) ? (lo + hi) / 2.0 : lo + step * (double)j;
+CGPoint p = CGPointMake(center.x + radius * cos(angle), center.y + radius * sin(angle));
+char name[128];
+GHCFAppNameForBundleID(bid, name, sizeof(name));
+NSInteger tag = GHCFAppIndexForBundleID(bid);
+if (tag < 0) continue;
+UIButton *btn = [self arcIconButtonForBundleID:bid name:name tag:tag action:action atCenter:p size:icon withName:NO];
+[GHCFLauncherContentView addSubview:btn];
+[GHCFDialButtons addObject:btn];
+[GHCFDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
+[GHCFDialAngles addObject:[NSNumber numberWithDouble:angle]];
+CGFloat bottom = p.y + icon / 2.0;
+if (bottom > maxBottom) maxBottom = bottom;
+}
+}
+// 中心钮：觸發鈕本人（悬浮钮已藏起，这颗就是它）；点一下收起启动器。
+// 图拿不到就回落齿轮钮（设置入口不断）。
+UIButton *centerBtn = nil;
+UIImage *flyTriggerImage = GHCFLoadFlyTriggerImage();
+double dSize = GHCFReadPrefsDouble("flyTriggerIconSize", 56.0);
+if (dSize < 44.0) dSize = 44.0;
+if (dSize > 72.0) dSize = 72.0;
+if (flyTriggerImage) {
+centerBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+centerBtn.frame = CGRectMake(center.x - dSize / 2.0, center.y - dSize / 2.0, dSize, dSize);
+[centerBtn setImage:flyTriggerImage forState:UIControlStateNormal];
+centerBtn.imageView.contentMode = UIViewContentModeScaleAspectFit;
+centerBtn.layer.cornerRadius = dSize / 2.0;
+centerBtn.layer.masksToBounds = YES;
+[centerBtn addTarget:self action:@selector(handleDialCenterButton:) forControlEvents:UIControlEventTouchUpInside];
+} else {
+centerBtn = [self arcRadialGearButtonAtCenter:center size:76.0];
+}
+[GHCFLauncherContentView addSubview:centerBtn];
+{
+char sbuf[160];
+snprintf(sbuf, sizeof(sbuf), "v43.42 dial icons=%d size=%d rings=%d center=%d,%d centered=%d", (int)total, (int)icon, rings, (int)center.x, (int)center.y, centered ? 1 : 0);
+GHCFLogLine(sbuf);
+}
+return maxBottom + 12.0;
+}
+
+// v43.42（1.0.115，表盘启动器）：中心觸發鈕钮点一下收起启动器
+//（悬浮钮回原位，见 dismissLauncher）。
+- (void)handleDialCenterButton:(UIButton *)sender {
+(void)sender;
+[self dismissLauncher];
+}
+
+// v43.37（1.0.110，扇形轉盤，第 6 檔 trollfan 才裝；1.0.107 e4af0c0 拿回來）：
+// 手指撥動轉盤——按觸點繞圓心的角度增量轉圖標；每轉過一格（2π/總數）
+// 給一次 tick 震動＋水滴音；放手時吸附到最近的格子（0.15 秒動畫）。
+// 齒輪鈕在圓心，不跟著轉。圓心 40pt 內不算（角度在圓心附近不穩定，
+// 手指按著齒輪不轉盤）。
+- (void)handleDialPan:(UIPanGestureRecognizer *)recognizer {
+if (!GHCFDialButtons || [GHCFDialButtons count] == 0 || GHCFDialTotal <= 0) return;
+UIView *view = GHCFLauncherContentView;
+if (!view) return;
+CGPoint p = [recognizer locationInView:view];
+double dx = (double)(p.x - GHCFDialCenter.x);
+double dy = (double)(p.y - GHCFDialCenter.y);
+if (dx * dx + dy * dy < 40.0 * 40.0) return;
+double ang = atan2(dy, dx);
+if (recognizer.state == UIGestureRecognizerStateBegan) {
+GHCFDialLastTouchAngle = ang;
+return;
+}
+if (recognizer.state == UIGestureRecognizerStateChanged) {
+double delta = ang - GHCFDialLastTouchAngle;
+// 角度跳變（-π↔π 邊界）時 delta 會跳 ±2π，折回 [-π, π]。
+if (delta > M_PI) delta -= 2.0 * M_PI;
+if (delta < -M_PI) delta += 2.0 * M_PI;
+GHCFDialLastTouchAngle = ang;
+GHCFDialRotation += delta;
+GHCFDialApplyRotation();
+double slot = (GHCFDialSlot > 0) ? GHCFDialSlot : 2.0 * M_PI / (double)GHCFDialTotal;
+if (fabs(GHCFDialRotation - GHCFDialLastTickRotation) >= slot) {
+GHCFDialLastTickRotation = GHCFDialRotation;
+GHCFDialTickFeedback();
+}
+return;
+}
+if (recognizer.state == UIGestureRecognizerStateEnded || recognizer.state == UIGestureRecognizerStateCancelled) {
+// 吸附到最近的格子。
+double slot = (GHCFDialSlot > 0) ? GHCFDialSlot : 2.0 * M_PI / (double)GHCFDialTotal;
+double target = round(GHCFDialRotation / slot) * slot;
+GHCFDialRotation = target;
+[UIView animateWithDuration:0.15 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+GHCFDialApplyRotation();
+} completion:nil];
+GHCFDialLastTickRotation = target;
+}
+}
+
+// v43.19：側邊欄式——邊緣滑出來（跟圓環／格狀一樣由邊緣滑動叫出，不常駐）。
+// 屏幕貼邊一條深色圓角豎欄（跟滑出方向走：左／右），圖標往下排，點一個開
+// 一個浮窗；裝不下就上下滾。頂上小箭頭點一下收起啟動器。
+- (CGFloat)addSidebarLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
+if (!bids || [bids count] == 0) return 0;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat screenW = screenBounds.size.width;
+CGFloat screenH = screenBounds.size.height;
+CGFloat icon = size;
+if (icon < 40.0) icon = 40.0;
+if (icon > 72.0) icon = 72.0;
+CGFloat gap = 8.0;
+CGFloat pad = 8.0;
+CGFloat barW = icon + pad * 2.0;
+NSInteger n = (NSInteger)[bids count];
+CGFloat contentH = 28.0 + n * (icon + gap) - gap + pad;
+CGFloat maxBarH = screenH - 48.0;
+CGFloat barH = contentH > maxBarH ? maxBarH : contentH;
+BOOL slideLeft = GHCFIsARCSlideLeft();
+CGFloat barX = slideLeft ? 4.0 : screenW - barW - 4.0;
+CGFloat barY = (screenH - barH) / 2.0;
+UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(barX, barY, barW, barH)];
+bar.tag = 9101;
+bar.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
+bar.layer.cornerRadius = barW / 2.0;
+bar.layer.masksToBounds = YES;
+[GHCFLauncherContentView addSubview:bar];
+UIButton *collapseBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+collapseBtn.frame = CGRectMake(0, 4.0, barW, 20.0);
+[collapseBtn setTitle:[NSString stringWithCString:(slideLeft ? "\xE2\x80\xBA" : "\xE2\x80\xB9") encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
+[collapseBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+collapseBtn.titleLabel.font = [UIFont boldSystemFontOfSize:16];
+[collapseBtn addTarget:self action:@selector(handleSidebarCollapseButton:) forControlEvents:UIControlEventTouchUpInside];
+[bar addSubview:collapseBtn];
+UIScrollView *sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 28.0, barW, barH - 28.0 - pad)];
+sv.showsVerticalScrollIndicator = NO;
+sv.showsHorizontalScrollIndicator = NO;
+[bar addSubview:sv];
+CGFloat y = 0;
+for (NSInteger i = 0; i < n; i++) {
+id item = [bids objectAtIndex:i];
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+char nameBuf[128];
+GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = GHCFAppIndexForBundleID(bid);
+if (tag < 0) continue;
+UIButton *btn = [self arcIconButtonForBundleID:bid name:nameBuf tag:tag action:action atCenter:CGPointMake(barW / 2.0, y + icon / 2.0) size:icon withName:NO];
+[sv addSubview:btn];
+y += icon + gap;
+}
+sv.contentSize = CGSizeMake(barW, y > 0 ? y - gap : 0);
+{
+char sbuf[96];
+snprintf(sbuf, sizeof(sbuf), "v43.19 sidebar icons=%d size=%d side=%s", (int)n, (int)icon, slideLeft ? "left" : "right");
+GHCFLogLine(sbuf);
+}
+return barH;
+}
+
+- (void)handleSidebarCollapseButton:(UIButton *)sender {
+(void)sender;
+[self dismissLauncher];
+}
+
+// v43.19：抽屜式——底部半屏抽屜（高＝屏高 55%），頂上有拖動條和「全部 App」
+// 標題，裡面 4 列 App 格子（帶名字，可上下滾）。拖頂部拖動區往下滑超過
+// 120pt（或甩速夠快）就關抽屜，否則彈回；點抽屜外面也關（跟其他樣式一樣）。
+- (CGFloat)addDrawerLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
+if (!bids || [bids count] == 0) return 0;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat screenW = screenBounds.size.width;
+CGFloat screenH = screenBounds.size.height;
+CGFloat icon = size;
+if (icon < 40.0) icon = 40.0;
+if (icon > 72.0) icon = 72.0;
+CGFloat panelH = screenH * 0.55;
+CGFloat panelY = screenH - panelH;
+UIView *panel = [[UIView alloc] initWithFrame:CGRectMake(0, panelY, screenW, panelH)];
+panel.tag = 9102;
+panel.backgroundColor = [UIColor colorWithWhite:0.12 alpha:0.97];
+panel.layer.cornerRadius = 24.0;
+panel.layer.masksToBounds = YES;
+[GHCFLauncherContentView addSubview:panel];
+UIView *dragZone = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenW, 56.0)];
+dragZone.backgroundColor = [UIColor clearColor];
+[panel addSubview:dragZone];
+UIView *handle = [[UIView alloc] initWithFrame:CGRectMake((screenW - 36.0) / 2.0, 8.0, 36.0, 5.0)];
+handle.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.4];
+handle.layer.cornerRadius = 2.5;
+[dragZone addSubview:handle];
+UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(20.0, 22.0, screenW - 40.0, 24.0)];
+title.text = [NSString stringWithCString:"全部 App" encoding:NSUTF8StringEncoding];
+title.textColor = [UIColor whiteColor];
+title.font = [UIFont boldSystemFontOfSize:17];
+[dragZone addSubview:title];
+UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleDrawerPan:)];
+[dragZone addGestureRecognizer:pan];
+CGFloat cols = 4.0;
+CGFloat margin = 16.0;
+CGFloat cellW = (screenW - margin * 2.0) / cols;
+CGFloat cellH = icon + 18.0;
+CGFloat gridTop = 56.0;
+UIScrollView *sv = [[UIScrollView alloc] initWithFrame:CGRectMake(0, gridTop, screenW, panelH - gridTop)];
+sv.showsVerticalScrollIndicator = NO;
+sv.showsHorizontalScrollIndicator = NO;
+[panel addSubview:sv];
+NSInteger n = (NSInteger)[bids count];
+NSInteger placed = 0;
+for (NSInteger i = 0; i < n; i++) {
+id item = [bids objectAtIndex:i];
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+char nameBuf[128];
+GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = GHCFAppIndexForBundleID(bid);
+if (tag < 0) continue;
+NSInteger row = placed / 4;
+NSInteger col = placed % 4;
+CGFloat cx = margin + cellW * col + cellW / 2.0;
+CGFloat cy = row * cellH + icon / 2.0;
+UIButton *btn = [self arcIconButtonForBundleID:bid name:nameBuf tag:tag action:action atCenter:CGPointMake(cx, cy) size:icon withName:YES];
+[sv addSubview:btn];
+placed++;
+}
+NSInteger rows = (placed + 3) / 4;
+sv.contentSize = CGSizeMake(screenW, rows * cellH);
+{
+char sbuf[96];
+snprintf(sbuf, sizeof(sbuf), "v43.19 drawer icons=%d size=%d rows=%d", (int)placed, (int)icon, (int)rows);
+GHCFLogLine(sbuf);
+}
+return panelH;
+}
+
+- (void)handleDrawerPan:(UIPanGestureRecognizer *)recognizer {
+UIView *dragZone = recognizer.view;
+if (!dragZone) return;
+UIView *panel = dragZone.superview;
+if (!panel) return;
+if (recognizer.state == UIGestureRecognizerStateBegan) {
+GHCFDrawerPanelBaseY = panel.frame.origin.y;
+} else if (recognizer.state == UIGestureRecognizerStateChanged) {
+CGPoint t = [recognizer translationInView:panel.superview];
+CGFloat ny = GHCFDrawerPanelBaseY + t.y;
+if (ny < GHCFDrawerPanelBaseY) ny = GHCFDrawerPanelBaseY;
+panel.frame = CGRectMake(panel.frame.origin.x, ny, panel.frame.size.width, panel.frame.size.height);
+} else if (recognizer.state == UIGestureRecognizerStateEnded || recognizer.state == UIGestureRecognizerStateCancelled) {
+CGPoint v = [recognizer velocityInView:panel.superview];
+CGFloat dy = panel.frame.origin.y - GHCFDrawerPanelBaseY;
+if (dy > 120.0 || v.y > 800.0) {
+[self dismissLauncher];
+} else {
+[UIView animateWithDuration:0.25 animations:^{
+panel.frame = CGRectMake(panel.frame.origin.x, GHCFDrawerPanelBaseY, panel.frame.size.width, panel.frame.size.height);
+}];
+}
+}
+}
+
+// v43.19：橫向輪盤式——卡片左右滑（paging），中間那張最大（帶「點一下打開」），
+// 兩邊的小一點＋淡一點，下面有圓點和頁數。點卡片開浮窗。scroll view 框只有
+// 一頁寬、居中，clipsToBounds 關掉才看得到兩邊的卡片（兩邊卡片點不到，滑到
+// 中間再點）。
+// v43.23：第 5 件——輪盤改 A Cover Flow 透視（Lee 2026-11-22 定，見
+// hidden_files/carousel-3d-options.png 的 A）：中間卡正著最大、鑲金邊、
+// 底下有影子；左右卡斜著排、透視傾斜；下面圓點保留。B 層疊縱深不做。
+- (CGFloat)addCarouselLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
+(void)size;
+(void)action;
+if (!bids || [bids count] == 0) return 0;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat screenW = screenBounds.size.width;
+CGFloat screenH = screenBounds.size.height;
+CGFloat cardW = 200.0;
+CGFloat cardH = 280.0;
+CGFloat pageW = cardW + 20.0;
+NSInteger n = (NSInteger)[bids count];
+CGFloat svH = cardH + 20.0;
+CGFloat svY = (screenH - svH) / 2.0 - 20.0;
+UIScrollView *sv = [[UIScrollView alloc] initWithFrame:CGRectMake((screenW - pageW) / 2.0, svY, pageW, svH)];
+sv.tag = 9103;
+sv.pagingEnabled = YES;
+sv.clipsToBounds = NO;
+sv.showsHorizontalScrollIndicator = NO;
+sv.showsVerticalScrollIndicator = NO;
+sv.delegate = self;
+sv.contentSize = CGSizeMake(pageW * n, svH);
+[GHCFLauncherContentView addSubview:sv];
+GHCFCarouselScrollView = sv;
+GHCFCarouselPageWidth = pageW;
+NSMutableArray *cards = [NSMutableArray array];
+for (NSInteger i = 0; i < n; i++) {
+id item = [bids objectAtIndex:i];
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+char nameBuf[128];
+GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = GHCFAppIndexForBundleID(bid);
+if (tag < 0) continue;
+CGFloat cx = pageW * i + pageW / 2.0;
+UIButton *card = [UIButton buttonWithType:UIButtonTypeCustom];
+card.frame = CGRectMake(cx - cardW / 2.0, 10.0, cardW, cardH);
+card.tag = tag;
+card.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
+card.layer.cornerRadius = 20.0;
+// v43.23：按鍵反饋——點下縮＋震、鬆手才打開；點左右卡先滑到中間再開
+//（不用 TouchUpInside 直開，1.0.94「兩邊點不到」的限制就改掉了）。
+[card addTarget:self action:@selector(handleCarouselCardTouchDown:) forControlEvents:UIControlEventTouchDown];
+[card addTarget:self action:@selector(handleCarouselCardTouchUpInside:) forControlEvents:UIControlEventTouchUpInside];
+[card addTarget:self action:@selector(handleCarouselCardTouchCancelled:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+CGFloat bigIcon = 96.0;
+UIImage *icon = GHCFAppIcon(bid);
+UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake((cardW - bigIcon) / 2.0, 44.0, bigIcon, bigIcon)];
+if (icon) {
+iconView.image = icon;
+} else {
+iconView.backgroundColor = [UIColor grayColor];
+}
+iconView.layer.cornerRadius = bigIcon * 0.22;
+iconView.layer.masksToBounds = YES;
+[card addSubview:iconView];
+UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 156.0, cardW, 24.0)];
+nameLabel.text = [NSString stringWithCString:nameBuf encoding:NSUTF8StringEncoding];
+nameLabel.textColor = [UIColor whiteColor];
+nameLabel.font = [UIFont boldSystemFontOfSize:18];
+nameLabel.textAlignment = NSTextAlignmentCenter;
+[card addSubview:nameLabel];
+UILabel *hintLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 186.0, cardW, 20.0)];
+hintLabel.text = [NSString stringWithCString:"点一下打开" encoding:NSUTF8StringEncoding];
+hintLabel.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.6];
+hintLabel.font = [UIFont systemFontOfSize:13];
+hintLabel.textAlignment = NSTextAlignmentCenter;
+[card addSubview:hintLabel];
+[sv addSubview:card];
+[cards addObject:card];
+}
+GHCFCarouselCards = cards;
+UIPageControl *pc = [[UIPageControl alloc] initWithFrame:CGRectMake(0, svY + svH + 8.0, screenW, 20.0)];
+pc.tag = 9105;
+pc.numberOfPages = n;
+pc.currentPage = 0;
+pc.userInteractionEnabled = NO;
+[GHCFLauncherContentView addSubview:pc];
+GHCFCarouselPageControl = pc;
+[self carouselUpdateForScrollView:sv];
+{
+char sbuf[96];
+snprintf(sbuf, sizeof(sbuf), "v43.19 carousel icons=%d cards=%d", (int)n, (int)[cards count]);
+GHCFLogLine(sbuf);
+}
+return cardH;
+}
+
+- (void)carouselUpdateForScrollView:(UIScrollView *)sv {
+if (!GHCFCarouselCards) return;
+CGFloat cx = sv.contentOffset.x + sv.bounds.size.width / 2.0;
+// v43.23 A Cover Flow 透視：中間卡正著最大、鑲金邊、底下有影子；
+// 左右卡斜著排（繞 Y 軸透視傾斜，越遠越斜、越小、越暗）；下面圓點保留。
+NSInteger centerIdx = -1;
+CGFloat bestD = 1e9;
+for (NSInteger ci = 0; ci < (NSInteger)[GHCFCarouselCards count]; ci++) {
+UIView *card = [GHCFCarouselCards objectAtIndex:ci];
+CGFloat d = fabs(card.center.x - cx);
+if (d < bestD) { bestD = d; centerIdx = ci; }
+}
+for (NSInteger ci = 0; ci < (NSInteger)[GHCFCarouselCards count]; ci++) {
+UIView *card = [GHCFCarouselCards objectAtIndex:ci];
+CGFloat d = fabs(card.center.x - cx);
+CGFloat t = d / GHCFCarouselPageWidth;
+if (t > 1.0) t = 1.0;
+CATransform3D tr = CATransform3DIdentity;
+tr.m34 = -1.0 / 500.0;
+CGFloat rotY = 0;
+if (t > 0.02) rotY = (card.center.x < cx) ? -0.6 * t : 0.6 * t;
+tr = CATransform3DRotate(tr, rotY, 0, 1, 0);
+CGFloat scale = 1.0 - 0.18 * t;
+tr = CATransform3DScale(tr, scale, scale, 1.0);
+card.layer.transform = tr;
+card.alpha = 1.0 - 0.25 * t;
+BOOL isCenter = (ci == centerIdx);
+card.layer.borderWidth = isCenter ? 2.0 : 0.0;
+card.layer.borderColor = [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0].CGColor;
+card.layer.shadowColor = [UIColor blackColor].CGColor;
+card.layer.shadowOpacity = isCenter ? 0.5f : 0.15f;
+card.layer.shadowRadius = isCenter ? 12.0 : 6.0;
+card.layer.shadowOffset = CGSizeMake(0, isCenter ? 8.0 : 4.0);
+card.layer.zPosition = isCenter ? 10.0 : 10.0 - t * 10.0;
+}
+if (GHCFCarouselPageControl) {
+NSInteger page = (NSInteger)lround(sv.contentOffset.x / GHCFCarouselPageWidth);
+if (page < 0) page = 0;
+if (page >= (NSInteger)[GHCFCarouselCards count]) page = (NSInteger)[GHCFCarouselCards count] - 1;
+GHCFCarouselPageControl.currentPage = page;
+}
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+if (scrollView == GHCFCarouselScrollView) [self carouselUpdateForScrollView:scrollView];
+}
+
+// v43.23：第 5 件——輪盤按鍵反饋：點下卡片縮一下＋輕震一下，鬆手才打開；
+// 點左右卡片先滑到中間，滑到了再打開（scrollViewDidEndScrollingAnimation 接）。
+- (void)handleCarouselCardTouchDown:(UIButton *)sender {
+sender.transform = CGAffineTransformMakeScale(0.95, 0.95);
+GHCFLauncherTapFeedback();
+}
+
+- (void)handleCarouselCardTouchUpInside:(UIButton *)sender {
+sender.transform = CGAffineTransformIdentity;
+if (!GHCFCarouselScrollView || !GHCFCarouselCards) return;
+NSInteger page = (NSInteger)lround(GHCFCarouselScrollView.contentOffset.x / GHCFCarouselPageWidth);
+if (page < 0) page = 0;
+if (page >= (NSInteger)[GHCFCarouselCards count]) page = (NSInteger)[GHCFCarouselCards count] - 1;
+NSInteger tapped = [GHCFCarouselCards indexOfObject:sender];
+if (tapped < 0) return;
+if (tapped == page) {
+[self handleAppButton:sender];
+return;
+}
+GHCFCarouselPendingOpenIdx = (int)tapped;
+[GHCFCarouselScrollView setContentOffset:CGPointMake(GHCFCarouselPageWidth * tapped, 0) animated:YES];
+char buf[96];
+snprintf(buf, sizeof(buf), "v43.23 carousel side card %d centering first", (int)tapped);
+GHCFLogLine(buf);
+}
+
+- (void)handleCarouselCardTouchCancelled:(UIButton *)sender {
+sender.transform = CGAffineTransformIdentity;
+}
+
+- (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView {
+if (scrollView != GHCFCarouselScrollView) return;
+if (GHCFCarouselPendingOpenIdx < 0) return;
+int idx = GHCFCarouselPendingOpenIdx;
+GHCFCarouselPendingOpenIdx = -1;
+if (!GHCFCarouselCards || idx >= (NSInteger)[GHCFCarouselCards count]) return;
+UIButton *card = [GHCFCarouselCards objectAtIndex:idx];
+[self handleAppButton:card];
+}
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView {
+if (scrollView == GHCFCarouselScrollView) GHCFCarouselPendingOpenIdx = -1;
+}
+
+// v43.19：磁貼式——深色大卡片裡大方塊（第一個 App，2×2）加小方塊拼著排，
+// 都帶名字。App 無上限（v43.24：第 6 件）：大方塊 1 個＋小方塊若干，卡片居中；
+// 卡片高封頂，網格放 UIScrollView 上下滾（圖標不縮到 40pt 以下）。點方塊開浮窗
+//（大方塊是第一個 App——置頂／最近排在最前面的那個）。
+- (CGFloat)addTileLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
+if (!bids || [bids count] == 0) return 0;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat screenW = screenBounds.size.width;
+CGFloat screenH = screenBounds.size.height;
+CGFloat small = size;
+if (small < 40.0) small = 40.0;
+if (small > 72.0) small = 72.0;
+CGFloat gap = 8.0;
+CGFloat pad = 12.0;
+NSInteger n = (NSInteger)[bids count];
+NSInteger smallCount = n - 1;
+NSInteger rows = 2;
+if (smallCount > 4) rows += (smallCount - 4 + 3) / 4;
+CGFloat rowH = small + 18.0;
+CGFloat cardW = pad * 2.0 + small * 4.0 + gap * 3.0;
+CGFloat cardH = pad * 2.0 + rowH * rows;
+CGFloat maxCardH = screenH - 48.0;
+// v43.24：第 6 件——App 無上限：卡片不再整體縮小（圖標不縮到 40pt 以下），
+// 卡片高封頂 maxCardH，網格放進 UIScrollView 上下滾。
+if (cardH > maxCardH) cardH = maxCardH;
+CGFloat cardX = (screenW - cardW) / 2.0;
+CGFloat cardY = (screenH - cardH) / 2.0;
+UIView *card = [[UIView alloc] initWithFrame:CGRectMake(cardX, cardY, cardW, cardH)];
+card.tag = 9104;
+card.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
+card.layer.cornerRadius = 20.0;
+card.layer.masksToBounds = YES;
+[GHCFLauncherContentView addSubview:card];
+CGFloat contentH = pad * 2.0 + rowH * rows;
+UIScrollView *tileSV = [[UIScrollView alloc] initWithFrame:card.bounds];
+tileSV.contentSize = CGSizeMake(cardW, contentH);
+tileSV.showsVerticalScrollIndicator = YES;
+[card addSubview:tileSV];
+CGFloat big = small * 2.0 + gap;
+NSInteger placed = 0;
+for (NSInteger i = 0; i < n; i++) {
+id item = [bids objectAtIndex:i];
+if (![item isKindOfClass:[NSString class]]) continue;
+const char *bid = [(NSString *)item UTF8String];
+if (!bid || bid[0] == '\0') continue;
+char nameBuf[128];
+GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = GHCFAppIndexForBundleID(bid);
+if (tag < 0) continue;
+if (i == 0) {
+UIButton *bigBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+bigBtn.frame = CGRectMake(pad, pad, big, big);
+bigBtn.tag = tag;
+[bigBtn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+[bigBtn addTarget:self action:@selector(handleLauncherIconTouchDown:) forControlEvents:UIControlEventTouchDown];
+[bigBtn addTarget:self action:@selector(handleLauncherIconTouchCancel:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+UIImage *icon = GHCFAppIcon(bid);
+UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, big, big)];
+if (icon) {
+iconView.image = icon;
+} else {
+iconView.backgroundColor = [UIColor grayColor];
+}
+iconView.layer.cornerRadius = big * 0.22;
+iconView.layer.masksToBounds = YES;
+[bigBtn addSubview:iconView];
+UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(8.0, big - 24.0, big - 16.0, 18.0)];
+nameLabel.text = [NSString stringWithCString:nameBuf encoding:NSUTF8StringEncoding];
+nameLabel.textColor = [UIColor whiteColor];
+nameLabel.font = [UIFont boldSystemFontOfSize:13];
+[bigBtn addSubview:nameLabel];
+[tileSV addSubview:bigBtn];
+} else {
+NSInteger s = placed;
+NSInteger row = 0;
+NSInteger col = 0;
+if (s < 4) {
+row = s / 2;
+col = 2 + (s % 2);
+} else {
+NSInteger t = s - 4;
+row = 2 + t / 4;
+col = t % 4;
+}
+CGFloat cx = pad + col * (small + gap) + small / 2.0;
+CGFloat cy = pad + row * rowH + small / 2.0;
+UIButton *btn = [self arcIconButtonForBundleID:bid name:nameBuf tag:tag action:action atCenter:CGPointMake(cx, cy) size:small withName:YES];
+[tileSV addSubview:btn];
+placed++;
+}
+}
+{
+char sbuf[96];
+snprintf(sbuf, sizeof(sbuf), "v43.19 tile icons=%d small=%d rows=%d", (int)n, (int)placed, (int)rows);
+GHCFLogLine(sbuf);
+}
+return cardH;
+}
+
+// v43.2：圓環中央大設定齒輪——深底白齒輪（SF Symbol gearshape.fill），
+// 點了開系統設定（分屏設定頁深連結，見 handleARCRadialGearButton）。
+- (UIButton *)arcRadialGearButtonAtCenter:(CGPoint)center size:(CGFloat)size {
+UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+btn.frame = CGRectMake(center.x - size / 2.0, center.y - size / 2.0, size, size);
+btn.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.18];
+btn.layer.cornerRadius = size / 2.0;
+btn.layer.borderWidth = 1.5;
+btn.layer.borderColor = [UIColor whiteColor].CGColor;
+UIImage *gear = [UIImage systemImageNamed:[NSString stringWithCString:"gearshape.fill" encoding:NSUTF8StringEncoding]];
+UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(size * 0.18, size * 0.18, size * 0.64, size * 0.64)];
+iconView.image = gear;
+iconView.tintColor = [UIColor whiteColor];
+iconView.contentMode = UIViewContentModeScaleAspectFit;
+[btn addSubview:iconView];
+[btn addTarget:self action:@selector(handleARCRadialGearButton:) forControlEvents:UIControlEventTouchUpInside];
+return btn;
+}
+
+- (void)handleARCRadialGearButton:(UIButton *)sender {
+(void)sender;
+GHCFLogLine("v43.2 arc gear tapped");
+[self dismissLauncher];
+NSString *urlStr = [NSString stringWithCString:"App-Prefs:root=ChinaFly" encoding:NSUTF8StringEncoding];
+NSURL *url = [NSURL URLWithString:urlStr];
+if (!url) return;
+[[UIApplication sharedApplication] openURL:url options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
+char buf[64];
+snprintf(buf, sizeof(buf), "v43.2 gear open settings %s", success ? "success" : "failed");
+GHCFLogLine(buf);
+}];
+}
+
+// v41：ARC 裡一顆圓形 App 圖標（icon + 名 + 狀態點）：開著的 App 帶
+// 綠點（主窗金色），點一下升為主窗；置頂的帶 ★；長按圖標置頂/取消置頂。
+// v41：ARC 裡一顆圓形 App 圖標（icon + 名 + 狀態點）：開著的 App 帶
+// 綠點（主窗金色），點一下升為主窗；置頂的帶 ★；長按圖標置頂/取消置頂。
+// v54 L：改按中心點放（弧圈排布用；withName=NO 時不寫名字——弧圈裡
+// 名字會疊到下一圈圖標上）。
+// v43.24：第 5 件——啟動器圖標點按回饋（六檔共用）：按下縮 0.95＋輕震＋點按音；
+// 鬆開／取消還原。掛在共用工廠 arcIconButtonForBundleID 與 tile 大卡上。
+- (void)handleLauncherIconTouchDown:(UIButton *)sender {
+sender.transform = CGAffineTransformMakeScale(0.95, 0.95);
+// v43.37（1.0.110，扇形轉盤；v43.42 表盘启动器同）：trollfan／表盘上
+// 的圖標點下走轉盤專用 tick（震動強度＋水滴音各走各的開關）；其他
+// 五種樣式、轉盤關掉時走原來的共用點按反饋。
+if ((GHCFReadLauncherStyleTrollFan() || GHCFReadLauncherStyleDial()) && GHCFReadCarouselEnabled()) {
+GHCFDialTickFeedback();
+} else {
+GHCFLauncherTapFeedback();
+}
+}
+- (void)handleLauncherIconTouchCancel:(UIButton *)sender {
+sender.transform = CGAffineTransformIdentity;
+}
+
+- (UIButton *)arcIconButtonForBundleID:(const char *)bid name:(const char *)name tag:(NSInteger)tag action:(SEL)action atCenter:(CGPoint)center size:(CGFloat)size withName:(BOOL)withName {
+UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+btn.frame = CGRectMake(center.x - size / 2.0, center.y - size / 2.0, size, size);
+btn.tag = tag;
+[btn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+[btn addTarget:self action:@selector(handleLauncherIconTouchDown:) forControlEvents:UIControlEventTouchDown];
+[btn addTarget:self action:@selector(handleLauncherIconTouchCancel:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+UIImage *icon = GHCFAppIcon(bid);
+UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, size, size)];
+if (icon) {
+iconView.image = icon;
+} else {
+iconView.backgroundColor = [UIColor grayColor];
+}
+iconView.layer.cornerRadius = size * 0.22;
+iconView.layer.masksToBounds = YES;
+[btn addSubview:iconView];
+int slotIdx = (bid) ? GHCFAppIndexForBundleID(bid) : -1;
+BOOL isOpen = (slotIdx >= 0 && GHCFCacheWindows[slotIdx] && !GHCFCacheWindows[slotIdx].hidden);
+if (GHCFReadARCShowOpenDots() && isOpen) {
+UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(size - 12, 0, 12, 12)];
+dot.userInteractionEnabled = NO; // v55：狀態點不接手勢，點到點上也要開 App（不是收起啟動器）。
+BOOL isMain = (slotIdx == GHCFActiveAppIndex);
+dot.backgroundColor = isMain ? [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0] : [UIColor colorWithRed:0.2 green:0.8 blue:0.2 alpha:1.0];
+dot.layer.cornerRadius = 6.0;
+dot.layer.borderWidth = 1.5;
+dot.layer.borderColor = [UIColor whiteColor].CGColor;
+[btn addSubview:dot];
+}
+if (GHCFIsAppPinned(bid)) {
+UILabel *pin = [[UILabel alloc] initWithFrame:CGRectMake(-4, -4, 16, 16)];
+pin.text = [NSString stringWithCString:"★" encoding:NSUTF8StringEncoding];
+pin.textColor = [UIColor colorWithRed:1.0 green:0.85 blue:0.0 alpha:1.0];
+pin.font = [UIFont boldSystemFontOfSize:12];
+[btn addSubview:pin];
+}
+if (withName && GHCFReadARCShowNames() && name && name[0] != '\0') {
+UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(-8, size + 2, size + 16, 14)];
+nameLabel.text = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
+nameLabel.textColor = [UIColor whiteColor];
+nameLabel.font = [UIFont systemFontOfSize:10];
+nameLabel.textAlignment = NSTextAlignmentCenter;
+[btn addSubview:nameLabel];
+}
+UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleARCIconLongPress:)];
+lp.minimumPressDuration = 0.5;
+[btn addGestureRecognizer:lp];
+return btn;
+}
+
+// v41：長按 ARC 圖標——置頂/取消置頂（置頂的固定在最上面一段，
+// 存 prefs 鍵 pinnedAppIDs；震動一下回饋；重建內容即時生效）。
+- (void)handleARCIconLongPress:(UILongPressGestureRecognizer *)recognizer {
+if (recognizer.state != UIGestureRecognizerStateBegan) return;
+UIButton *btn = (UIButton *)recognizer.view;
+if (!btn) return;
+NSInteger idx = btn.tag;
+if (idx < 0 || idx >= GHCFAppCount) return;
+const char *bid = GHCFAppBundleIDs[idx];
+BOOL pinned = !GHCFIsAppPinned(bid);
+GHCFSetAppPinned(bid, pinned);
+if (GHCFReadARCHaptics()) {
+@try {
+UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+[haptic impactOccurred];
+} @catch (NSException *e) {
+(void)e;
+}
+}
+[self rebuildARCContent];
+}
+
+
+
+// v72：showNotificationBannerForName 整个拿掉（皇上：浮窗已打开提示取消）。
+// 低电量那两条走 showNotificationBannerWithText，不动。
+
+// v41：截圖/錄屏狀態變了（ARC 設置的截圖錄屏隱藏 ARC，預設開）：
+// 錄屏開始時把 ARC 藏起來，錄完不自動叫回來。截圖的通知在截圖完成
+// 後才發，藏了也來不及進那一張——截圖隱藏做不到（見 BUILD_LOG
+// §113），只做到錄屏隱藏。觸發鈕不藏（FV 的 ARC 鈕也一樣在圖裡）。
+- (void)handleScreenCaptureChanged:(NSNotification *)note {
+(void)note;
+BOOL captured = [UIScreen mainScreen].isCaptured;
+char buf[64];
+snprintf(buf, sizeof(buf), "v57 screen capture changed %d", captured ? 1 : 0);
+GHCFLogLine(buf);
+if (captured && GHCFReadARCHideOnScreenshot() && GHCFLauncherVisible) {
+[self dismissLauncher];
+GHCFLogLine("v57 arc hidden for screen capture");
+}
+}
+
+// v41：選 App 頁（浮窗設定卡片「選擇應用」／系統設定「加入 App」開的
+// 已安裝 App 清單；跟設定頁選擇器同一份鍵、同一份清單，
+// 兩邊改了都同步）。每次打開都重建
+// 清單（緩存可能更新了；開關狀態即時讀 prefs）。列舉在後台做、結果
+// 寫緩存檔，這裡只讀緩存（見 GHCFRefreshInstalledAppListInBackground）。
+- (void)showAppPicker {
+if (GHCFAppPickerWindow && !GHCFAppPickerWindow.hidden) {
+GHCFLogLine("v57 app picker already open");
+return;
+}
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+if (!GHCFAppPickerWindow) {
+GHCFAppPickerWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+GHCFAppPickerWindow.windowLevel = UIWindowLevelAlert - 1.0;
+GHCFAppPickerWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *pickerScene = GHCFActiveWindowScene();
+if (pickerScene) GHCFAppPickerWindow.windowScene = pickerScene;
+UIViewController *vc = [[UIViewController alloc] init];
+UIView *root = [[UIView alloc] initWithFrame:screenBounds];
+root.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
+vc.view = root;
+UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(16, 44, screenBounds.size.width - 32, 30)];
+title.text = [NSString stringWithCString:"选择应用" encoding:NSUTF8StringEncoding];
+title.textColor = [UIColor whiteColor];
+title.font = [UIFont boldSystemFontOfSize:20];
+[root addSubview:title];
+UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(16, 76, screenBounds.size.width - 32, 20)];
+sub.text = [NSString stringWithCString:"开了就出现在启动器里（最多 12 个）" encoding:NSUTF8StringEncoding];
+sub.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.7];
+sub.font = [UIFont systemFontOfSize:13];
+[root addSubview:sub];
+UIScrollView *scroll = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 104, screenBounds.size.width, screenBounds.size.height - 104 - 60)];
+scroll.tag = 77;
+[root addSubview:scroll];
+UIButton *done = [UIButton buttonWithType:UIButtonTypeSystem];
+done.frame = CGRectMake(0, screenBounds.size.height - 56, screenBounds.size.width, 44);
+[done setTitle:[NSString stringWithCString:"完成" encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
+[done setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+done.titleLabel.font = [UIFont boldSystemFontOfSize:17];
+[done addTarget:self action:@selector(handleAppPickerDone:) forControlEvents:UIControlEventTouchUpInside];
+[root addSubview:done];
+GHCFAppPickerWindow.rootViewController = vc;
+}
+UIScrollView *scroll = (UIScrollView *)[GHCFAppPickerWindow.rootViewController.view viewWithTag:77];
+for (UIView *sub in [scroll.subviews copy]) [sub removeFromSuperview];
+NSArray *installed = GHCFCachedInstalledAppList();
+NSString *bidKey = [NSString stringWithCString:"bundleID" encoding:NSUTF8StringEncoding];
+NSString *nameKey = [NSString stringWithCString:"name" encoding:NSUTF8StringEncoding];
+CGFloat y = 0;
+CGFloat rowH = 52.0;
+GHCFAppPickerCount = 0;
+if (!installed || [installed count] == 0) {
+UILabel *empty = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, screenBounds.size.width - 32, 40)];
+empty.text = [NSString stringWithCString:"还没有已安装 App 清单（后台列举中，稍后再开）" encoding:NSUTF8StringEncoding];
+empty.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.7];
+empty.font = [UIFont systemFontOfSize:13];
+empty.numberOfLines = 2;
+[scroll addSubview:empty];
+y = 48.0;
+} else {
+for (id item in installed) {
+if (GHCFAppPickerCount >= 256) break;
+if (![item isKindOfClass:[NSDictionary class]]) continue;
+NSString *itemBid = [(NSDictionary *)item objectForKey:bidKey];
+NSString *itemName = [(NSDictionary *)item objectForKey:nameKey];
+if (!itemBid || [itemBid length] == 0) continue;
+const char *bid = [itemBid UTF8String];
+strncpy(GHCFAppPickerBids[GHCFAppPickerCount], bid, sizeof(GHCFAppPickerBids[0]) - 1);
+GHCFAppPickerBids[GHCFAppPickerCount][sizeof(GHCFAppPickerBids[0]) - 1] = '\0';
+UIImage *icon = GHCFAppIcon(bid);
+UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(16, y + 8, 36, 36)];
+if (icon) {
+iconView.image = icon;
+} else {
+iconView.backgroundColor = [UIColor grayColor];
+}
+iconView.layer.cornerRadius = 8.0;
+iconView.layer.masksToBounds = YES;
+[scroll addSubview:iconView];
+UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(60, y, screenBounds.size.width - 60 - 70, rowH)];
+nameLabel.text = itemName ? itemName : itemBid;
+nameLabel.textColor = [UIColor whiteColor];
+nameLabel.font = [UIFont systemFontOfSize:15];
+[scroll addSubview:nameLabel];
+UISwitch *sw = [[UISwitch alloc] init];
+sw.frame = CGRectMake(screenBounds.size.width - 16 - 51, y + 10, 51, 31);
+sw.on = GHCFIsAppInLauncher(bid);
+sw.tag = GHCFAppPickerCount;
+[sw addTarget:self action:@selector(handleAppPickerToggle:) forControlEvents:UIControlEventValueChanged];
+[scroll addSubview:sw];
+y += rowH;
+GHCFAppPickerCount++;
+}
+}
+scroll.contentSize = CGSizeMake(screenBounds.size.width, y);
+GHCFAppPickerWindow.hidden = NO;
+char buf[128];
+snprintf(buf, sizeof(buf), "v57 app picker opened %d apps", GHCFAppPickerCount);
+GHCFLogLine(buf);
+}
+
+// v41：選 App 頁關掉（ARC 內容重建，剛勾的立刻生效）。
+- (void)dismissAppPicker {
+if (GHCFAppPickerWindow) GHCFAppPickerWindow.hidden = YES;
+[self rebuildARCContent];
+GHCFLogLine("v57 app picker closed");
+}
+
+// v41：選 App 頁的完成鈕。
+- (void)handleAppPickerDone:(id)sender {
+(void)sender;
+[self dismissAppPicker];
+}
+
+// v41：選 App 頁的開關——當場勾選，立刻生效、存 CFPreferences；
+// 滿了（15 個槽位用完）開關彈回關。關掉的 App 如果正開著窗，
+// 窗留著（只從啟動器拿掉，下次打不開而已）。
+- (void)handleAppPickerToggle:(UISwitch *)sender {
+NSInteger row = sender.tag;
+if (row < 0 || row >= GHCFAppPickerCount) return;
+const char *bid = GHCFAppPickerBids[row];
+BOOL on = sender.on;
+if (!GHCFSetAppInLauncher(bid, on)) {
+sender.on = NO;
+GHCFLogLine("v57 app picker full, switch reverted");
+return;
+}
+[self rebuildARCContent];
+}
+
+@end
+
+// v43.28：激活码（皇上 2026-11-22 定，设备授权整套取消后改走激活码，
+// 像黄白助手那样）——设置里输码，输对才能用插件；输错／没输锁住，
+// 只藏窗、不崩、不进安全模式。码的名单在源站 license/codes.json
+// （10 个码，第一个是主码；码只放名单文件，不要写死在代码里）。
+// 名单是异步抓的（NSURLSession，3 秒超时），抓不到不锁死；
+// 判断只在 setup 跑起来之后做，绝不在 %ctor 里同步跑
+// （1.0.102 就是 %ctor 同步跑 setup 进的安全模式）。
+// 锁法：复用 GHCFApplyEnabledState——锁住时分屏开关就当关着，
+// 感应带／觸發鈕／已开浮窗全藏、启动器关掉；解锁时恢复。
+static void GHCFDeferredSetupRun(void);
+static void GHCFActivationCheckStart(void);
+
+static BOOL GHCFSetupRan = NO; // 延后 setup 跑过一次（重复跑会建两套窗／重复登记通知）。
+
+%ctor {
+// v25 的 %ctor 和 v21/v22/v23/v24 一模一样，只做一行纯 C 调用：
+// 5 秒后在主队列跑一个 block。不登记通知、不写日志、不读文件、
+// 不调系统日志、不建窗、不 hook。
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)),
+dispatch_get_main_queue(), ^{
+if (!GHCFSetupRan) {
+GHCFSetupRan = YES;
+GHCFDeferredSetupRun();
+}
+});
+}
+
+// v43.28：激活状态写 prefs（设置页状态行／诊断信息读这个键）：
+// authorized 已激活、locked 未激活（码不对或没输）、checkFailed 名单
+// 读不到（暂不锁）。只写状态字，不写码本身。
+static void GHCFActivationSetState(const char *state) {
+if (!state) return;
+GHCFWritePrefsCString("activationState", state);
+}
+
+static void GHCFActivationApplyLock(void) {
+if (!GHCFActivationLocked) {
+GHCFActivationLocked = YES;
+GHCFActivationSetState("locked");
+GHCFLogLine("v43.28 activation locked");
+}
+GHCFApplyEnabledState();
+}
+
+static void GHCFActivationApplyUnlock(void) {
+if (GHCFActivationLocked) {
+GHCFActivationLocked = NO;
+GHCFActivationSetState("authorized");
+GHCFLogLine("v43.28 activation authorized");
+}
+GHCFApplyEnabledState();
+}
+
+// v43.28：异步抓名单对码。结果：1 码在名单、0 码不在名单／没输码、
+// -1 抓不到／解不开（网络、超时、JSON 坏掉——这种不锁死，维持原状）。
+// 回调一定在主队列跑。码只放内存比对，绝不写日志。
+static void GHCFActivationFetchAndCheck(void (^completion)(int result)) {
+char *code = GHCFReadPrefsCString("activationCode");
+if (!code) {
+if (completion) completion(0);
+return;
+}
+// 去掉头尾空白（设置页输码时手滑多打了空格也认）。
+size_t len = strlen(code);
+while (len > 0 && (code[len - 1] == ' ' || code[len - 1] == '\n' || code[len - 1] == '\t' || code[len - 1] == '\r')) code[--len] = '\0';
+size_t start = 0;
+while (code[start] == ' ' || code[start] == '\n' || code[start] == '\t' || code[start] == '\r') start++;
+if (start > 0) memmove(code, code + start, strlen(code + start) + 1);
+if (code[0] == '\0') {
+free(code);
+if (completion) completion(0);
+return;
+}
+NSString *urlString = [NSString stringWithCString:"https://guhailong-repo.pages.dev/license/codes.json" encoding:NSUTF8StringEncoding];
+NSURL *url = [NSURL URLWithString:urlString];
+if (!url) {
+free(code);
+if (completion) completion(-1);
+return;
+}
+NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+request.timeoutInterval = 3.0;
+NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+(void)response;
+int result = -1;
+if (!error && data) {
+@try {
+id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+NSArray *codes = nil;
+if (parsed && [parsed isKindOfClass:[NSDictionary class]]) {
+NSString *codesKey = [NSString stringWithCString:"codes" encoding:NSUTF8StringEncoding];
+id arr = [(NSDictionary *)parsed objectForKey:codesKey];
+if (arr && [arr isKindOfClass:[NSArray class]]) codes = (NSArray *)arr;
+} else if (parsed && [parsed isKindOfClass:[NSArray class]]) {
+codes = (NSArray *)parsed;
+}
+if (codes) {
+result = 0;
+NSString *wantCode = [NSString stringWithCString:code encoding:NSUTF8StringEncoding];
+for (id entry in codes) {
+if ([entry isKindOfClass:[NSString class]] && wantCode && [(NSString *)entry isEqualToString:wantCode]) {
+result = 1;
+break;
+}
+}
+}
+} @catch (NSException *e) {
+(void)e;
+result = -1;
+}
+}
+free(code);
+int finalResult = result;
+dispatch_async(dispatch_get_main_queue(), ^{
+if (completion) completion(finalResult);
+});
+}];
+[task resume];
+}
+
+// v43.28：启动时／点「检查激活码」时跑一次对码（异步，不卡 SpringBoard）。
+// -1（抓不到名单）不锁死：只记日志、状态写 checkFailed，锁保持原状。
+static BOOL GHCFActivationCheckInFlight = NO;
+static BOOL GHCFActivationRecheckRegistered = NO;
+
+static void GHCFActivationCheckStart(void) {
+if (GHCFActivationCheckInFlight) return;
+if (!GHCFActivationRecheckRegistered) {
+GHCFActivationRecheckRegistered = YES;
+int recheckToken = 0;
+int recheckResult = notify_register_dispatch("com.guhailong.fly.activationRecheck", &recheckToken, dispatch_get_main_queue(), ^(int token) {
+(void)token;
+GHCFActivationCheckStart();
+});
+if (recheckResult != 0) {
+GHCFLogLine("v43.28 activation recheck notify register failed");
+}
+}
+GHCFActivationCheckInFlight = YES;
+GHCFActivationFetchAndCheck(^(int result) {
+GHCFActivationCheckInFlight = NO;
+if (result == 1) {
+GHCFActivationApplyUnlock();
+} else if (result == 0) {
+GHCFActivationApplyLock();
+} else {
+GHCFActivationSetState("checkFailed");
+GHCFLogLine("v43.28 activation check failed, lock unchanged");
+}
+});
+}
+
+
+// v43.26：helper 載入標記——helper（沙盒 App）自己寫 prefs 可能寫不到全域
+// domain，改由 helper 發 Darwin 通知（名字裡帶 bid），SpringBoard 收到就把
+// kbHelperLoaded-<bid>＝時間戳寫進共用 prefs（SpringBoard 寫得到；狀態頁
+// GHCFKbHelperMarkersText() 讀的就是這個 domain，不用改顯示格式）。
+// bid／suffix 只傳字串字面量（常駐），block 抓指標安全；不要在迴圈裡抓
+// 區域陣列變數。兩個後綴：helperLoaded（%ctor 載入時）／helperAlive
+// （App 啟動完成時）。只給微信／QQ 登記（過濾器改窄後 helper 只進這兩個）。
+static void GHCFRegisterHelperLoadedNotify(const char *bid, const char *suffix) {
+if (!bid || !suffix) return;
+char notifyName[256];
+snprintf(notifyName, sizeof(notifyName), "com.guhailong.fly.%s.%s", suffix, bid);
+int markerToken = 0;
+int markerResult = notify_register_dispatch(notifyName, &markerToken, dispatch_get_main_queue(), ^(int token) {
+(void)token;
+char keyBuf[192];
+snprintf(keyBuf, sizeof(keyBuf), "kbHelperLoaded-%s", bid);
+char valBuf[64];
+snprintf(valBuf, sizeof(valBuf), "%f", [NSDate timeIntervalSinceReferenceDate]);
+GHCFWritePrefsCString(keyBuf, valBuf);
+char lbuf[256];
+snprintf(lbuf, sizeof(lbuf), "v43.26 kb-helper marker %s %s", suffix, bid);
+GHCFLogLine(lbuf);
+});
+if (markerResult == 0) {
+char rbuf[256];
+snprintf(rbuf, sizeof(rbuf), "v43.26 kb-helper marker notify registered %s", notifyName);
+GHCFLogLine(rbuf);
+} else {
+char rbuf[256];
+snprintf(rbuf, sizeof(rbuf), "v43.26 kb-helper marker notify register failed %s", notifyName);
+GHCFLogLine(rbuf);
+}
+}
+
+static void GHCFDeferredSetupRun(void) {
+// 延后步骤（启动完成 5 秒后，主队列）：
+// 1) 寫日誌（v57：開關加回來，讀 enabled 鍵；預設關——裝完要自己去開）；
+// 2) 建右边缘感应带（24pt 宽透明窗），带子是自己写的普通视图，
+//    写日志；
+// 3) 感应带上挂右边缘滑动手势；觸發鈕单独一个 56x56 的小窗
+//    （右边缘、竖直居中，图从 prefs bundle 里读）。
+// 不登记通知、不建 FBScene、不 hook。
+{
+char dbuf[64];
+snprintf(dbuf, sizeof(dbuf), "v57 deferred setup ran, enabled=%d", (int)GHCFReadEnabled());
+GHCFLogLine(dbuf);
+}
+// v69：啟動時自愈一次——清掉已存的小窗尺寸（拖大過的 App 也回到 112×242）。
+GHCFResetStoredPeekSizesOnce();
+// v43.18：鍵盤模式合一遷移一次（見 GHCFMigrateKeyboardModeOnce）。
+GHCFMigrateKeyboardModeOnce();
+// v41：自選 App 槽位從 prefs 讀進來（ARC 第一次打開就看得到）；
+// 已安裝 App 清單在後台列舉、寫緩存檔（不堵主線程），設定頁/ARC 只讀緩存。
+GHCFLoadCustomApps();
+GHCFRefreshInstalledAppListInBackground();
+// 右边缘感应带：24pt 宽、全高、透明，层级在 SpringBoard 内容之上。
+// v23 的修法：窗显式挂 windowScene（没挂 scene 的窗可能不显示，
+// v22 的教训）；带子的视图给显式 frame（不用 plain init 的零 frame）。
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGFloat stripWidth = 24.0;
+CGRect stripFrame = CGRectMake(screenBounds.size.width - stripWidth, 0, stripWidth, screenBounds.size.height);
+GHCFStripWindow = [[UIWindow alloc] initWithFrame:stripFrame];
+// v29：层级降到 Alert - 4——锁屏之下，但仍在状态栏（1000）与 App（0）之上，平时用不受影响。
+GHCFStripWindow.windowLevel = UIWindowLevelAlert - 4.0;
+GHCFStripWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *stripScene = GHCFActiveWindowScene();
+if (stripScene) {
+GHCFStripWindow.windowScene = stripScene;
+GHCFLogLine("v57 window scene found");
+} else {
+GHCFLogLine("v57 window scene nil");
+}
+UIViewController *stripVC = [[UIViewController alloc] init];
+GHCFPlainStripView *stripView = [[GHCFPlainStripView alloc] initWithFrame:CGRectMake(0, 0, stripWidth, screenBounds.size.height)];
+stripView.backgroundColor = [UIColor clearColor];
+stripVC.view = stripView;
+GHCFStripWindow.rootViewController = stripVC;
+GHCFStripWindow.hidden = NO;
+GHCFLogLine("v57 edge strip built");
+// 诊断日志：窗与带子到底是什么状态（真机一看就知道上没上屏）。
+char dbuf[256];
+CGRect wf = GHCFStripWindow.frame;
+snprintf(dbuf, sizeof(dbuf), "v57 window frame=%d,%d,%d,%d hidden=%d scene=%s", (int)wf.origin.x, (int)wf.origin.y, (int)wf.size.width, (int)wf.size.height, GHCFStripWindow.hidden ? 1 : 0, GHCFStripWindow.windowScene ? "ok" : "nil");
+GHCFLogLine(dbuf);
+CGRect sf = stripView.frame;
+snprintf(dbuf, sizeof(dbuf), "v57 strip frame=%d,%d,%d,%d", (int)sf.origin.x, (int)sf.origin.y, (int)sf.size.width, (int)sf.size.height);
+GHCFLogLine(dbuf);
+// 5.1 的处理器（唯一的自定义处理类）。
+GHCFLauncherShared = [[GHCFLauncher alloc] init];
+// 右边缘滑动手势（挂在感应带上）。
+UIScreenEdgePanGestureRecognizer *edgePan = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleEdgeSwipe:)];
+edgePan.edges = UIRectEdgeRight;
+edgePan.delegate = GHCFLauncherShared;
+[stripView addGestureRecognizer:edgePan];
+GHCFLauncherEdgePan = edgePan;
+GHCFLogLine("v57 edge gesture added");
+// v43.32：左边缘感应带（触发侧左／双侧时用）——跟右带同一层级／scene／
+// 透明底，自己的边缘滑动手势（edges=Left）接同一个 handleEdgeSwipe:。
+CGRect stripFrameL = CGRectMake(0, 0, stripWidth, screenBounds.size.height);
+GHCFStripWindowLeft = [[UIWindow alloc] initWithFrame:stripFrameL];
+GHCFStripWindowLeft.windowLevel = UIWindowLevelAlert - 4.0;
+GHCFStripWindowLeft.backgroundColor = [UIColor clearColor];
+if (stripScene) {
+GHCFStripWindowLeft.windowScene = stripScene;
+}
+UIViewController *stripVCL = [[UIViewController alloc] init];
+GHCFPlainStripView *stripViewL = [[GHCFPlainStripView alloc] initWithFrame:CGRectMake(0, 0, stripWidth, screenBounds.size.height)];
+stripViewL.backgroundColor = [UIColor clearColor];
+stripVCL.view = stripViewL;
+GHCFStripWindowLeft.rootViewController = stripVCL;
+GHCFStripWindowLeft.hidden = YES;
+UIScreenEdgePanGestureRecognizer *edgePanL = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleEdgeSwipe:)];
+edgePanL.edges = UIRectEdgeLeft;
+edgePanL.delegate = GHCFLauncherShared;
+[stripViewL addGestureRecognizer:edgePanL];
+GHCFLauncherEdgePanLeft = edgePanL;
+GHCFLogLine("v43.32 left edge strip built");
+// v43.32：调试画布窗（平时藏着，不接手势；调试模式开起来才画触发区）。
+GHCFDebugTriggerWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+GHCFDebugTriggerWindow.windowLevel = UIWindowLevelAlert - 3.0;
+GHCFDebugTriggerWindow.backgroundColor = [UIColor clearColor];
+GHCFDebugTriggerWindow.userInteractionEnabled = NO;
+if (stripScene) {
+GHCFDebugTriggerWindow.windowScene = stripScene;
+}
+UIViewController *dbgVC = [[UIViewController alloc] init];
+GHCFDebugTriggerView = [[UIView alloc] initWithFrame:screenBounds];
+GHCFDebugTriggerView.backgroundColor = [UIColor clearColor];
+GHCFDebugTriggerView.userInteractionEnabled = NO;
+dbgVC.view = GHCFDebugTriggerView;
+GHCFDebugTriggerWindow.rootViewController = dbgVC;
+GHCFDebugTriggerWindow.hidden = YES;
+GHCFLogLine("v43.32 debug trigger window built");
+// v40：感应带跟小窗位置设定走（初始位置按设定放；设定改了，下次开
+// 启动器时 showLauncher 会再调 GHCFUpdateStripPosition 跟到对的边）。
+GHCFUpdateStripPosition();
+// v38：觸發鈕（皇上要金色「分」按钮改成可爱型觸發鈕图，3D 大笑
+// 版）。24pt 的感应带放不下 56pt 的圆钮（圆钮一半会伸出窗外、点
+// 不到），所以觸發鈕单独一个小窗（全屏任意位置，初始按設定落邊
+// 緣、豎直居中、圖从 prefs bundle 里读；读不到就退回金色圆钮 +
+// 「分」字（不空白、不崩）。
+// v41：大小走設定（flyTriggerIconSize，44–72，預設 56）；左右邊走設定
+// （flyTriggerSide，沒設跟小窗位置）；位置從 prefs 恢復（上次拖到的
+// x、y，沒拖過就按左右邊設定落邊緣、高度居中）；層級 Alert - 1.25
+// （1998.75，貼邊 peek 之上、ARC 之下——圖 1 裡鈕疊在最下面那張
+// peek 卡上）。
+CGFloat flyTriggerSize = GHCFReadFlyTriggerIconSize();
+// v51：位置從 prefs 恢復（上次拖到的 x、y；沒拖過就落回邊緣邏輯：
+// 左右邊走設定、高度居中；x 夾在 [size/2, 屏寬 - size/2]、y 夾在
+// [100, 屏高-100]，鈕不掉出邊）。
+double savedFlyTriggerX = GHCFReadFlyTriggerButtonX();
+double savedFlyTriggerY = GHCFReadFlyTriggerButtonY();
+CGFloat flyTriggerCenterX = (savedFlyTriggerX >= 0) ? (CGFloat)savedFlyTriggerX : (GHCFIsFlyTriggerSideLeft() ? flyTriggerSize / 2.0 : (screenBounds.size.width - flyTriggerSize / 2.0));
+CGFloat flyTriggerCenterY = (savedFlyTriggerY >= 0) ? (CGFloat)savedFlyTriggerY : (screenBounds.size.height / 2.0);
+if (flyTriggerCenterX < flyTriggerSize / 2.0) flyTriggerCenterX = flyTriggerSize / 2.0;
+if (flyTriggerCenterX > screenBounds.size.width - flyTriggerSize / 2.0) flyTriggerCenterX = screenBounds.size.width - flyTriggerSize / 2.0;
+if (flyTriggerCenterY < 100.0) flyTriggerCenterY = 100.0;
+if (flyTriggerCenterY > screenBounds.size.height - 100.0) flyTriggerCenterY = screenBounds.size.height - 100.0;
+CGRect flyTriggerFrame = CGRectMake(flyTriggerCenterX - flyTriggerSize / 2.0, flyTriggerCenterY - flyTriggerSize / 2.0, flyTriggerSize, flyTriggerSize);
+GHCFFlyTriggerButtonWindow = [[UIWindow alloc] initWithFrame:flyTriggerFrame];
+GHCFFlyTriggerButtonWindow.windowLevel = UIWindowLevelAlert - 1.25;
+GHCFFlyTriggerButtonWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *flyTriggerScene = GHCFActiveWindowScene();
+if (flyTriggerScene) {
+GHCFFlyTriggerButtonWindow.windowScene = flyTriggerScene;
+} else {
+GHCFLogLine("v57 flyTrigger scene nil");
+}
+UIViewController *flyTriggerVC = [[UIViewController alloc] init];
+UIView *flyTriggerRoot = [[UIView alloc] initWithFrame:CGRectMake(0, 0, flyTriggerSize, flyTriggerSize)];
+flyTriggerRoot.backgroundColor = [UIColor clearColor];
+flyTriggerVC.view = flyTriggerRoot;
+GHCFFlyTriggerButtonWindow.rootViewController = flyTriggerVC;
+UIButton *flyTriggerButton = [UIButton buttonWithType:UIButtonTypeCustom];
+flyTriggerButton.frame = CGRectMake(0, 0, flyTriggerSize, flyTriggerSize);
+flyTriggerButton.layer.cornerRadius = flyTriggerSize / 2.0;
+flyTriggerButton.layer.masksToBounds = YES;
+// v53：鈕的圖走共用 helper（先試自訂圖，再走 bundle 預設圖；
+// 以前這裡內聯同一套查找，helper 唯一呼叫處是已刪的懸浮球）。
+UIImage *flyTriggerImage = GHCFLoadFlyTriggerImage();
+if (flyTriggerImage && flyTriggerImage.CGImage) {
+// imageWithContentsOfFile 读 @3x 文件时 scale 是 1.0（168pt，太大）；
+// 按屏幕 scale 重包一层（168px ÷ 3 = 56pt），正好填满圆钮。
+CGFloat screenScale = [UIScreen mainScreen].scale;
+if (screenScale > 0) {
+flyTriggerImage = [UIImage imageWithCGImage:flyTriggerImage.CGImage scale:screenScale orientation:flyTriggerImage.imageOrientation];
+}
+[flyTriggerButton setImage:flyTriggerImage forState:UIControlStateNormal];
+GHCFLogLine("v57 flyTrigger image loaded");
+} else {
+// 退回金色圆钮 + 「分」字（图读不到时不空白、不崩）。
+flyTriggerButton.backgroundColor = [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0];
+flyTriggerButton.layer.borderWidth = 2.0;
+flyTriggerButton.layer.borderColor = [UIColor blackColor].CGColor;
+[flyTriggerButton setTitle:[NSString stringWithCString:"分" encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
+[flyTriggerButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+flyTriggerButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+GHCFLogLine("v57 flyTrigger image missing, fallback to gold");
+}
+// v41：單擊開 ARC、雙擊輪切主窗（代替原來的 TouchUpInside：單擊手勢
+// 要等雙擊失敗才認，雙擊時不誤開 ARC；見 handleFlyTriggerButtonSingleTap /
+// handleFlyTriggerButtonDoubleTap）。點按跟拖動分開：pan 有內建位移門檻
+// （約 10pt），手指沒怎麼動、快速抬起時 pan 不認、單擊照舊開 ARC；
+// 拖動了 pan 認出來（cancelsTouchesInView 預設 YES，會取消鈕的點按
+// 追蹤），才算移動鈕的位置。
+UITapGestureRecognizer *flyTriggerSingleTap = [[UITapGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonSingleTap:)];
+flyTriggerSingleTap.numberOfTapsRequired = 1;
+flyTriggerSingleTap.delegate = GHCFLauncherShared;
+UITapGestureRecognizer *flyTriggerDoubleTap = [[UITapGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonDoubleTap:)];
+flyTriggerDoubleTap.numberOfTapsRequired = 2;
+flyTriggerDoubleTap.delegate = GHCFLauncherShared;
+[flyTriggerSingleTap requireGestureRecognizerToFail:flyTriggerDoubleTap];
+[flyTriggerButton addGestureRecognizer:flyTriggerSingleTap];
+[flyTriggerButton addGestureRecognizer:flyTriggerDoubleTap];
+UIPanGestureRecognizer *flyTriggerDrag = [[UIPanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonDrag:)];
+flyTriggerDrag.minimumNumberOfTouches = 1;
+flyTriggerDrag.maximumNumberOfTouches = 1;
+flyTriggerDrag.delegate = GHCFLauncherShared;
+[flyTriggerButton addGestureRecognizer:flyTriggerDrag];
+// v40：一键关全部浮窗（皇上 11:55 糾正「全加」）——长按觸發鈕
+// 关掉全部已开的浮窗 + 已收起的 peek。长按与点按/拖动
+// 分开：长按要手指基本不动（UILongPressGestureRecognizer 内建
+// allowableMovement 约 10pt，拖动了它就不认）；短按（无拖动、无长按）
+// 仍是开启动器；长按松手不触发启动器（长按旗标 suppress
+// 单击，见 handleFlyTriggerButtonSingleTap）。
+// v41：長按時間走調度設定（longPressDuration，0.3–1.0 秒，預設 0.5）。
+UILongPressGestureRecognizer *flyTriggerLongPress = [[UILongPressGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonLongPress:)];
+flyTriggerLongPress.minimumPressDuration = GHCFReadLongPressDuration();
+flyTriggerLongPress.delegate = GHCFLauncherShared;
+[flyTriggerButton addGestureRecognizer:flyTriggerLongPress];
+[flyTriggerRoot addSubview:flyTriggerButton];
+GHCFFlyTriggerButton = flyTriggerButton;
+GHCFAppliedFlyTriggerSize = flyTriggerSize;
+GHCFAppliedFlyTriggerLeft = GHCFIsFlyTriggerSideLeft();
+// v43.43：顯示開關加回來（flyTriggerButtonEnabled，預設開；關著建完就
+// 藏起來，等開關開了 tick／prefschanged 再放回來）。
+GHCFFlyTriggerButtonWindow.hidden = GHCFReadFlyTriggerButtonEnabled() ? NO : YES;
+GHCFLogLine("v57 flyTrigger button added");
+CGRect bf = flyTriggerButton.frame;
+snprintf(dbuf, sizeof(dbuf), "v57 flyTrigger button frame=%d,%d,%d,%d", (int)bf.origin.x, (int)bf.origin.y, (int)bf.size.width, (int)bf.size.height);
+GHCFLogLine(dbuf);
+// v41：錄屏開始時藏 ARC（NSNotificationCenter，不是被禁的
+// CFNotificationCenterAddObserver；截圖藏不了——通知在截圖完成後才發，
+// 見 §113）。
+[[NSNotificationCenter defaultCenter] addObserver:GHCFLauncherShared selector:@selector(handleScreenCaptureChanged:) name:UIScreenCapturedDidChangeNotification object:nil];
+GHCFLogLine("v57 screen capture observer added");
+// v32：锁屏信号——libnotify 的 notify_register_dispatch（<notify.h>，
+// 纯 C API，传 C 字串）。这不是被禁的 CFNotificationCenterAddObserver，
+// 不碰 CFString，回调跑在主队列。v31 的做法（锁了且有 hosted scene
+// 就把它推回后台）不够——皇上 16:00 复现：等 30 秒左右密码就按不
+// 了了，键盘看得见、按了没反应；foreground-scene 理论被证伪。
+// v32 只加一个变量：锁屏时把悬浮窗也临时藏起来（窗/presenter 锁屏
+// 时可能还抓着触摸），解锁时再显示回来——只藏"开着"的窗，最小化
+// 着的窗本来就藏着，不碰它；没窗时什么都不做。v39：解锁时也把
+// foreground 推回去（v38 只显示窗、不推前景，恢复路径又只在最小化
+// 时跑，锁屏藏窗的窗解锁后一直黑——见 BUILD_LOG §108；解锁时锁屏
+// 已不在，推前景不影响密码）。v40：锁屏/解锁管全部窗（v39 只管活动
+// 窗一个）——循环缓存数组，每窗都藏/显示、每窗的 scene 都推后台/
+// 推前景；贴边小卡锁屏时不藏。handler 保持极小，只调后台化函数 +
+// 藏窗/显示/推前景 + 记日志。
+int lockNotifyResult = notify_register_dispatch("com.apple.springboard.lockstate", &lockToken, dispatch_get_main_queue(), ^(int token) {
+uint64_t lockState = 0;
+notify_get_state(token, &lockState);
+if (lockState == 1) {
+GHCFScreenLocked = YES;
+// v40：锁屏管全部窗（v39 只管活动窗一个）——v66 起 scene 不再推回后台
+// （全程不黑屏，見下面）；看得见的窗都藏起来（记 HiddenByLock，解锁时再显示回来）；
+// 最小化着的窗本来就藏着，不碰它（解锁时它也不能自己弹出来，
+// 等用户点恢复/点小卡）。贴边小卡锁屏时不藏（卡在右边缘、
+// 不挡锁屏密码；解锁后还在，用户直接点卡恢复）。
+// v65：上面那句假設錯了——皇上 1.0.64 報鎖屏後密碼解不了，小卡 112x216
+// 貼邊正好可能蓋住密碼鍵盤邊列的數字；所以鎖屏連小卡也藏起來，解鎖時
+// HiddenByLock 路徑照舊顯示回來（見下面解鎖分支，不分大小窗）。
+BOOL anyScene = NO;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheScenes[i]) {
+anyScene = YES;
+// v66：鎖屏不再把 scene 推回後台（皇上：要全程不黑屏）——鎖屏推後台
+// 是黑 peek 的主因（21.log／22.log 都是鎖後黑、解鎖推不回來）。窗還是
+// 藏起來（1.0.65 的密碼修法不動，藏窗才是不擋鍵盤的關鍵）；scene 留在
+// 前景，進程不掛起，解鎖後內容直接就是活的。代價：鎖屏時 App 進程還
+// 在跑，會多耗點電；鎖很久、系統自己把進程掛起／殺掉的話還是會黑，
+// 那時看門狗／恢復延後會把它推回來，關掉重開也行。解鎖分支的推前景
+// 保留（系統萬一還是把它推後台了，解鎖再推回來）。
+char kbuf[128];
+snprintf(kbuf, sizeof(kbuf), "v68 scene kept foreground on lock %s", GHCFCacheBundleIDs[i]);
+GHCFLogLine(kbuf);
+}
+if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden) {
+GHCFCacheWindows[i].hidden = YES;
+GHCFCacheHiddenByLock[i] = YES;
+if (i == GHCFActiveAppIndex) GHCFHostedHiddenByLock = YES;
+char hbuf[128];
+if (GHCFCacheMinimized[i]) {
+snprintf(hbuf, sizeof(hbuf), "v68 peek hidden on lock %s", GHCFCacheBundleIDs[i]);
+} else {
+snprintf(hbuf, sizeof(hbuf), "v57 hosted window hidden on lock %s", GHCFCacheBundleIDs[i]);
+}
+GHCFLogLine(hbuf);
+}
+}
+if (!anyScene) {
+GHCFLogLine("v57 lock state locked, no hosted scene");
+}
+// v43.7：锁屏也把恢复动画的临时窗藏起来——它在 Alert−1.75 层、全屏，
+// 动画播到一半锁屏会留在锁屏上盖住密码键盘（1.0.64 小卡盖密码键盘边列数字
+// 同类问题）。解锁不显示回来（动画 0.7 秒早播完了；completion 里本来就会
+// hidden=YES 并把指针清 nil）。
+if (GHCFSnapshotAnimWindow) GHCFSnapshotAnimWindow.hidden = YES;
+GHCFUpdateDimOverlay();
+} else {
+GHCFScreenLocked = NO;
+// v53：解鎖把藏起來的窗顯示回來（HiddenByLock 認），收著的窗不顯示出來
+//（還是一截 peek）。v43.7：推前景只給看得見的窗——收著的 peek 不在解鎖時推
+//（主线程一次推 25 个跨进程调用会卡住密码键盘，28.log 定案）；peek 交给
+// 2 秒一轮的看门狗（contentState=1 推前景、0 盖占位），解锁后 2 秒内接手。
+BOOL anyRestored = NO;
+for (int i = 0; i < GHCFAppCount; i++) {
+if (GHCFCacheHiddenByLock[i] && GHCFCacheWindows[i]) {
+GHCFCacheWindows[i].hidden = NO;
+GHCFCacheHiddenByLock[i] = NO;
+if (i == GHCFActiveAppIndex) GHCFHostedHiddenByLock = NO;
+anyRestored = YES;
+char hbuf[128];
+snprintf(hbuf, sizeof(hbuf), "v57 hosted window shown on unlock %s", GHCFCacheBundleIDs[i]);
+GHCFLogLine(hbuf);
+}
+// v43.7：只给看得见的窗推前景（见上面）。
+if (!GHCFCacheWindows[i] || GHCFCacheWindows[i].hidden) continue;
+if (GHCFCacheScenes[i]) {
+char fbuf[160];
+snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on unlock %s", GHCFCacheBundleIDs[i]);
+GHCFPushForegroundCachedSceneAtIndex(i, fbuf);
+anyRestored = YES;
+// v72：解锁推完前景、scene 还没就绪——盖占位（不要有任何 App 解锁后是黑窗；
+// 看门狗会在就绪时拿掉占位）。
+@try {
+NSUInteger unlockCS = [GHCFCacheScenes[i] contentState];
+if (unlockCS != 2) GHCFShowPlaceholderForIndex(i);
+} @catch (NSException *e) {
+(void)e;
+}
+}
+}
+if (!anyRestored) {
+GHCFLogLine("v57 lock state unlocked");
+}
+GHCFUpdateDimOverlay();
+}
+});
+if (lockNotifyResult == 0) {
+GHCFLogLine("v57 lockstate notify registered");
+} else {
+GHCFLogLine("v57 lockstate notify register failed");
+}
+// v43.5：鍵盤橋接——App 行程的鍵盤助手（GHCFKeyboardHelper）收到
+// 鍵盤彈出／收起就寫 kbNotifyInfo（"<包名>|<鍵盤高>"）再 notify_post
+// Darwin 通知；SpringBoard 側用 notify_register_dispatch 接（跟鎖屏
+// 同一寫法；不要用 CFNotificationCenterAddObserver，會凍住 SpringBoard）。
+// 收到就走上面共用邏輯（內彈出上移／外彈出關窗／橫屏放大）。
+int kbShowToken = 0;
+int kbShowResult = notify_register_dispatch("com.guhailong.fly.keyboardWillShow", &kbShowToken, dispatch_get_main_queue(), ^(int token) {
+(void)token;
+char *info = GHCFReadPrefsCString("kbNotifyInfo");
+if (!info) return;
+char bid[128] = {0};
+int height = 0;
+if (sscanf(info, "%127[^|]|%d", bid, &height) == 2) {
+[GHCFLauncherShared ghcfHandleKeyboardShowHeight:(CGFloat)height bundleID:bid];
+}
+free(info);
+});
+if (kbShowResult == 0) {
+GHCFLogLine("v43.5 keyboard show notify registered");
+} else {
+GHCFLogLine("v43.5 keyboard show notify register failed");
+}
+int kbHideToken = 0;
+int kbHideResult = notify_register_dispatch("com.guhailong.fly.keyboardDidHide", &kbHideToken, dispatch_get_main_queue(), ^(int token) {
+(void)token;
+char *info = GHCFReadPrefsCString("kbNotifyInfo");
+if (!info) return;
+char bid[128] = {0};
+if (sscanf(info, "%127[^|]|%*d", bid) == 1) {
+[GHCFLauncherShared ghcfHandleKeyboardHideBundleID:bid];
+}
+free(info);
+});
+if (kbHideResult == 0) {
+GHCFLogLine("v43.5 keyboard hide notify registered");
+} else {
+GHCFLogLine("v43.5 keyboard hide notify register failed");
+}
+// v43.26：helper 載入標記——四個通知（兩個 bid × 兩個後綴），收到就把
+// kbHelperLoaded-<bid> 寫進共用 prefs，狀態頁就看得到（見
+// GHCFRegisterHelperLoadedNotify）。
+GHCFRegisterHelperLoadedNotify("com.tencent.xin", "helperLoaded");
+GHCFRegisterHelperLoadedNotify("com.tencent.xin", "helperAlive");
+GHCFRegisterHelperLoadedNotify("com.tencent.mqq", "helperLoaded");
+GHCFRegisterHelperLoadedNotify("com.tencent.mqq", "helperAlive");
+// v43.13：設定變更通知——設定頁帶 PostNotification 的行一改就發
+// com.guhailong.fly.prefschanged（Darwin 通知，跟鎖屏／鍵盤
+// 同一寫法；不要用 CFNotificationCenterAddObserver，會凍住 SpringBoard）。
+int prefsChangedResult = notify_register_dispatch("com.guhailong.fly.prefschanged", &prefsChangedToken, dispatch_get_main_queue(), ^(int token) {
+(void)token;
+// v43.14：改边立刻生效（其二）——edgeSwipeSide 一改就发 prefschanged，
+// 这里直接把感应带跟到新边（ recognizer 的 edges 一起改）；不用另加通知，
+// 复用 v43.13 已有的这一条注册。
+GHCFUpdateStripPosition();
+// v43.16 C：任務欄位置／透明度／大小一改就重刷（新三行都帶 PostNotification）；
+// v43.21：樣式也一樣（taskbarStyle 行帶 PostNotification，切換立刻生效）。
+GHCFUpdateTaskbar();
+// v43.43：觸發鈕開關一改立刻生效（不用等 2 秒 tick）。
+GHCFApplyFlyTriggerButtonEnabled();
+});
+if (prefsChangedResult == 0) {
+GHCFLogLine("v43.13 prefsChanged notify registered");
+} else {
+GHCFLogLine("v43.13 prefsChanged notify register failed");
+}
+// v42：鍵盤監聽（NSNotificationCenter，不是被禁的
+// CFNotificationCenterAddObserver；探針：鍵盤通知由 App 行程發，
+// 可能到不了 SpringBoard——邏輯已寫好，收到了就上移、收起回原位）。
+[[NSNotificationCenter defaultCenter] addObserver:GHCFLauncherShared selector:@selector(handleKeyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+[[NSNotificationCenter defaultCenter] addObserver:GHCFLauncherShared selector:@selector(handleKeyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+GHCFLogLine("v57 keyboard observers added");
+// v42：電量監控開（低電量自動收窗讀 batteryLevel 用）。
+[[UIDevice currentDevice] setBatteryMonitoringEnabled:YES];
+GHCFLogLine("v57 battery monitoring enabled");
+// v42：底部任務欄——開關開著就建（2 秒 tick 也會補建，
+// 所以設定改了不用 respring；v53：懸浮球已整個拿掉）。
+if (GHCFReadTaskbarEnabled()) GHCFBuildTaskbarIfNeeded();
+// v42：重啟後自動恢復浮窗（開關預設開）——scene 撐不過重啟，
+// 恢復是重建 scene 重新開 App，不是接續舊 scene；
+// 讀 restoreWindows 清單（"bundleID|x,y,w,h"），隔 0.6 秒一個輪流開
+//（位置存在清單裡，開窗時 buildHostedWindow 會照恢復幾何放；
+// 現在只開浮窗，不恢復 peek——peek 是收起態，重開意義不大）。
+// v53：分屏關著時不恢復浮窗（開關關了重啟也不該把窗開回來）。
+if (GHCFReadEnabled() && GHCFReadRestoreWindowsAfterRespring()) {
+NSArray *restoreList = GHCFReadIDList("restoreWindows");
+NSInteger restoreCount = (NSInteger)[restoreList count];
+if (restoreCount > 0) {
+char rbuf[128];
+snprintf(rbuf, sizeof(rbuf), "v57 restore after respring %d windows", (int)restoreCount);
+GHCFLogLine(rbuf);
+for (NSInteger ri = 0; ri < restoreCount; ri++) {
+NSString *entry = [restoreList objectAtIndex:ri];
+NSString *sep = [NSString stringWithCString:"|" encoding:NSUTF8StringEncoding];
+NSArray *parts = [entry componentsSeparatedByString:sep];
+if ([parts count] < 2) continue;
+NSString *bid = [parts objectAtIndex:0];
+double delay = 0.6 * (double)(ri + 1);
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+char nameBuf[128];
+GHCFAppNameForBundleID([bid UTF8String], nameBuf, sizeof(nameBuf));
+char nbuf[192];
+snprintf(nbuf, sizeof(nbuf), "v57 restore launch %s", [bid UTF8String]);
+GHCFLogLine(nbuf);
+[GHCFLauncherShared launchHostedApp:[bid UTF8String] name:nameBuf];
+});
+}
+}
+}
+// v42：2 秒定時 tick（任務欄/電量/配對/啟用開關）——
+// 設定改了 2 秒內生效，不用 respring。
+// v53：啟用開關跟進一次（關著就藏鈕／收窗／藏感應帶；開著恢復正常）。
+GHCFApplyEnabledState();
+GHCFSchedulePeriodicTick();
+GHCFLogLine("v57 periodic tick scheduled");
+// v43.28：激活码检查从这里启动（setup 跑起来之后、异步读名单；
+// 绝不在 %ctor 里跑——1.0.102 的教训）。
+GHCFActivationCheckStart();
+}
