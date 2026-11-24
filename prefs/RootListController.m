@@ -71,9 +71,8 @@ static BOOL GHCFPrefsBool(const char *key, BOOL defaultValue) {
 }
 
 // ChinaFly 1.0.1: 讀舊分屏域的 enabled 鍵（休眠提示用；跟 dylib 的
-// GHCFReadOldSplitscreenEnabled 同一套做法）。舊插件開著
-// 時 China Fly 休眠，提示只反映舊開關的狀態——關掉舊開關後提示消失，
-// 但 dylib 還要 respring 一次才會醒。
+// GHCFReadOldSplitscreenEnabled 同一套做法）。1.0.3 起提示條件改成
+// 開關開著 AND 舊 dylib 文件還在（見 GHCFPrefsShouldDormantForOldSplitscreen）。
 static BOOL GHCFPrefsReadOldSplitscreenEnabled(void) {
     CFStringRef domain = GHCFRuntimeCFString("com.guhailong.splitscreen");
     CFStringRef keyRef = GHCFRuntimeCFString("enabled");
@@ -89,6 +88,23 @@ static BOOL GHCFPrefsReadOldSplitscreenEnabled(void) {
     if (domain) CFRelease(domain);
     if (keyRef) CFRelease(keyRef);
     return out;
+}
+
+// ChinaFly 1.0.3：舊分屏的 dylib 文件還在不在（跟 dylib 那邊同一套：
+// 先查 rootless 路徑 /var/jb/...，再查 /Library/...）。
+static BOOL GHCFPrefsOldSplitscreenDylibExists(void) {
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSString *jbPath = GHCFRuntimeString("/var/jb/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib");
+    NSString *libPath = GHCFRuntimeString("/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib");
+    if (jbPath && [fm fileExistsAtPath:jbPath]) return YES;
+    if (libPath && [fm fileExistsAtPath:libPath]) return YES;
+    return NO;
+}
+// ChinaFly 1.0.3：休眠條件改成「舊開關開著 AND 舊 dylib 文件還在」
+//（跟 dylib 的 GHCFShouldDormantForOldSplitscreen 同一個條件，提示跟
+// dylib 對不上會騙人）。舊包刪了、只剩殘留 prefs 時不再顯示休眠提示。
+static BOOL GHCFPrefsShouldDormantForOldSplitscreen(void) {
+    return GHCFPrefsReadOldSplitscreenEnabled() && GHCFPrefsOldSplitscreenDylibExists();
 }
 
 // 讀一個 prefs 字串（沒設就回 NULL，調用處要 free）。
@@ -493,6 +509,9 @@ static NSArray *GHCFReadCachedApps(void) {
 
 // 菜單項解析：entry 是 bundleID 就找對應 App 名；是顯示名就按名
 // 找 bundleID；都找不到就原樣當顯示名（bid 回 nil，運行時按名找）。
+// ChinaFly 1.0.3：前向聲明（定義在後面，選擇應用那頁用的同一套名字解析）。
+static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid);
+
 static void GHCFResolveMenuEntry(NSString *entry, NSString **outBid, NSString **outName) {
     NSString *bid = nil;
     NSString *name = nil;
@@ -520,7 +539,16 @@ static void GHCFResolveMenuEntry(NSString *entry, NSString **outBid, NSString **
             }
         }
     }
-    if (!name || [name length] == 0) name = entry ? entry : GHCFRuntimeString("");
+    // ChinaFly 1.0.3：拿不到名字時先用選擇應用那頁同一套現解
+    //（localizedName → Info.plist 顯示名 → CFBundleName → 資料夾名），
+    // 絕不直接顯示裸 bundleID（皇上 09:46 的規矩）；proxy 完全拿不到
+    // 才回退到 entry 本身（此時那個 App 根本沒裝上）。
+    if (!name || [name length] == 0) {
+        NSString *key = bid ? bid : entry;
+        NSString *resolved = key ? GHCFPrefsDisplayNameForBundleID(key) : nil;
+        if (resolved && [resolved length] > 0) name = resolved;
+        else name = entry ? entry : GHCFRuntimeString("");
+    }
     if (outBid) *outBid = bid;
     if (outName) *outName = name;
 }
@@ -2291,14 +2319,14 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
                     NSString *txt = [GHCFRuntimeString("iOS ") stringByAppendingString:(ver ? ver : GHCFRuntimeString("?"))];
                     [spec setProperty:txt forKey:GHCFRuntimeString("valueText")];
                 } else if ([vk isEqualToString:GHCFRuntimeString("pluginVersion")]) {
-                    [spec setProperty:GHCFRuntimeString("1.0.2") forKey:GHCFRuntimeString("valueText")];
+                    [spec setProperty:GHCFRuntimeString("1.0.3") forKey:GHCFRuntimeString("valueText")];
                 }
             }
-            // ChinaFly 1.0.1: 舊分屏開著時，第一組（激活授权）下方顯示休眠提示。
+            // ChinaFly 1.0.1: 舊分屏開著時，第一組（激活授权）下方顯示休眠提示；
+            // 1.0.3 改成開關開著 AND 舊 dylib 文件還在才提示（跟 dylib 同條件）。
             // specifiers 每次進頁都重建（viewWillAppear 會 reloadSpecifiers），
-            // 所以重進頁面就重新判斷。提示只反映舊開關——關掉舊分屏後提示消失，
-            // 但 dylib 還要 respring 一次才會醒。
-            if (GHCFPrefsReadOldSplitscreenEnabled()) {
+            // 所以重進頁面就重新判斷。舊包刪了、只剩殘留 prefs 時提示不再出現。
+            if (GHCFPrefsShouldDormantForOldSplitscreen()) {
                 for (PSSpecifier *spec in loaded) {
                     if (spec.cellType == PSGroupCell) {
                         [spec setProperty:GHCFRuntimeString("舊分屏開著，China Fly 休眠中") forKey:GHCFRuntimeString("footerText")];

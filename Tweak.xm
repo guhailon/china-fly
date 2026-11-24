@@ -2471,6 +2471,21 @@ if (domain) CFRelease(domain);
 if (keyRef) CFRelease(keyRef);
 return result;
 }
+// ChinaFly（1.0.3）：舊分屏的 dylib 文件還在不在。先查 rootless 路徑
+// /var/jb/...，再查 /Library/...（跟程式碼裡既有的 rootless-first 寫法一致）。
+static BOOL GHCFReadOldSplitscreenDylibExists(void) {
+NSString *jbPath = [NSString stringWithCString:"/var/jb/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib" encoding:NSUTF8StringEncoding];
+NSString *libPath = [NSString stringWithCString:"/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib" encoding:NSUTF8StringEncoding];
+NSFileManager *fm = [NSFileManager defaultManager];
+if (jbPath && [fm fileExistsAtPath:jbPath]) return YES;
+if (libPath && [fm fileExistsAtPath:libPath]) return YES;
+return NO;
+}
+// ChinaFly（1.0.3）：休眠條件改成「舊開關開著 AND 舊 dylib 文件還在」。
+// 舊包刪了、只剩殘留 prefs（開關還開著）時不再休眠——dylib 一載入就醒。
+static BOOL GHCFShouldDormantForOldSplitscreen(void) {
+return GHCFReadOldSplitscreenEnabled() && GHCFReadOldSplitscreenDylibExists();
+}
 // v53：C5 全屏時觸發鈕自動藏已取消（功能＋設定行都拿掉；鈕永遠顯示）。
 // C6 鍵盤彈出時浮窗自動上移（Keyboard.plist 的 keyboardAvoidEnabled，預設開；
 // 探針：通知可能到不了 SpringBoard，見 §115）。
@@ -10728,7 +10743,7 @@ if (codes) {
 result = 0;
 NSString *wantCode = [NSString stringWithCString:code encoding:NSUTF8StringEncoding];
 for (id entry in codes) {
-if ([entry isKindOfClass:[NSString class]] && wantCode && [(NSString *)entry isEqualToString:wantCode]) {
+if ([entry isKindOfClass:[NSString class]] && wantCode && [(NSString *)entry caseInsensitiveCompare:wantCode] == NSOrderedSame) {
 result = 1;
 break;
 }
@@ -11234,11 +11249,11 @@ if (completion) completion(finalTranslated);
 }
 
 static void GHCFDeferredSetupRun(void) {
-// ChinaFly（1.0.0，防撞）：舊 SeaDragon Split 開著就休眠——只寫一行
-// 日誌，不建鈕、不接手勢、不注入行為；舊插件那邊不動。檢查放在
-// deferred setup 裡建東西之前，絕不在 %ctor 裡同步跑
-//（1.0.102 安全模式循環的教訓）。
-if (GHCFReadOldSplitscreenEnabled()) {
+// ChinaFly（1.0.0，防撞；1.0.3 改成開關開著 AND 舊 dylib 文件還在才休眠）：
+// 舊 SeaDragon Split 開著就休眠——只寫一行日誌，不建鈕、不接手勢、
+// 不注入行為；舊插件那邊不動。檢查放在 deferred setup 裡建東西之前，
+// 絕不在 %ctor 裡同步跑（1.0.102 安全模式循環的教訓）。
+if (GHCFShouldDormantForOldSplitscreen()) {
 GHCFLogLine("ChinaFly dormant, old SeaDragon Split enabled");
 return;
 }
