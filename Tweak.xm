@@ -1292,6 +1292,11 @@ typedef struct { uint32_t val[8]; } GHCFAuditToken;
 // 的排布，中心钮点一下收起启动器。
 - (CGFloat)addDialLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
 - (void)handleDialCenterButton:(UIButton *)sender;
+// ChinaFly（1.0.2，表盤菜單入口 A）：表盤頂上的菜單鈕（App ↔ 菜單動作切換）
+// 與菜單動作鈕、菜單鈕工廠。
+- (UIButton *)arcMenuButtonForMenuIndex:(NSInteger)midx atCenter:(CGPoint)center size:(CGFloat)size action:(SEL)action;
+- (void)handleDialMenuButton:(UIButton *)sender;
+- (void)handleDialMenuActionButton:(UIButton *)sender;
 - (void)handleARCIconLongPress:(UILongPressGestureRecognizer *)recognizer;
 - (void)showNotificationBannerWithText:(const char *)text;
 // v72：showNotificationBannerForName 整个拿掉（皇上：浮窗已打开提示取消）——
@@ -1385,6 +1390,56 @@ static BOOL GHCFBuildingDialIcons = NO;
 static UIColor *GHCFReadDialIconSelectedColor(void);
 static UIColor *GHCFReadDialIconNoneColor(void);
 static UIColor *GHCFReadDialIconEnabledColor(void);
+// ChinaFly（1.0.2，表盤菜單）：33 個菜單項的表（定義在菜單分發器前面，
+// 跟 MenuEdit.plist items 3–35 同順序；identifier 是 key 去掉 menuToggle_
+// 前綴）；表盤菜單模式旗標（開著時表盤排菜單動作，不排 App）。
+typedef struct { const char *identifier; const char *label; const char *symbol; BOOL working; } GHCFMenuItemDef;
+static BOOL GHCFDialMenuMode = NO;
+static int GHCFMenuItemIndexForIdentifier(const char *identifier);
+static NSArray *GHCFEnabledMenuIdentifiers(void);
+void GHCFMenuActionPerform(const char *identifier);
+// ChinaFly（1.0.2，表盤菜單）：33 個菜單項的表——identifier、設定頁標籤、
+// SF Symbol、是否真能做（7 個真能做，其餘 26 個只存開關＋記日誌）。
+// 順序跟 MenuEdit.plist items 3–35 一致；identifier 是 key 去掉
+// menuToggle_ 前綴（智慧型反轉顏色那行 key 是 menuToggle__toggleSmartInvert，
+// 所以 identifier 是 _toggleSmartInvert，跟分發器那邊對得上）。
+// SF Symbol 名字一個一個對過：名字錯了圖就空白，工廠裡拿不到圖會記一行日誌。
+// （定義放這裡：const 陣列不能先暫定定義再定義，表盤那邊先用到它。）
+static const GHCFMenuItemDef GHCFMenuItems[33] = {
+{"ToggleBluetooth", "藍牙", "bluetooth", NO},
+{"ToggleWiFi", "Wi-Fi", "wifi", NO},
+{"ToggleVPN", "VPN", "lock.shield", NO},
+{"ToggleCellularData", "行動數據", "antenna.radiowaves.left.and.right", NO},
+{"ToggleTrueTone", "原彩顯示", "sun.max", NO},
+{"ToggleAirplaneMode", "飛航模式", "airplane", NO},
+{"TogglePersonalHotspot", "個人熱點", "personalhotspot", NO},
+{"ToggleLowPowerMode", "低耗電模式", "battery.25", NO},
+{"ToggleFlashlight", "手電筒", "flashlight.on.fill", YES},
+{"ToggleNightShift", "夜覽", "moon.fill", NO},
+{"_toggleSmartInvert", "智慧型反轉顏色", "circle.lefthalf.filled", NO},
+{"activateLockButton", "鎖定螢幕", "lock.fill", YES},
+{"activateSiri", "Siri", "mic.fill", NO},
+{"decreaseVolume", "降低音量", "speaker.wave.1.fill", YES},
+{"increaseVolume", "提高音量", "speaker.wave.3.fill", YES},
+{"toggleAppLibrary", "App 資源庫", "square.grid.3x3.fill", NO},
+{"toggleAppSwitcher", "App 切換器", "square.stack.3d.up.fill", NO},
+{"toggleCommandAndControl", "語音控制", "waveform", NO},
+{"toggleControlCenter", "控制中心", "switch.2", NO},
+{"toggleLiveSpeech", "即時語音", "person.wave.2", NO},
+{"toggleMute", "靜音", "speaker.slash.fill", NO},
+{"toggleNearbyDeviceControlPicker", "附近裝置控制", "airplayaudio", NO},
+{"toggleNotificationCenter", "通知中心", "bell.fill", NO},
+{"toggleWatchRemoteScreen", "Apple Watch 遠端螢幕", "applewatch", NO},
+{"toggleQuickNote", "快速備忘錄", "note.text", NO},
+{"toggleDock", "Dock", "dock.rectangle", NO},
+{"ToggleLocation", "定位服務", "location.fill", NO},
+{"takeScreenshot", "截圖", "camera.viewfinder", YES},
+{"takeScreenshotAndEdit", "截圖並編輯", "square.and.pencil", YES},
+{"ToggleAutoBrightness", "自動亮度", "sun.max.fill", NO},
+{"ToggleDND", "勿擾模式", "moon.zzz.fill", NO},
+{"screenshotToPasteboard", "截圖到剪貼簿", "doc.on.clipboard", YES},
+{"screenshotRegion", "區域截圖", "crop", NO},
+};
 static void GHCFDialRefreshIconRings(void) {
 if (!GHCFDialButtons || !GHCFDialRadii || !GHCFDialAngles) return;
 NSUInteger n = [GHCFDialButtons count];
@@ -1408,13 +1463,19 @@ if (!iconView) continue;
 UIColor *ring = nil;
 CGFloat width = 1.0;
 CGFloat alpha = 0.35;
-if (i == best) {
+// ChinaFly（1.0.2，表盤菜單）：菜單模式下 tag 是菜單下標（0–32），不是
+// App 下標——不能拿它查 GHCFCacheWindows；灰掉的（enabled=NO）永遠只描
+// 淡圈，不搶選中圈。
+BOOL menuGrey = (GHCFDialMenuMode && !btn.enabled);
+if (menuGrey) {
+ring = GHCFReadDialIconNoneColor();
+} else if (i == best) {
 ring = GHCFReadDialIconSelectedColor();
 width = 2.5;
 alpha = 1.0;
 } else {
 NSInteger tag = btn.tag;
-BOOL isOpen = (tag >= 0 && tag < GHCFAppCount && GHCFCacheWindows[tag] && !GHCFCacheWindows[tag].hidden);
+BOOL isOpen = (!GHCFDialMenuMode && tag >= 0 && tag < GHCFAppCount && GHCFCacheWindows[tag] && !GHCFCacheWindows[tag].hidden);
 if (isOpen) {
 ring = GHCFReadDialIconEnabledColor();
 width = 2.0;
@@ -4694,8 +4755,9 @@ if (image) [GHCFFlyTriggerButton setImage:image forState:UIControlStateNormal];
 static BOOL GHCFAppliedEnabledState = NO;
 static BOOL GHCFAppliedEnabledValue = NO;
 // ChinaFly 1.0.0：激活码锁（定义在这里，GHCFApplyEnabledState 和下面
-// %ctor 后的激活模块共用）——锁住时分屏开关就当关着。跟旧分屏同一套
-// 码表（拉同一份线上的 codes.json），但实现、键、通知名全用自己的。
+// %ctor 后的激活模块共用）——锁住时分屏开关就当关着。机制跟旧分屏 1.0.103
+// 那套一样；码表是 China Fly 自己的（1.0.2 起不再跟旧分屏共用），
+// 拉线上的 codes-fly.json；实现、键、通知名全用自己的。
 static BOOL GHCFActivationLocked = NO;
 // v43.43（1.0.115，觸發鈕開關）：顯示開關跟進（tick 每 2 秒跑一次＋
 // prefschanged 立刻跑一次）。關→藏鈕；開→只在分屏開著、表盤沒藏
@@ -8729,6 +8791,8 @@ GHCFDialHidFlyTriggerButton = NO;
 }
 // v43.37（1.0.110，扇形轉盤）：轉盤狀態清空——圖標按鈕跟著舊窗走，
 // 靜態陣列不留著它們（不然每次打開都漏 25 顆按鈕）；弱引用跟著歸 nil。
+// ChinaFly（1.0.2）：菜單模式也清掉，下次打開一律先是 App。
+GHCFDialMenuMode = NO;
 GHCFDialButtons = nil;
 GHCFDialRadii = nil;
 GHCFDialAngles = nil;
@@ -8925,8 +8989,21 @@ if (launcherStyle == 1) {
 [self addTileLauncherIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
 } else if (launcherStyle == 6) {
 // v43.42（1.0.115，表盘启动器）：第 7 档；表盘模式关了就回落圆环。
+// ChinaFly（1.0.2，表盤菜單）：菜單模式時排已開的菜單動作（33 個，
+// 開關決定出不出來；全關了就回 App，不留空表盤）。
 if (GHCFReadDialModeEnabled()) {
+if (GHCFDialMenuMode) {
+NSArray *menuIDs = GHCFEnabledMenuIdentifiers();
+if (menuIDs && [menuIDs count] > 0) {
+[self addDialLauncherIconsForBids:menuIDs iconSize:GHCFReadDialIconSize() action:@selector(handleDialMenuActionButton:)];
+} else {
+GHCFLogLine("ChinaFly dial menu empty, all toggles off, back to apps");
+GHCFDialMenuMode = NO;
 [self addDialLauncherIconsForBids:ordered iconSize:GHCFReadDialIconSize() action:@selector(handleAppButton:)];
+}
+} else {
+[self addDialLauncherIconsForBids:ordered iconSize:GHCFReadDialIconSize() action:@selector(handleAppButton:)];
+}
 } else {
 [self addRadialARCIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
 }
@@ -9587,6 +9664,20 @@ const char *bid = [(NSString *)item UTF8String];
 if (!bid || bid[0] == '\0') continue;
 double angle = (count == 1) ? (lo + hi) / 2.0 : lo + step * (double)j;
 CGPoint p = CGPointMake(center.x + radius * cos(angle), center.y + radius * sin(angle));
+// ChinaFly（1.0.2，表盤菜單）：菜單模式時 bids 其實是菜單 identifier
+//（GHCFEnabledMenuIdentifiers 來的），按菜單表排，不走 App 那條路。
+if (GHCFDialMenuMode) {
+int midx = GHCFMenuItemIndexForIdentifier(bid);
+if (midx < 0) continue;
+UIButton *btn = [self arcMenuButtonForMenuIndex:midx atCenter:p size:icon action:action];
+[GHCFLauncherContentView addSubview:btn];
+[GHCFDialButtons addObject:btn];
+[GHCFDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
+[GHCFDialAngles addObject:[NSNumber numberWithDouble:angle]];
+CGFloat bottom = p.y + icon / 2.0;
+if (bottom > maxBottom) maxBottom = bottom;
+continue;
+}
 char name[128];
 GHCFAppNameForBundleID(bid, name, sizeof(name));
 NSInteger tag = GHCFAppIndexForBundleID(bid);
@@ -9621,6 +9712,34 @@ centerBtn.layer.masksToBounds = YES;
 centerBtn = [self arcRadialGearButtonAtCenter:center size:76.0];
 }
 [GHCFLauncherContentView addSubview:centerBtn];
+// ChinaFly（1.0.2，表盤菜單入口 A）：表盤頂上一個菜單鈕，點一下在 App
+// 和菜單動作之間切（rebuildARCContent 重建內容，開關／排序下次打開就
+// 生效，不用 respring）。放屏幕頂中央（表盤圓盤上方、劉海下面），
+// 居中圓盤和扇形兩種形態都不撞圖標。圖標走 SF Symbol；符號拿不到就
+// 寫字（MENU／APPS），不留空白鈕。
+{
+UIButton *menuBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+CGFloat mSize = 44.0;
+menuBtn.frame = CGRectMake(screenW / 2.0 - mSize / 2.0, topInset + 18.0, mSize, mSize);
+menuBtn.layer.cornerRadius = mSize / 2.0;
+menuBtn.layer.masksToBounds = YES;
+menuBtn.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.5];
+menuBtn.tintColor = [UIColor whiteColor];
+const char *symName = GHCFDialMenuMode ? "square.grid.2x2" : "list.bullet";
+UIImage *symImg = [UIImage systemImageNamed:[NSString stringWithCString:symName encoding:NSUTF8StringEncoding]];
+if (symImg) {
+[menuBtn setImage:symImg forState:UIControlStateNormal];
+} else {
+char mbuf[96];
+snprintf(mbuf, sizeof(mbuf), "ChinaFly dial menu toggle symbol %s nil", symName);
+GHCFLogLine(mbuf);
+[menuBtn setTitle:[NSString stringWithCString:(GHCFDialMenuMode ? "APPS" : "MENU") encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
+[menuBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+menuBtn.titleLabel.font = [UIFont boldSystemFontOfSize:9];
+}
+[menuBtn addTarget:self action:@selector(handleDialMenuButton:) forControlEvents:UIControlEventTouchUpInside];
+[GHCFLauncherContentView addSubview:menuBtn];
+}
 {
 char sbuf[160];
 snprintf(sbuf, sizeof(sbuf), "v43.42 dial icons=%d size=%d rings=%d center=%d,%d centered=%d", (int)total, (int)icon, rings, (int)center.x, (int)center.y, centered ? 1 : 0);
@@ -9634,6 +9753,41 @@ return maxBottom + 12.0;
 - (void)handleDialCenterButton:(UIButton *)sender {
 (void)sender;
 [self dismissLauncher];
+}
+
+// ChinaFly（1.0.2，表盤菜單入口 A）：表盤頂上的菜單鈕，點一下在 App
+// 和菜單動作之間切（rebuildARCContent 重建內容；開關／排序下次打開就
+// 生效，不用 respring）。關啟動器時模式清掉（見 dismissLauncher），
+// 下次打開一律先是 App。
+- (void)handleDialMenuButton:(UIButton *)sender {
+(void)sender;
+GHCFDialMenuMode = !GHCFDialMenuMode;
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly dial menu mode %d", GHCFDialMenuMode ? 1 : 0);
+GHCFLogLine(buf);
+[self rebuildARCContent];
+}
+
+// ChinaFly（1.0.2，表盤菜單）：菜單動作鈕。灰掉的點不到（enabled=NO，
+// 這裡再守一道 working）。7 個真能做的走 GHCFMenuActionPerform。
+// 截圖三件先收啟動器再做——截圖要等窗收掉（0.45 秒，收窗動畫 0.35 秒＋
+// 餘量），不然快照裡有表盤自己；鎖屏／手電筒／音量收掉就做。
+- (void)handleDialMenuActionButton:(UIButton *)sender {
+NSInteger idx = sender.tag;
+if (idx < 0 || idx >= 33) return;
+const GHCFMenuItemDef *def = &GHCFMenuItems[idx];
+if (!def || !def->working) return;
+const char *ident = def->identifier;
+BOOL isShot = (strcmp(ident, "takeScreenshot") == 0 || strcmp(ident, "takeScreenshotAndEdit") == 0 || strcmp(ident, "screenshotToPasteboard") == 0);
+NSString *identStr = [NSString stringWithCString:ident encoding:NSUTF8StringEncoding];
+[self dismissLauncher];
+if (isShot) {
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.45 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+GHCFMenuActionPerform([identStr UTF8String]);
+});
+} else {
+GHCFMenuActionPerform(ident);
+}
 }
 
 // v43.37（1.0.110，扇形轉盤，第 6 檔 trollfan 才裝；1.0.107 e4af0c0 拿回來）：
@@ -10239,6 +10393,63 @@ lp.minimumPressDuration = 0.5;
 return btn;
 }
 
+// ChinaFly（1.0.2，表盤菜單）：菜單動作鈕——結構跟 arcIconButtonForBundleID
+// 一樣（iconView 是 subviews[0]，GHCFDialRefreshIconRings 描圈認它；
+// 名字標籤在下面，字 10pt）。圖標走 SF Symbol（白字、圓底）；符號拿不到
+// 就記一行日誌、用標籤前兩個字當圖（不留空白鈕）。不能用的（working=NO）
+// 灰掉：enabled=NO＋alpha 0.35，點不到。長按不裝（置頂只對 App 有意義）。
+- (UIButton *)arcMenuButtonForMenuIndex:(NSInteger)midx atCenter:(CGPoint)center size:(CGFloat)size action:(SEL)action {
+UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+btn.frame = CGRectMake(center.x - size / 2.0, center.y - size / 2.0, size, size);
+btn.tag = midx;
+[btn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+[btn addTarget:self action:@selector(handleLauncherIconTouchDown:) forControlEvents:UIControlEventTouchDown];
+[btn addTarget:self action:@selector(handleLauncherIconTouchCancel:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+const GHCFMenuItemDef *def = (midx >= 0 && midx < 33) ? &GHCFMenuItems[midx] : NULL;
+const char *label = (def && def->label) ? def->label : "";
+const char *symbol = (def && def->symbol) ? def->symbol : "";
+BOOL working = (def && def->working) ? YES : NO;
+UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, size, size)];
+iconView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.45];
+iconView.layer.cornerRadius = size / 2.0;
+iconView.layer.masksToBounds = YES;
+iconView.contentMode = UIViewContentModeCenter;
+UIImage *symImg = nil;
+if (symbol[0] != '\0') {
+symImg = [UIImage systemImageNamed:[NSString stringWithCString:symbol encoding:NSUTF8StringEncoding]];
+}
+if (symImg) {
+iconView.image = symImg;
+iconView.tintColor = [UIColor whiteColor];
+} else {
+char sbuf[160];
+snprintf(sbuf, sizeof(sbuf), "ChinaFly menu symbol %s nil, fallback to label", symbol);
+GHCFLogLine(sbuf);
+NSString *labelStr = [NSString stringWithCString:label encoding:NSUTF8StringEncoding];
+NSUInteger take = ([labelStr length] > 2) ? 2 : [labelStr length];
+UILabel *fallback = [[UILabel alloc] initWithFrame:iconView.bounds];
+fallback.text = [labelStr substringToIndex:take];
+fallback.font = [UIFont boldSystemFontOfSize:13];
+fallback.textColor = [UIColor whiteColor];
+fallback.textAlignment = NSTextAlignmentCenter;
+[iconView addSubview:fallback];
+}
+[btn addSubview:iconView];
+if (label[0] != '\0') {
+UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(-8, size + 2, size + 16, 14)];
+nameLabel.text = [NSString stringWithCString:label encoding:NSUTF8StringEncoding];
+nameLabel.textColor = [UIColor whiteColor];
+nameLabel.font = [UIFont systemFontOfSize:10];
+nameLabel.textAlignment = NSTextAlignmentCenter;
+[btn addSubview:nameLabel];
+}
+if (!working) {
+btn.enabled = NO;
+btn.alpha = 0.35;
+}
+return btn;
+}
+
 // v41：長按 ARC 圖標——置頂/取消置頂（置頂的固定在最上面一段，
 // 存 prefs 鍵 pinnedAppIDs；震動一下回饋；重建內容即時生效）。
 - (void)handleARCIconLongPress:(UILongPressGestureRecognizer *)recognizer {
@@ -10434,8 +10645,8 @@ GHCFDeferredSetupRun();
 
 // ChinaFly 1.0.0：激活码（皇上 2026-11-23 定加进 1.0.0，照旧分屏
 // 1.0.103 那套）——设置里输码，输对才能用插件；输错／没输锁住，
-// 只藏窗、不崩、不进安全模式。码表跟旧分屏用同一套：拉同一份线上的
-// codes.json（https://guhailong-repo.pages.dev/license/codes.json），
+// 只藏窗、不崩、不进安全模式。码表是 China Fly 自己的（1.0.2 起不再跟旧分屏
+// 共用）：拉线上的 codes-fly.json（https://guhailong-repo.pages.dev/license/codes-fly.json），
 // 码只放名单文件，不要写死在代码里。名单是异步抓的（NSURLSession，
 // 3 秒超时），抓不到不锁死；判断只在 setup 跑起来之后做，绝不在
 // %ctor 里同步跑（1.0.102 就是 %ctor 同步跑 setup 进的安全模式）。
@@ -10490,7 +10701,7 @@ free(code);
 if (completion) completion(0);
 return;
 }
-NSString *urlString = [NSString stringWithCString:"https://guhailong-repo.pages.dev/license/codes.json" encoding:NSUTF8StringEncoding];
+NSString *urlString = [NSString stringWithCString:"https://guhailong-repo.pages.dev/license/codes-fly.json" encoding:NSUTF8StringEncoding];
 NSURL *url = [NSURL URLWithString:urlString];
 if (!url) {
 free(code);
@@ -10647,13 +10858,34 @@ GHCFLogChinaFlyUnwiredBool("splitTranslation", YES);
 // @try/@catch，絕不能因為一個動作閃退）。不連結私有框架：
 // AVCaptureDevice／MPVolumeView 都走 NSClassFromString＋objc_msgSend
 // 運行時拿；鎖屏走 dlsym 找 GSEventLockDevice，找不到就只記日誌。
-// 目前沒有啟動器內的調用點（表盤只排 App，菜單 UI 在設定頁那邊）：
-// GHCFMenuActionPerform 先備著，等菜單 UI 接線再調。
+// ChinaFly（1.0.2）：表盤菜單已接線——handleDialMenuActionButton:
+// 調 GHCFMenuActionPerform（灰掉的按鈕 enabled=NO，點不到，
+// 這裡也再守一道 working 判斷）。
+// ChinaFly（1.0.2，表盤菜單）：33 個菜單項的表 GHCFMenuItems 定義在
+// 表盤靜態區前面（const 陣列不能先暫定定義再定義）；下面只留兩個 helper。
 static BOOL GHCFMenuToggleEnabled(const char *identifier) {
 if (!identifier || identifier[0] == '\0') return NO;
 char key[96];
 snprintf(key, sizeof(key), "menuToggle_%s", identifier);
 return GHCFReadPrefsBool(key, YES);
+}
+static int GHCFMenuItemIndexForIdentifier(const char *identifier) {
+if (!identifier || identifier[0] == '\0') return -1;
+for (int i = 0; i < 33; i++) {
+if (strcmp(identifier, GHCFMenuItems[i].identifier) == 0) return i;
+}
+return -1;
+}
+// 表盤菜單要排的 identifier 清單（按 MenuEdit.plist 順序，只留開關開著的；
+// 開關的真正作用就是這一項出不出現在菜單裡，預設全開就是 33 個全列）。
+static NSArray *GHCFEnabledMenuIdentifiers(void) {
+NSMutableArray *out = [NSMutableArray array];
+for (int i = 0; i < 33; i++) {
+if (GHCFMenuToggleEnabled(GHCFMenuItems[i].identifier)) {
+[out addObject:[NSString stringWithCString:GHCFMenuItems[i].identifier encoding:NSUTF8StringEncoding]];
+}
+}
+return out;
 }
 static void GHCFMenuActionLogOnly(const char *identifier) {
 char buf[192];
@@ -10820,7 +11052,7 @@ GHCFLogLine("ChinaFly menu screenshotToPasteboard copied");
 }
 // 分發器：33 個 identifier 各走自己的處理函數；未知 identifier 只記日誌。
 // 整個分發包在 @try/@catch 裡，任何一個動作都不能閃退 SpringBoard。
-// 非 static（對外 API）：目前沒有啟動器內的調用點，等菜單 UI 接線再調。
+// 非 static（對外 API）：1.0.2 起表盤菜單調它（handleDialMenuActionButton:）。
 void GHCFMenuActionPerform(const char *identifier) {
 if (!identifier || identifier[0] == '\0') return;
 @try {

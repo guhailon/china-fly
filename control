@@ -1,5 +1,5 @@
 Package: com.guhailong.fly
 Name: China Fly
-Version: 1.0.1
+Version: 1.0.2
 Architecture: iphoneos-arm64
 Description: China Fly — TrollOpen-style floating-window splitscreen (original code). SpringBoard only, rootless.

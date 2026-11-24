@@ -1800,7 +1800,7 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 // 舊頁（ARC、ARCButtons、Floating、Window、Shadow、Scheduler、Banner、
 // GestureCustom、Keyboard、Info、Status、Other）已刪，不在白名單裡，
 // 點了也不會載。Activation 是 1.0.0 新加的激活頁（照舊分屏 1.0.103
-// 那套，碼表跟舊分屏用同一份線上的 codes.json）。
+// 那套，碼表是 China Fly 自己的 codes-fly.json（1.0.2 起不再跟舊分屏共用）。
 static BOOL GHCFPrefsIsKnownPlistName(const char *name) {
     if (!name || name[0] == '\0') return NO;
     static const char *known[] = {"ActionButtonLongPress", "ActionButtonTap", "Activation", "Dial", "FloatingIcon", "MenuEdit", "Root", "SplitSettings", "Trigger"};
@@ -2138,9 +2138,9 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 
 // China Fly 1.0.0：狀態頁（GHCFStatusListController）與鍵盤助手標記
 //（GHCFKbHelperMarkersText）已整段拿掉。激活頁（下面兩類）是 1.0.0
-// 新加的（皇上 21:34 定，照舊分屏 1.0.103 那套；碼表跟舊分屏用同一份
-// 線上的 codes.json，實現、鍵、通知名全用 China Fly 自己的）。
-// 除了共用這份碼表，China Fly 別的什麼都不碰舊分屏（皇上 21:36 定）。
+// 新加的（皇上 21:34 定，照舊分屏 1.0.103 那套；碼表是 China Fly 自己的
+// codes-fly.json（1.0.2 起不再跟舊分屏共用），實現、鍵、通知名全用 China Fly 自己的）。
+// 除了碼表是自己的，China Fly 別的什麼都不碰舊分屏（皇上 21:36 定）。
 
 @interface GHCFActivationRowCell : PSTableCell
 @end
@@ -2291,7 +2291,7 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
                     NSString *txt = [GHCFRuntimeString("iOS ") stringByAppendingString:(ver ? ver : GHCFRuntimeString("?"))];
                     [spec setProperty:txt forKey:GHCFRuntimeString("valueText")];
                 } else if ([vk isEqualToString:GHCFRuntimeString("pluginVersion")]) {
-                    [spec setProperty:GHCFRuntimeString("1.0.1") forKey:GHCFRuntimeString("valueText")];
+                    [spec setProperty:GHCFRuntimeString("1.0.2") forKey:GHCFRuntimeString("valueText")];
                 }
             }
             // ChinaFly 1.0.1: 舊分屏開著時，第一組（激活授权）下方顯示休眠提示。
