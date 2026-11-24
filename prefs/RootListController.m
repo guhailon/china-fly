@@ -27,6 +27,7 @@
 #import <PhotosUI/PhotosUI.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <objc/message.h>
+#import <objc/runtime.h>
 #import <notify.h>
 
 // 运行时现做一个 NSString（不用写死字串）。
@@ -58,6 +59,27 @@ static BOOL GHCFPrefsBool(const char *key, BOOL defaultValue) {
     CFStringRef keyRef = GHCFRuntimeCFString(key);
     BOOL out = defaultValue;
     if (domain && keyRef) {
+        CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
+        if (v) {
+            if (CFGetTypeID(v) == CFBooleanGetTypeID()) out = CFBooleanGetValue((CFBooleanRef)v);
+            CFRelease(v);
+        }
+    }
+    if (domain) CFRelease(domain);
+    if (keyRef) CFRelease(keyRef);
+    return out;
+}
+
+// ChinaFly 1.0.1: 讀舊分屏域的 enabled 鍵（休眠提示用；跟 dylib 的
+// GHCFReadOldSplitscreenEnabled 同一套做法）。舊插件開著
+// 時 China Fly 休眠，提示只反映舊開關的狀態——關掉舊開關後提示消失，
+// 但 dylib 還要 respring 一次才會醒。
+static BOOL GHCFPrefsReadOldSplitscreenEnabled(void) {
+    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.splitscreen");
+    CFStringRef keyRef = GHCFRuntimeCFString("enabled");
+    BOOL out = NO;
+    if (domain && keyRef) {
+        CFPreferencesAppSynchronize(domain);
         CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
         if (v) {
             if (CFGetTypeID(v) == CFBooleanGetTypeID()) out = CFBooleanGetValue((CFBooleanRef)v);
@@ -1035,6 +1057,69 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
     return icon;
 }
 
+// ChinaFly 1.0.1: .app 資料夾名當顯示名（去 ".app" 後綴）。
+static NSString *GHCFPrefsAppFolderDisplayName(NSString *bundlePath) {
+    if (!bundlePath || [bundlePath length] == 0) return nil;
+    NSString *last = [bundlePath lastPathComponent];
+    if (!last || [last length] == 0) return nil;
+    NSString *suffix = GHCFRuntimeString(".app");
+    if ([last hasSuffix:suffix]) last = [last substringToIndex:([last length] - [suffix length])];
+    if ([last length] == 0) return nil;
+    return last;
+}
+
+// ChinaFly 1.0.1: 從一個 App 的 bundle 路徑讀顯示名：Info.plist
+// CFBundleDisplayName → CFBundleName → .app 資料夾名。
+static NSString *GHCFPrefsDisplayNameFromAppBundlePath(NSString *bundlePath) {
+    if (!bundlePath || [bundlePath length] == 0) return nil;
+    NSString *infoPath = [bundlePath stringByAppendingPathComponent:GHCFRuntimeString("Info.plist")];
+    NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
+    NSString *name = nil;
+    if (info) {
+        name = [info objectForKey:GHCFRuntimeString("CFBundleDisplayName")];
+        if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = [info objectForKey:GHCFRuntimeString("CFBundleName")];
+    }
+    if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = GHCFPrefsAppFolderDisplayName(bundlePath);
+    return name;
+}
+
+// ChinaFly 1.0.1: 選擇應用顯示時的名字解析——緩存名字空了就現解：
+// LSApplicationWorkspace 找該 bundleID 的 proxy：localizedName →
+// Info.plist（bundleURL）CFBundleDisplayName → CFBundleName → .app
+// 資料夾名。proxy 完全拿不到才回 nil（workspace 本身叫不到，實際上
+// 不會發生；此時整頁的圖標機制也一樣拿不到東西）。
+static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
+    if (!bid || [bid length] == 0) return nil;
+    NSString *name = nil;
+    @try {
+        Class wsClass = objc_getClass("LSApplicationWorkspace");
+        if (!wsClass) return nil;
+        SEL defaultSel = sel_registerName("defaultWorkspace");
+        if (!defaultSel || ![wsClass respondsToSelector:defaultSel]) return nil;
+        id workspace = ((id (*)(id, SEL))objc_msgSend)((id)wsClass, defaultSel);
+        if (!workspace) return nil;
+        SEL proxySel = sel_registerName("applicationProxyForIdentifier:");
+        if (!proxySel || ![workspace respondsToSelector:proxySel]) return nil;
+        id proxy = ((id (*)(id, SEL, id))objc_msgSend)(workspace, proxySel, bid);
+        if (!proxy) return nil;
+        SEL nameSel = sel_registerName("localizedName");
+        if (nameSel && [proxy respondsToSelector:nameSel]) name = ((id (*)(id, SEL))objc_msgSend)(proxy, nameSel);
+        if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) {
+            NSString *bundlePath = nil;
+            SEL bundleURLSel = sel_registerName("bundleURL");
+            if (bundleURLSel && [proxy respondsToSelector:bundleURLSel]) {
+                NSURL *bundleURL = ((id (*)(id, SEL))objc_msgSend)(proxy, bundleURLSel);
+                if (bundleURL && [bundleURL isKindOfClass:[NSURL class]]) bundlePath = [bundleURL path];
+            }
+            name = GHCFPrefsDisplayNameFromAppBundlePath(bundlePath);
+        }
+    } @catch (NSException *e) {
+        name = nil;
+    }
+    if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) return nil;
+    return name;
+}
+
 
 @interface GHCFAppPickerListController : PSListController <UISearchBarDelegate>
 @property (nonatomic, strong) UISearchBar *ghcfSearchBar;
@@ -1157,7 +1242,13 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
                     const char *bid = [bidStr UTF8String];
                     if (GHCFFixedIndexForBundleID(bid) >= 0) continue;
                     anyCached = YES;
-                    NSString *label = (nameStr && [nameStr length] > 0) ? nameStr : bidStr;
+                    // ChinaFly 1.0.1: 絕不顯示光禿禿的 bundleID——緩存名字空了就
+                    // 顯示時現解（同一條退路鏈：本地化名 → Info.plist 顯示名 →
+                    // CFBundleName → 資料夾名）。下面那行 bundleID 只在
+                    // LSApplicationWorkspace 本身叫不到時才會走到（此時整頁
+                    // 的圖標機制也一樣拿不到東西，實際上不會發生）。
+                    NSString *label = (nameStr && [nameStr length] > 0) ? nameStr : GHCFPrefsDisplayNameForBundleID(bidStr);
+                    if (!label || [label length] == 0) label = bidStr;
                     PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:label target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:PSSwitchCell edit:nil];
                     NSString *selKey = [GHCFRuntimeString("sel-") stringByAppendingString:bidStr];
                     [spec setProperty:selKey forKey:GHCFRuntimeString("key")];
@@ -2200,7 +2291,19 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
                     NSString *txt = [GHCFRuntimeString("iOS ") stringByAppendingString:(ver ? ver : GHCFRuntimeString("?"))];
                     [spec setProperty:txt forKey:GHCFRuntimeString("valueText")];
                 } else if ([vk isEqualToString:GHCFRuntimeString("pluginVersion")]) {
-                    [spec setProperty:GHCFRuntimeString("1.0.0") forKey:GHCFRuntimeString("valueText")];
+                    [spec setProperty:GHCFRuntimeString("1.0.1") forKey:GHCFRuntimeString("valueText")];
+                }
+            }
+            // ChinaFly 1.0.1: 舊分屏開著時，第一組（激活授权）下方顯示休眠提示。
+            // specifiers 每次進頁都重建（viewWillAppear 會 reloadSpecifiers），
+            // 所以重進頁面就重新判斷。提示只反映舊開關——關掉舊分屏後提示消失，
+            // 但 dylib 還要 respring 一次才會醒。
+            if (GHCFPrefsReadOldSplitscreenEnabled()) {
+                for (PSSpecifier *spec in loaded) {
+                    if (spec.cellType == PSGroupCell) {
+                        [spec setProperty:GHCFRuntimeString("舊分屏開著，China Fly 休眠中") forKey:GHCFRuntimeString("footerText")];
+                        break;
+                    }
                 }
             }
             _specifiers = loaded;

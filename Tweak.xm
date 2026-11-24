@@ -3507,12 +3507,40 @@ return -1;
 // 沒有 QQ／微信／抖音）。只讀列舉，不調 openApplicationWithBundleID
 //（禁區——同步調用會堵主線程 ≥5 秒）。類名運行時查找
 //（objc_getClass + objc_msgSend，不連結私有框架，跟 GHCFAppIcon
-// 同一套寫法），不留 OBJC_CLASS 符號。只留有顯示名稱的 App
-//（allApplications 本來就不含服務；再防一手：bundleID／顯示名為空
-// 的不要）。固定 5 個釘在最前面，其餘按名字排。寫進緩存檔，設定頁
-// 與 ARC 選擇器共用同一份；寫完記一行日誌。
+// 同一套寫法），不留 OBJC_CLASS 符號。顯示名逐個 App 退
+//（localizedName → Info.plist 顯示名 → CFBundleName → 資料夾名；
+// 1.0.1 改：拿不到 localizedName 的 App 不再直接跳過，bundleID
+// 為空的才不要）。固定 5 個釘在最前面，其餘按名字排。寫進緩存檔，
+// 設定頁與 ARC 選擇器共用同一份；寫完記一行日誌。
 // 若 workspace 叫不到／列出來是空的，退回檔案掃描（舊寫法），
 // 選擇器至少不空。列舉方法是探針：QQ／微信出不出來要皇上真機驗才算數。
+// ChinaFly 1.0.1: .app 資料夾名當顯示名（去 ".app" 後綴）。
+static NSString *GHCFAppFolderDisplayName(NSString *bundlePath) {
+if (!bundlePath || [bundlePath length] == 0) return nil;
+NSString *last = [bundlePath lastPathComponent];
+if (!last || [last length] == 0) return nil;
+NSString *suffix = [NSString stringWithCString:".app" encoding:NSUTF8StringEncoding];
+if ([last hasSuffix:suffix]) last = [last substringToIndex:([last length] - [suffix length])];
+if ([last length] == 0) return nil;
+return last;
+}
+// ChinaFly 1.0.1: 從一個 App 的 bundle 路徑讀顯示名：Info.plist
+// CFBundleDisplayName → CFBundleName → .app 資料夾名。
+static NSString *GHCFDisplayNameFromAppBundlePath(NSString *bundlePath) {
+if (!bundlePath || [bundlePath length] == 0) return nil;
+NSString *infoName = [NSString stringWithCString:"Info.plist" encoding:NSUTF8StringEncoding];
+NSString *infoPath = [bundlePath stringByAppendingPathComponent:infoName];
+NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
+NSString *displayKey = [NSString stringWithCString:"CFBundleDisplayName" encoding:NSUTF8StringEncoding];
+NSString *nameKey = [NSString stringWithCString:"CFBundleName" encoding:NSUTF8StringEncoding];
+NSString *name = nil;
+if (info) {
+name = [info objectForKey:displayKey];
+if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = [info objectForKey:nameKey];
+}
+if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = GHCFAppFolderDisplayName(bundlePath);
+return name;
+}
 static void GHCFRefreshInstalledAppListInBackground(void) {
 dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 @try {
@@ -3538,6 +3566,7 @@ allApps = ((id (*)(id, SEL))objc_msgSend)(workspace, allSel);
 if (allApps && [allApps isKindOfClass:[NSArray class]]) {
 SEL bidSel = sel_registerName("bundleIdentifier");
 SEL nameSel = sel_registerName("localizedName");
+SEL bundleURLSel = sel_registerName("bundleURL");
 for (id proxy in allApps) {
 if (!proxy) continue;
 NSString *bid = nil;
@@ -3545,6 +3574,16 @@ NSString *name = nil;
 if (bidSel && [proxy respondsToSelector:bidSel]) bid = ((id (*)(id, SEL))objc_msgSend)(proxy, bidSel);
 if (nameSel && [proxy respondsToSelector:nameSel]) name = ((id (*)(id, SEL))objc_msgSend)(proxy, nameSel);
 if (!bid || ![bid isKindOfClass:[NSString class]] || [bid length] == 0) continue;
+// ChinaFly 1.0.1: localizedName 拿不到就逐個 App 退（Info.plist 顯示名 →
+// CFBundleName → .app 資料夾名），不要直接跳過這個 App。
+if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) {
+NSString *bundlePath = nil;
+if (bundleURLSel && [proxy respondsToSelector:bundleURLSel]) {
+NSURL *bundleURL = ((id (*)(id, SEL))objc_msgSend)(proxy, bundleURLSel);
+if (bundleURL && [bundleURL isKindOfClass:[NSURL class]]) bundlePath = [bundleURL path];
+}
+name = GHCFDisplayNameFromAppBundlePath(bundlePath);
+}
 if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) continue;
 if ([seenBids containsObject:bid]) continue;
 [seenBids addObject:bid];
@@ -3592,7 +3631,8 @@ if (!bid || [bid length] == 0) continue;
 if ([seenBids containsObject:bid]) continue;
 NSString *name = [info objectForKey:displayKey];
 if (!name || [name length] == 0) name = [info objectForKey:nameKey2];
-if (!name || [name length] == 0) name = [appPath lastPathComponent];
+// ChinaFly 1.0.1: 資料夾名去 ".app" 後綴（跟主列舉路徑一致）。
+if (!name || [name length] == 0) name = GHCFAppFolderDisplayName(appPath);
 [seenBids addObject:bid];
 NSDictionary *item = [NSDictionary dictionaryWithObjectsAndKeys:bid, cacheBidKey, name, cacheNameKey, nil];
 [apps addObject:item];

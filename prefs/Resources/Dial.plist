@@ -324,7 +324,7 @@
 			<key>PostNotification</key>
 			<string>com.guhailong.fly.prefschanged</string>
 			<key>cell</key>
-			<string>PSTextFieldCell</string>
+			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#000000</string>
 			<key>defaults</key>
@@ -340,7 +340,7 @@
 			<key>PostNotification</key>
 			<string>com.guhailong.fly.prefschanged</string>
 			<key>cell</key>
-			<string>PSTextFieldCell</string>
+			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#000000</string>
 			<key>defaults</key>
@@ -356,7 +356,7 @@
 			<key>PostNotification</key>
 			<string>com.guhailong.fly.prefschanged</string>
 			<key>cell</key>
-			<string>PSTextFieldCell</string>
+			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#FFFFFF</string>
 			<key>defaults</key>
@@ -372,7 +372,7 @@
 			<key>PostNotification</key>
 			<string>com.guhailong.fly.prefschanged</string>
 			<key>cell</key>
-			<string>PSTextFieldCell</string>
+			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#3D8DFF</string>
 			<key>defaults</key>
@@ -394,7 +394,7 @@
 			<key>PostNotification</key>
 			<string>com.guhailong.fly.prefschanged</string>
 			<key>cell</key>
-			<string>PSTextFieldCell</string>
+			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#FFFFFF</string>
 			<key>defaults</key>
@@ -410,7 +410,7 @@
 			<key>PostNotification</key>
 			<string>com.guhailong.fly.prefschanged</string>
 			<key>cell</key>
-			<string>PSTextFieldCell</string>
+			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#007AFF</string>
 			<key>defaults</key>
@@ -426,7 +426,7 @@
 			<key>PostNotification</key>
 			<string>com.guhailong.fly.prefschanged</string>
 			<key>cell</key>
-			<string>PSTextFieldCell</string>
+			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#8E8E93</string>
 			<key>defaults</key>
