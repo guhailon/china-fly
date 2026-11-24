@@ -1,16 +1,16 @@
 // ChinaFly 1.0.0（2026-11-23）：dylib 側。
-// 底子是 SeaDragon Split 1.0.115（v43.42，頭 653fcaa），包名／prefs 域／
-// 符號前綴全改（com.guhailong.fly、GHCF、ChinaFly）；歌詞播放器、激活、
+// 底子是 舊分屏 1.0.115（v43.42，頭 653fcaa），包名／prefs 域／
+// 符號前綴全改（com.chinafly.fly、CFLY、ChinaFly）；歌詞播放器、激活、
 // 鍵盤助手、kb-probe 已刪。表盤是唯一的啟動器（預設走表盤，舊樣式代碼留著
-// 休眠）；看得見的 UI 照 TrollOpen 影片＋照片重做，看不見的引擎（場景托管、
-// 懸浮窗、觸發器）沿用自己的代碼。TrollOpen 閉源付費：只照影片模仿佈局和
-// 設置項，不抄代碼、不拿素材。日誌前綴 GHCF，新行標 ChinaFly。
+// 休眠）；看得見的 UI 照 參考影片＋照片重做，看不見的引擎（場景托管、
+// 懸浮窗、觸發器）沿用自己的代碼。參考影片 閉源付費：只照影片模仿佈局和
+// 設置項，不抄代碼、不拿素材。日誌前綴 CFLY，新行標 ChinaFly。
 // v43.6 (1.0.81)：恢复黑窗修复——restoreHostedWindow 改尺寸之前先预抓快照（小卡最后一帧活内容），恢复动画优先播这张；改完尺寸再抓是黑的（皇上 2026-11-18 20:37 影片定案）。L4377 任务栏快照／L6410 碎裂退出快照查过：都在改尺寸之前抓，没有同样问题，原样不动。
 // v43.6 (1.0.81)：自選 App 上限 7 個→10 個（皇上 2026-11-18 20:32 點的：7 個不夠，加到 10 個）。
 // v43.5 (1.0.80)：鍵盤設置（皇上 2026-11-17 21:28–21:32 打√：6 鍵盤設置，最後一項）。
 // (a) 設定頁對齊別人那頁：豎屏／橫屏分開內／外彈出、橫屏鍵盤彈起放大浮窗、
 // 橫屏時拖動外置鍵盤（震動那項別人自己說半成品，不做）。舊 keyboardPopupMode
-// 單鍵只當遷移 fallback。(b) 新 dylib GHCFKeyboardHelper 塞進 App 進程：
+// 單鍵只當遷移 fallback。(b) 新 dylib CFLYKeyboardHelper 塞進 App 進程：
 // 橋接鍵盤通知給 SpringBoard（Darwin 通知＋kbNotifyInfo），內彈上移／外彈
 // 關窗／橫屏放大才真正生效；kill switch 開著＋外彈出＋已託管時才移鍵盤窗
 // 到屏幕底部全寬（實驗，預設關）。SpringBoard 側橫屏拖鍵盤探針已刪
@@ -30,7 +30,7 @@
 // 分屏設定頁，要真機驗（落不到就停在設定根目錄，結果記 v43.2 日誌）。
 // ── v43.24 (1.0.99)：嚴格單主窗——分屏配對與三屏／側窗整個拿掉（皇上 2026-11-22 15:46：
 // 只要一個大的浮窗，點到其他都縮小浮窗，跟 FV 一樣）。同一時間只有一個大浮窗；
-// 點開另一個 App 時當前主窗自動縮成小卡（GHCFAutoPeekOtherWindows 本來就這樣做，
+// 點開另一個 App 時當前主窗自動縮成小卡（CFLYAutoPeekOtherWindows 本來就這樣做，
 // 配對與側窗的豁免拿掉後就是完整規則）。邊緣滑動回默認：開啟動器（第 2 下也是）。
 // 拿掉的：分屏配對入口與佈局、分隔線窗與拖動、三屏入口與組合鍵、
 // 側窗分支與側窗設定讀值。
@@ -68,7 +68,7 @@
 // 彈「已複製」，保證一定有可見回饋、連結一定到手。
 // (2) 兩行設定看不到（浮窗退出動畫、啟動器樣式）：出貨包裡兩行結構完整，
 // 手機端設定 App 的每頁快取嫌疑最大。三重保險：兩行複製一份到 Root 主頁
-// （同一 key）；GHCFPlistPageController 學手勢總覽頁，viewWillAppear
+// （同一 key）；CFLYPlistPageController 學手勢總覽頁，viewWillAppear
 // 清 _specifiers 快取重組；頁面載入時記一行 plist 名＋item 數量，下次日誌
 // 直接證明載的是新版還是舊版。
 // (3) 小浮窗切回主窗閃黑邊：恢復那一下 scene 還在準備（contentState=1），
@@ -80,7 +80,7 @@
 // ── v42.28 (1.0.70)：改名＋Telegram 行＋影片 5 項全做（皇上 2026-11-17 10:22「全部」）──
 // (1) 改名 China Fly：插件內（設定入口 label、Root.plist 標題、
 // Status.plist 頁腳）改 China Fly；Sileo 列表名改混合名
-// 「China Fly（顧海龍分屏）」；包名 com.guhailong.fly 不動。
+// 「China Fly（顧海龍分屏）」；包名 com.chinafly.fly 不動。
 // (2) 系統狀態頁「聯繫與源」加 Telegram 交流群行，點了進群
 // （https://t.me/+UaeIYedetWtiZGQ1；打不開就複製連結＋提示，v54 教訓）。
 // (3) 浮窗退出動畫（設定頁選）：靈動島（默認＝現有的彈簧滑出＋淡出）、
@@ -97,7 +97,7 @@
 // 1.0.67 只改了主窗，小窗沒動所以還在。A：小窗改 112×242（寬不變、高 26pt，
 // 寬高比和屏幕一致，內容正好填滿，沒黑邊；小窗像個迷你手機屏，字大 12%）。
 // 記住的尺寸：皇上 20:47 說已經開大過的 App 也要取消——啟動時一次清掉全部
-// 已存的 PeekW/PeekH（寫 0＝沒存過，GHCFResetStoredPeekSizesOnce，照 v53
+// 已存的 PeekW/PeekH（寫 0＝沒存過，CFLYResetStoredPeekSizesOnce，照 v53
 // 自愈的寫法，%ctor 延後塊裡跑），全部回到 112×242；以後想改大再拖。
 // 4 扇以上本來就會等比縮高排布（shrink），242 只讓 4 扇時縮得更多一點，
 // 1–3 扇不影響。
@@ -105,7 +105,7 @@
 // ── v42.26 (1.0.68)：皇上 2026-11-16 20:04 勾中的 4 ──
 // 其他拖動手勢同款不跟手（和 1.0.65 小浮窗下滑同一個根因：
 // translationInView 量在會動的窗／容器上，增量式穩態只有手指一半速度、
-// 走走停停）。四處一起換固定不動的邊條窗（GHCFStripWindow）當參考座標，
+// 走走停停）。四處一起換固定不動的邊條窗（CFLYStripWindow）當參考座標，
 // 只換參考視圖，其餘夾取／門檻邏輯不動：觸發鈕拖動、主浮窗拖動
 // （細條拖窗，最常用）、小窗右下角手柄調尺寸（約 2/3 速度；這正是
 // 項目 4 的測試點，修完請皇上重測）、三屏分隔線（右貼邊時有毛病）。
@@ -125,7 +125,7 @@
 // (2) 小浮窗往下滑不跟手，好像要貼著邊才可以關：1.0.65 的 bug——
 // translationInView:w 量位移，w 是小窗自己（跟著手指走），量出來的
 // 位移被窗的移動吃掉，拖了不跟手、只有快甩才關得了。改拿固定不動的
-// 邊條窗（GHCFStripWindow）當參考座標量手指位置，窗跟著手指走才準；
+// 邊條窗（CFLYStripWindow）當參考座標量手指位置，窗跟著手指走才準；
 // 閾值不變（≥60pt 或 ≥700pt/s 關，否則彈回）。
 // (3) 鎖屏後密碼可以按了，不卡 ✓（1.0.65 藏小卡有效）。
 // (4) 黑 peek 會亮回來，但皇上要全程不黑屏：鎖屏不再把 scene 推回後台
@@ -154,7 +154,7 @@
 //
 // ── v42.22 (1.0.64)：皇上 2026-11-16 13:46 定 ──
 // 小浮窗打叉取消，改 FV 式手勢（推薦版：點小浮窗本身變主窗，往下滑取消）：
-// (1) peek 右上角紅 X 整個拿掉（GHCFPeekCloseButtons、handleDockPeekClose
+// (1) peek 右上角紅 X 整個拿掉（CFLYPeekCloseButtons、handleDockPeekClose
 // 全刪）；點小浮窗本身恢復主窗不變（handleDockPeekTap 走
 // promoteWindowToMainIndex）；點小浮窗外面照常用底下的 App，不攔截。
 // (2) 小浮窗加往下滑手勢取消：點按層上掛 UISwipeGestureRecognizer（只認
@@ -165,9 +165,9 @@
 // 的（retry2 查 contentState=2）；豆包開了又關、連鎖 4 次後，解鎖推前景
 // 的日誌一次都沒有，點開恢復時 contentState=0（全日誌近期唯一一次 0），
 // 隨後卡屏、respring。v63 只在收起那一刻推前景，鎖屏又推後台，解鎖通
-// 知沒送到就一直黑。修法：2 秒 tick 加看門狗（GHCFPeekWatchdogTick），
+// 知沒送到就一直黑。修法：2 秒 tick 加看門狗（CFLYPeekWatchdogTick），
 // 可見窗的 scene 沒就緒（contentState != 2）就再推前景；鎖著時跳過，
-// 不跟鎖屏回調打架；鎖屏旗標 GHCFScreenLocked 由鎖屏回調維護。進程
+// 不跟鎖屏回調打架；鎖屏旗標 CFLYScreenLocked 由鎖屏回調維護。進程
 // 本身死了的 scene 推了也沒用，要關掉重開。卡屏本身日誌定不了機制
 // （恢復 contentState=0 的窗後立刻 respring，只能說有關聯）；真機測
 // 時看黑 peek 會不會在 2 秒內自己亮回來。
@@ -177,7 +177,7 @@
 // 清後台／錄屏），取代置頂／最近／全部三段；沒激活時 ARC 原樣不動。
 // (2) 17 每款遊戲記浮窗位置：只記位置、不記尺寸（尺寸固定，見 (4)）；
 // 進遊戲前存一份位置，出遊戲只還原位置。
-// (3) 修小浮窗黑屏：peek 顯示時（GHCFShowDockPeekForIndex，所有 peek
+// (3) 修小浮窗黑屏：peek 顯示時（CFLYShowDockPeekForIndex，所有 peek
 // 的必經之路）補推 scene foreground=YES，喚醒被掛起的進程／丟了前景的
 // scene；不銷毀、不重建 scene；鎖屏推後台邏輯不動。能不能修死要真機測。
 // (4) 浮窗尺寸固定：照片量到約 346×769pt（透視誤差 ±10pt），一律開這個
@@ -191,9 +191,9 @@
 // 皇上說：主浮窗開著再點副浮窗，現在兩個大窗疊著，他不要；要 FV 那樣——
 // 點副浮窗時主浮窗自動縮成小的浮窗，點小的換回來，可以來回切；而且小
 // 的浮窗也要能縮大縮小，跟 FV 一樣。
-// (1) 一次只有一個大浮窗：帶到最前的中心路徑（GHCFBringWindowToFront，
+// (1) 一次只有一個大浮窗：帶到最前的中心路徑（CFLYBringWindowToFront，
 // ARC 點 App、任務欄、點 peek、雙擊觸發鈕輪切、重開緩存窗、開新窗、
-// 恢復、點窗頂細條全都走這裡）裡加 GHCFAutoPeekOtherWindows——其他
+// 恢復、點窗頂細條全都走這裡）裡加 CFLYAutoPeekOtherWindows——其他
 // 看得見的大浮窗自動縮成 v41 peek（112x216 活內容小窗、貼邊疊著、
 // scene 保活絕不銷毀；收起前先存位置/大小、scene 推回後台，跟手動最
 // 小化同一套）。不縮的：釘選的窗（釘＝鎖定）、三屏側窗、已收著的、
@@ -216,7 +216,7 @@
 // ── v42：30 項（皇上 2026-11-14 13:22–13:32 五次批准：三次「全做」＋
 // 浮窗設定卡片＋卡片頭像/背景可換＋最後五項 1/4/6/7/8） ──
 // A. 查看日誌（其他雜項功能）：設定 App 裡直接看分屏日誌（最新在上、
-// 預設最後 200 行、刷新、清空、分享；自訂控制器 GHCFLogViewerListController，
+// 預設最後 200 行、刷新、清空、分享；自訂控制器 CFLYLogViewerListController，
 // 跟主聊天抖音 1.0.6 的「顧海龍日誌」是兩回事）。
 // B. 三屏設置加 6 項：側窗寬度預設（窄 25%/中 30%/寬 40%）、記住上次
 // 三屏組合（重開）、三屏組合子頁（最多 3 對）、分隔線粗細+顏色、邊緣
@@ -267,7 +267,7 @@
 // 手指碰到鈕，兩個手勢根本收不到觸摸，鈕動不了（長按關全部也一樣死）。
 // 這個代理本來是 v38 為細條/控制條點按寫的（點在紅 X、黃最小化、±
 // 上時手勢不認、按鈕自己處理）。修法：shouldReceiveTouch 先判——
-// 手勢掛在觸發鈕上（recognizer.view == GHCFFlyTriggerButton）就回
+// 手勢掛在觸發鈕上（recognizer.view == CFLYFlyTriggerButton）就回
 // YES；其他手勢碰到 UIButton 才回 NO。拖動只沿右邊緣上下（Y，夾在
 // 100 到 h-100），拖完記住 Y（prefs 鍵 flyTriggerButtonY，運行時現拼），
 // 下次啟動恢復到那個高度。長按 0.5 秒關全部也因此活過來（pan 與
@@ -278,7 +278,7 @@
 // 雙擊輪切主窗。
 // 第 2 项：浮窗切換像 FV 影片 49：窗有前後順序——最前可見的是主浮窗，
 // 其次副浮窗、再副副浮窗，其餘收成貼邊 peek。順序存在靜態陣列
-// GHCFFrontOrder（最近帶到最前的在前），帶到最前/恢復/建新窗時更新。
+// CFLYFrontOrder（最近帶到最前的在前），帶到最前/恢復/建新窗時更新。
 // 點 peek 把那個窗升為主窗（恢復 + 推前景）；雙擊觸發鈕按順序輪切
 // 主窗；ARC 裡開著的 App 帶標記點，點一下升為主窗。日誌「v41 window
 // promoted to main」/「v41 window cycled main」。
@@ -337,13 +337,13 @@
 // 才拖得到收起門檻）。
 // 第 4 项：拖動修（皇上 11:34：v39 浮窗拖不動）：拖動是靠窗頂細條，
 // 但細條只有 16pt、太透明（只有一顆 56x5 的小 pill），找不到地方抓。
-// 細條加寬到 24pt（GHCF_HOSTED_STRIP_H，建窗與 resize 都用這個常量，
+// 細條加寬到 24pt（CFLY_HOSTED_STRIP_H，建窗與 resize 都用這個常量，
 // 一起改），pill 改 72x6、alpha 0.7、垂直置中，更好找；細條保持透明
 //（App 內容透出來）。控制條 36pt 不動、滑桿條 y=36 不動。手勢改成
 // 動「手勢所屬的窗」（recognizer.view 所在的 window），不是只動
-// GHCFHostedWindow 這個單一靜態（多窗時拖 B 窗會動到 A 窗）；拖動、
+// CFLYHostedWindow 這個單一靜態（多窗時拖 B 窗會動到 A 窗）；拖動、
 // 縮放、滑桿、控制條點按都先切活動量到手勢所屬的窗再做事。
-// 第 5 项：點窗外事件 + 安全距離（皇上 11:38 發 floatingView 設定頁
+// 第 5 项：點窗外事件 + 安全距離（皇上 11:38 發 參考實現 設定頁
 // 截圖「可以搞這樣子」）：設定頁加三項（同一個 prefs domain）：
 // ①「點窗外事件」開關（預設開）；②「點窗外動作」二選一（關閉浮窗 /
 // 側邊，預設側邊）；③「與劉海方向安全距離」滑桿（0–100，預設 50）。
@@ -378,7 +378,7 @@
 // 可拖的角落手柄（36x36 触摸区——比说的 24 稍大，好抓；带一个看得见
 // 的白色角落括号「⌟」标记，0.8 alpha，原来 60x60 透明窗 + 0.2 alpha
 // 淡菱形太难找）。拖动即改窗口 frame，并走现有的
-// GHCFApplyScaleToHostedWindow 缩放逻辑重算内容（松手时调 scene 的
+// CFLYApplyScaleToHostedWindow 缩放逻辑重算内容（松手时调 scene 的
 // frame，跟原来一样）；限制最小 200x300、最大不超过屏幕，保持圆角
 // 35 与 anchorPoint (0,0) 的 v39 修正。调整结束保存大小（第 6 项）。
 // 日誌记 resize（scene resized + geometry saved）。
@@ -399,7 +399,7 @@
 // scale=1.0 的 App 沒事（日志数字全对、窗没被改过，见 §108）。
 // 修法：建 contentView 時把 anchorPoint=(0,0)、position=(0,0)
 //（frame 仍是 (0,0,winW,winH)），一次改，建窗、resize、滑桿的
-// sublayerTransform 全都繞左上縮；GHCFApplyScaleToHostedWindow 裡
+// sublayerTransform 全都繞左上縮；CFLYApplyScaleToHostedWindow 裡
 // 兩個分支各重申一次錨點（防萬一）。scene frame、scale 數值不動；
 // presenterView/layerHostView 自己的錨點本來就是 (0,0)，不動。
 // 第 3 项：浮窗开着、关屏、再进去是黑的——解锁 handler 只把窗显示
@@ -416,7 +416,7 @@
 // fromRemnant 断言进安全模式）。修法按 KonbanXV（作者 Hoangdus，
 // MIT，https://github.com/Hoangdus/KonbanXV——只仿它的结构与做法，
 // 代码全部原创；註明写进这里与查表函数的注释）：建 scene 之前先
-// 查现有 scene——新增纯 C helper GHCFExistingMainSceneForBundleID：
+// 查现有 scene——新增纯 C helper CFLYExistingMainSceneForBundleID：
 // FBSceneManager sharedInstance → object_getIvar 读 _workspace →
 // object_getIvar 读 _allScenesByID（NSDictionary）→ 找 identifier
 // 等于固定 sceneID `sceneID:<bundleID>-default` 或含 bundleID 的
@@ -427,7 +427,7 @@
 // 用 _UISceneLayerHostContainerView（initWithScene:debugDescription:
 // + _setPresentationContext:，context 是 UIScenePresentationContext
 // 的 _initWithDefaultValues）建一个 layer host view，把它当
-// presenterView 用，嵌进内容区；scene 照常存 GHCFHostedScene，
+// presenterView 用，嵌进内容区；scene 照常存 CFLYHostedScene，
 // 前景/后台生命周期照常走（显示时 foreground=YES + backgrounded=
 // NO，最小化/关窗/锁屏时 foreground=NO + backgrounded=YES）；
 // **这个 scene 永远不调 destroyScene**（它是 App 自己的主 scene，
@@ -437,13 +437,13 @@
 // 不动 scene 的 frame——反向耦合的 frame 更新只对新建 scene 用）。
 // 安全区 insets **不要动**（主 scene 的 insets 是 App 正常显示用
 // 的）。presenter 为空的处理：缓存里加一个平行数组
-// GHCFCacheLayerHostViews[5]（和 presenter 数组平行）+ 活动量
-// GHCFHostedLayerHostView；复用守卫改成「presenter 与 view 活着
+// CFLYCacheLayerHostViews[5]（和 presenter 数组平行）+ 活动量
+// CFLYHostedLayerHostView；复用守卫改成「presenter 与 view 活着
 // **或** layer host view 活着」才复用；buildHostedWindow 的嵌入
 // 分叉（有 presenter 走老路，有 layer host view 走新路）；resize/
-// 滑杆的 helper 分叉（有 presenter 走 GHCFApplyScaleToHostedWindow
+// 滑杆的 helper 分叉（有 presenter 走 CFLYApplyScaleToHostedWindow
 // 的老路，有 layer host view 只改 view 的 bounds + sublayerTransform，
-// **不推 scene frame**）；GHCFDestroyCachedEntryAtIndex 分叉
+// **不推 scene frame**）；CFLYDestroyCachedEntryAtIndex 分叉
 //（layer-host 的项只清引用、不 deactivate/invalidate presenter、
 // 不 destroyScene）。**不要**用 _UIScenePresenter 挂现有 scene——
 // FBAL 的 presenter 是从新建 scene 的 uiPresentationManager 建的，
@@ -458,7 +458,7 @@
 // 应该是空操作，但没证实——真机要看点开浮窗后，主屏的 App 有没有
 // 被顶到前台）。
 // 第 2 项：无标题栏大窗（皇上 2026-11-13 22:12 的外观反馈：我们的
-// v37 装了、能用、没问题，但长得不如 floatingView——对方的窗又大
+// v37 装了、能用、没问题，但长得不如 參考實現——对方的窗又大
 // 又长、约 85% 宽、80% 高、圆角、没有标题栏，内容从顶到底贴边填
 // 满）。改：① 44pt 标题栏**拿掉**，内容区就是整个窗（App 内容从
 // 顶到底贴边填满，圆角 35、阴影不变）；② 默认窗改大：一般 App 内
@@ -515,9 +515,9 @@
 //（见 BUILD_LOG §99 末尾：查表函数、layer-host 嵌法、presenter 为
 // 空的处理、不销毁已有 scene 的规则、回退 createScene、验证计划），
 // 不猜一个不稳的做法赶 v37。
-// 第 1 项：反向耦合缩放（仿照 FrontBoardAppLauncher，作者
+// 第 1 项：反向耦合缩放（仿照 參考實現，作者
 // khanhduytran0，Apache-2.0，https://github.com/khanhduytran0/
-// FrontBoardAppLauncher——只仿它的结构与做法，代码全部原创）：每
+// 參考實現——只仿它的结构与做法，代码全部原创）：每
 // 个窗一个 scaleRatio（默认 1.0；计算器默认 0.77，窗仍是 320x737）；
 // scene frame = 内容尺寸 ÷ scale（App 在这个尺寸里排版）；内容区
 // 的 layer 加 sublayerTransform = CATransform3DMakeScale(scale,
@@ -550,7 +550,7 @@
 // 容左右两边各有一条约 50pt 的白色边（53% 缩放的图层只有约 219 宽，
 // 居中放在 320 宽的窗里，两边露白——露的是内容区的白色底）；② 我
 // 们的 v35 设置——列表画出来了，但顶上第一项在内容区顶上被切掉一
-// 半；③ 对方 floatingView——一个又高又大的浮窗（几乎满屏高、约
+// 半；③ 对方 參考實現——一个又高又大的浮窗（几乎满屏高、约
 // 85% 屏宽、圆角），Sileo 精选页把窗填得满满的、贴边，没有白边、
 // 没有被切掉、没有标题栏。v35 的防崩修法已证实有效（皇上能打开计
 // 算器和设置两个浮窗、没进安全模式；v34 切到设置崩了两次）。
@@ -735,7 +735,7 @@
 // v27 是诊断版（1.5 秒 + 4 秒重试、无条件记日志、记 presenterView），
 // 重试修不了计算器（10 秒等待已证明不是时机问题）。
 // v28 只改一个变量：sceneID 从每次新 UUID，改成参考项目
-// FrontBoardAppLauncher 的固定格式 `sceneID:<bundleID>-default`
+// 參考實現 的固定格式 `sceneID:<bundleID>-default`
 //（persistenceIdentifier 也用同一个固定值），和参考项目完全一样。
 // 关窗时 scene 本来就会销毁，所以固定 ID 重用是安全的（参考项目就
 // 是这么做的）。如果 v28 计算器画出来了，就是 sceneID 的问题；如果
@@ -799,7 +799,7 @@
 // 主队列（BSDispatchQueueAssert）——v24 把启动放后台队列，begin 一调
 // 就触发断言，把 SpringBoard 杀进安全模式。RBS 那些调用在后台队列都
 // 成功了，只有 begin 崩。所以 v25 只改一件事：启动放回主线程做
-// （和参考实现 FrontBoardAppLauncher 一模一样——它就是在主线程点按
+// （和参考实现 參考實現 一模一样——它就是在主线程点按
 // 回调里拉起进程）。FB 事务本身是异步的：begin 立刻返回、完成走回调，
 // 主线程不会被堵（v23 那种 5 秒卡死是同步打开调用造成的，那条路已
 // 经删了，不会重演）。先收启动器不变；每一步都记日志，下次再崩直接
@@ -810,9 +810,9 @@
 // 缩放手柄）。先只支持一个悬浮窗；计算器先测（测前先把计算器彻底
 // 关掉——目标 App 不能已经在跑）。键盘不做（计算器不用键盘；
 // iOS 16.5 上没有干净修法，见 V5_DESIGN.md §3.3）。
-// 场景托管的结构与私有接口声明，仿照 FrontBoardAppLauncher
+// 场景托管的结构与私有接口声明，仿照 參考實現
 //（作者 khanhduytran0，Apache-2.0，https://github.com/khanhduytran0/
-// FrontBoardAppLauncher）的 DecoratedAppSceneView.m、
+// 參考實現）的 DecoratedAppSceneView.m、
 // AppSceneViewController.m 与 UIKitPrivate+MultitaskSupport.h；
 // 代码全部原创，只借结构与接口名（接口名是事实，不是表达）。
 // LiveContainer 的窗外形与场景生命周期只学原理（AGPL-3.0，不能抄）。
@@ -844,12 +844,12 @@
 #import <AudioToolbox/AudioServices.h>
 #import <CommonCrypto/CommonDigest.h>
 
-#define GHCF_LOG_PATH "/var/mobile/Library/Logs/ChinaFly.log"
+#define CFLY_LOG_PATH "/var/mobile/Library/Logs/ChinaFly.log"
 
 // 纯 C 写日志（一行）：日志只用来证明延后步骤跑了、窗建了没有、
 // 启动走到哪一步了。
-static void GHCFLogLine(const char *line) {
-FILE *f = fopen(GHCF_LOG_PATH, "a");
+static void CFLYLogLine(const char *line) {
+FILE *f = fopen(CFLY_LOG_PATH, "a");
 if (f) {
 fputs(line, f);
 fputc('\n', f);
@@ -863,17 +863,17 @@ fclose(f);
 // v43.24：第 6 件——加入 App 無上限：定長陣列改動態串列。
 // 固定 5 個（計算器／時鐘／備忘錄／設置／照片）照舊是啟動器的前 5 個；
 // 自選 App 存在 prefs 鍵 customAppBundleIDs（逗號串起來的 bundle ID 串列），
-// 啟動時從 prefs 讀進來（見 GHCFLoadCustomApps）；舊版 customAppNBundleID
+// 啟動時從 prefs 讀進來（見 CFLYLoadCustomApps）；舊版 customAppNBundleID
 // 槽位第一次讀到就遷移過來。啟動器／ARC 同時開的窗數不再定死 25。
 // v43.6：上限提到 15 个——自选槽位 7 个→10 个；v43.8：上限提到 25 个——
 // 自选槽位 10 个→20 个；v43.24：上限拿掉，改動態串列。
-static int GHCFAppCount = 0; // 現在的 App 總數（固定 5 個＋自選串列）。
-static int GHCFAppCapacity = 0; // 動態陣列現在的容量（>= GHCFAppCount）。
-typedef char GHCFChar128[128];
-static GHCFChar128 *GHCFAppBundleIDs = NULL;
-static GHCFChar128 *GHCFAppNames = NULL;
-// 固定 5 個的開關 key（自選走 sel-<bundleID>，見 GHCFAppEnabledKeyForIndex）。
-static const char *GHCFAppEnabledKeysFixed[5] = {
+static int CFLYAppCount = 0; // 現在的 App 總數（固定 5 個＋自選串列）。
+static int CFLYAppCapacity = 0; // 動態陣列現在的容量（>= CFLYAppCount）。
+typedef char CFLYChar128[128];
+static CFLYChar128 *CFLYAppBundleIDs = NULL;
+static CFLYChar128 *CFLYAppNames = NULL;
+// 固定 5 個的開關 key（自選走 sel-<bundleID>，見 CFLYAppEnabledKeyForIndex）。
+static const char *CFLYAppEnabledKeysFixed[5] = {
 "appCalculatorEnabled",
 "appClockEnabled",
 "appNotesEnabled",
@@ -881,8 +881,8 @@ static const char *GHCFAppEnabledKeysFixed[5] = {
 "appPhotosEnabled"
 };
 // v40：记位置/大小的键前缀——固定 5 个（idx<5 用这张表；idx>=5 走 geoCustom%d，
-// 見 GHCFGeoKeyForIndex）。键 = "geo" + 前缀 + 字段（例：geoCalculatorX）。
-static const char *GHCFGeoAppKeys[5] = {
+// 見 CFLYGeoKeyForIndex）。键 = "geo" + 前缀 + 字段（例：geoCalculatorX）。
+static const char *CFLYGeoAppKeys[5] = {
 "Calculator",
 "Clock",
 "Notes",
@@ -893,115 +893,117 @@ static const char *GHCFGeoAppKeys[5] = {
 // @interface 在下面 v41 區才出現；動態陣列宣告在這裡，指標型別要先認得）。
 @class FBScene;
 @class _UIScenePresenter;
-// 每窗一個的動態陣列（跟著 GHCFAppCount 走；初始化前是 NULL＋count 0，
+// 每窗一個的動態陣列（跟著 CFLYAppCount 走；初始化前是 NULL＋count 0，
 // 迴圈跳過、越界檢查擋掉，本來就安全）。
-static BOOL *GHCFRestoreGaveUp = NULL; // v43.7：这扇窗重建一次还是卡 0、门控已停手（占位留着；下次手动恢复再试）。
-static UIView * __strong *GHCFGatePlaceholders = NULL; // v72：每窗一个载入占位（深灰底＋转圈＋App 名）。
-static UIView * __strong *GHCFGateFrozenSnaps = NULL; // v43.22：每窗一个凍結快照（門控等待期間顯示最後一幀活內容，不換深灰佔位；點不動，帶細微載入提示）。
-static UIView * __strong *GHCFPeekDockSnaps = NULL; // v43.23：第 7 件——每窗一个 dock 快照（收成小卡當下抓的活幀；scene 掉 0 時小卡顯示它，平時藏著；不能跟門控凍結幀共用一個槽位——看門狗每 2 秒清一次凍結幀）。
-static UIWindow * __strong *GHCFCacheWindows = NULL;
-static FBScene * __strong *GHCFCacheScenes = NULL;
-static _UIScenePresenter * __strong *GHCFCachePresenters = NULL;
-static UIView * __strong *GHCFCacheLayerHostViews = NULL;
-static UIView * __strong *GHCFCacheTopStrips = NULL;
-static UIButton * __strong *GHCFPeekTapOverlays = NULL;
-static UIButton * __strong *GHCFHangTapOverlays = NULL;
-static BOOL *GHCFCacheHung = NULL;
-static CGRect *GHCFHangSavedFrames = NULL;
-static UIView * __strong *GHCFCacheContainers = NULL;
-static UIView * __strong *GHCFCacheContentViews = NULL;
-static UIView * __strong *GHCFCacheResizeHandles = NULL;
-static NSString * __strong *GHCFCacheSceneIDs = NULL;
-static GHCFChar128 *GHCFCacheBundleIDs = NULL;
-static int *GHCFCachePids = NULL;
-static BOOL *GHCFCacheMinimized = NULL;
-static BOOL *GHCFCacheHiddenByLock = NULL;
-static BOOL *GHCFCacheHiddenByDisable = NULL; // v53：啟用開關關掉時藏起來的窗（再開時恢復）。
-static CGFloat *GHCFCacheScaleRatios = NULL;
-static UIView * __strong *GHCFCacheScaleSliderBars = NULL;
-static UISlider * __strong *GHCFCacheScaleSliders = NULL;
-static UILabel * __strong *GHCFCacheScaleLabels = NULL;
-static int *GHCFFrontOrder = NULL;
-static GHCFChar128 *GHCFLowBatteryDockedBids = NULL;
+static BOOL *CFLYRestoreGaveUp = NULL; // v43.7：这扇窗重建一次还是卡 0、门控已停手（占位留着；下次手动恢复再试）。
+static UIView * __strong *CFLYGatePlaceholders = NULL; // v72：每窗一个载入占位（深灰底＋转圈＋App 名）。
+static UIView * __strong *CFLYGateFrozenSnaps = NULL; // v43.22：每窗一个凍結快照（門控等待期間顯示最後一幀活內容，不換深灰佔位；點不動，帶細微載入提示）。
+static UIView * __strong *CFLYPeekDockSnaps = NULL; // v43.23：第 7 件——每窗一个 dock 快照（收成小卡當下抓的活幀；scene 掉 0 時小卡顯示它，平時藏著；不能跟門控凍結幀共用一個槽位——看門狗每 2 秒清一次凍結幀）。
+static UIWindow * __strong *CFLYCacheWindows = NULL;
+static FBScene * __strong *CFLYCacheScenes = NULL;
+static _UIScenePresenter * __strong *CFLYCachePresenters = NULL;
+static UIView * __strong *CFLYCacheLayerHostViews = NULL;
+static UIView * __strong *CFLYCacheTopStrips = NULL;
+static UIButton * __strong *CFLYPeekTapOverlays = NULL;
+static UIButton * __strong *CFLYHangTapOverlays = NULL;
+static BOOL *CFLYCacheHung = NULL;
+static CGRect *CFLYHangSavedFrames = NULL;
+static UIView * __strong *CFLYCacheContainers = NULL;
+static UIView * __strong *CFLYCacheContentViews = NULL;
+static UIView * __strong *CFLYCacheResizeHandles = NULL;
+static NSString * __strong *CFLYCacheSceneIDs = NULL;
+static CFLYChar128 *CFLYCacheBundleIDs = NULL;
+static int *CFLYCachePids = NULL;
+static BOOL *CFLYCacheMinimized = NULL;
+static int *CFLYPeekLevels = NULL; // 1.0.4：每窗的空掛檔位（0＝整扇可見，1/2/3＝一/二/三檔空掛，露 40/70/100pt）。
+static BOOL *CFLYCacheHiddenByLock = NULL;
+static BOOL *CFLYCacheHiddenByDisable = NULL; // v53：啟用開關關掉時藏起來的窗（再開時恢復）。
+static CGFloat *CFLYCacheScaleRatios = NULL;
+static UIView * __strong *CFLYCacheScaleSliderBars = NULL;
+static UISlider * __strong *CFLYCacheScaleSliders = NULL;
+static UILabel * __strong *CFLYCacheScaleLabels = NULL;
+static int *CFLYFrontOrder = NULL;
+static CFLYChar128 *CFLYLowBatteryDockedBids = NULL;
 // 動態陣列擴容（容量翻倍，32 起；所有按 App 槽位索引的陣列一起長；
 // 擴容失敗回 NO，容量不動——呼叫處看到 NO 就停在舊容量裡，不寫越界）。
 // 注意：物件指標陣列是 `Type * __strong *`（ARC 不准裸 `Type **`）；arr[i]
 // 賦值是強引用語義；memcpy 只搬指標、不動引用計數（所有權跟著新 buffer
 // 走，舊 buffer 直接 free、不碰元素）。
-static BOOL GHCFEnsureAppCapacity(int needed) {
-if (needed <= GHCFAppCapacity) return YES;
-int cap = (GHCFAppCapacity > 0) ? GHCFAppCapacity : 32;
+static BOOL CFLYEnsureAppCapacity(int needed) {
+if (needed <= CFLYAppCapacity) return YES;
+int cap = (CFLYAppCapacity > 0) ? CFLYAppCapacity : 32;
 while (cap < needed) cap *= 2;
-#define GHCF_GROW(arr, type) do { type *n = (type *)calloc((size_t)cap, sizeof(type)); if (!n) return NO; if (arr) { memcpy(n, arr, (size_t)GHCFAppCapacity * sizeof(type)); free(arr); } arr = n; } while (0)
-#define GHCF_GROW_OBJ(arr, type) do { type __strong *n = (type __strong *)calloc((size_t)cap, sizeof(type)); if (!n) return NO; if (arr) { memcpy((void *)n, (const void *)arr, (size_t)GHCFAppCapacity * sizeof(type)); free((void *)arr); } arr = n; } while (0)
-GHCF_GROW(GHCFAppBundleIDs, GHCFChar128);
-GHCF_GROW(GHCFAppNames, GHCFChar128);
-GHCF_GROW(GHCFRestoreGaveUp, BOOL);
-GHCF_GROW_OBJ(GHCFGatePlaceholders, UIView *);
-GHCF_GROW_OBJ(GHCFGateFrozenSnaps, UIView *);
-GHCF_GROW_OBJ(GHCFPeekDockSnaps, UIView *);
-GHCF_GROW_OBJ(GHCFCacheWindows, UIWindow *);
-GHCF_GROW_OBJ(GHCFCacheScenes, FBScene *);
-GHCF_GROW_OBJ(GHCFCachePresenters, _UIScenePresenter *);
-GHCF_GROW_OBJ(GHCFCacheLayerHostViews, UIView *);
-GHCF_GROW_OBJ(GHCFCacheTopStrips, UIView *);
-GHCF_GROW_OBJ(GHCFPeekTapOverlays, UIButton *);
-GHCF_GROW_OBJ(GHCFHangTapOverlays, UIButton *);
-GHCF_GROW(GHCFCacheHung, BOOL);
-GHCF_GROW(GHCFHangSavedFrames, CGRect);
-GHCF_GROW_OBJ(GHCFCacheContainers, UIView *);
-GHCF_GROW_OBJ(GHCFCacheContentViews, UIView *);
-GHCF_GROW_OBJ(GHCFCacheResizeHandles, UIView *);
-GHCF_GROW_OBJ(GHCFCacheSceneIDs, NSString *);
-GHCF_GROW(GHCFCacheBundleIDs, GHCFChar128);
-GHCF_GROW(GHCFCachePids, int);
-GHCF_GROW(GHCFCacheMinimized, BOOL);
-GHCF_GROW(GHCFCacheHiddenByLock, BOOL);
-GHCF_GROW(GHCFCacheHiddenByDisable, BOOL);
-GHCF_GROW(GHCFCacheScaleRatios, CGFloat);
-GHCF_GROW_OBJ(GHCFCacheScaleSliderBars, UIView *);
-GHCF_GROW_OBJ(GHCFCacheScaleSliders, UISlider *);
-GHCF_GROW_OBJ(GHCFCacheScaleLabels, UILabel *);
-GHCF_GROW(GHCFFrontOrder, int);
-GHCF_GROW(GHCFLowBatteryDockedBids, GHCFChar128);
-#undef GHCF_GROW
-#undef GHCF_GROW_OBJ
-GHCFAppCapacity = cap;
+#define CFLY_GROW(arr, type) do { type *n = (type *)calloc((size_t)cap, sizeof(type)); if (!n) return NO; if (arr) { memcpy(n, arr, (size_t)CFLYAppCapacity * sizeof(type)); free(arr); } arr = n; } while (0)
+#define CFLY_GROW_OBJ(arr, type) do { type __strong *n = (type __strong *)calloc((size_t)cap, sizeof(type)); if (!n) return NO; if (arr) { memcpy((void *)n, (const void *)arr, (size_t)CFLYAppCapacity * sizeof(type)); free((void *)arr); } arr = n; } while (0)
+CFLY_GROW(CFLYAppBundleIDs, CFLYChar128);
+CFLY_GROW(CFLYAppNames, CFLYChar128);
+CFLY_GROW(CFLYRestoreGaveUp, BOOL);
+CFLY_GROW_OBJ(CFLYGatePlaceholders, UIView *);
+CFLY_GROW_OBJ(CFLYGateFrozenSnaps, UIView *);
+CFLY_GROW_OBJ(CFLYPeekDockSnaps, UIView *);
+CFLY_GROW_OBJ(CFLYCacheWindows, UIWindow *);
+CFLY_GROW_OBJ(CFLYCacheScenes, FBScene *);
+CFLY_GROW_OBJ(CFLYCachePresenters, _UIScenePresenter *);
+CFLY_GROW_OBJ(CFLYCacheLayerHostViews, UIView *);
+CFLY_GROW_OBJ(CFLYCacheTopStrips, UIView *);
+CFLY_GROW_OBJ(CFLYPeekTapOverlays, UIButton *);
+CFLY_GROW_OBJ(CFLYHangTapOverlays, UIButton *);
+CFLY_GROW(CFLYCacheHung, BOOL);
+CFLY_GROW(CFLYHangSavedFrames, CGRect);
+CFLY_GROW_OBJ(CFLYCacheContainers, UIView *);
+CFLY_GROW_OBJ(CFLYCacheContentViews, UIView *);
+CFLY_GROW_OBJ(CFLYCacheResizeHandles, UIView *);
+CFLY_GROW_OBJ(CFLYCacheSceneIDs, NSString *);
+CFLY_GROW(CFLYCacheBundleIDs, CFLYChar128);
+CFLY_GROW(CFLYCachePids, int);
+CFLY_GROW(CFLYCacheMinimized, BOOL);
+CFLY_GROW(CFLYPeekLevels, int);
+CFLY_GROW(CFLYCacheHiddenByLock, BOOL);
+CFLY_GROW(CFLYCacheHiddenByDisable, BOOL);
+CFLY_GROW(CFLYCacheScaleRatios, CGFloat);
+CFLY_GROW_OBJ(CFLYCacheScaleSliderBars, UIView *);
+CFLY_GROW_OBJ(CFLYCacheScaleSliders, UISlider *);
+CFLY_GROW_OBJ(CFLYCacheScaleLabels, UILabel *);
+CFLY_GROW(CFLYFrontOrder, int);
+CFLY_GROW(CFLYLowBatteryDockedBids, CFLYChar128);
+#undef CFLY_GROW
+#undef CFLY_GROW_OBJ
+CFLYAppCapacity = cap;
 return YES;
 }
 // 動態表初始化（只跑一次）：配好容量、填固定 5 個、FrontOrder = 0..4。
-static BOOL GHCFInitAppTablesDone = NO;
-static void GHCFInitAppTables(void) {
-if (GHCFInitAppTablesDone) return;
-GHCFInitAppTablesDone = YES;
-if (!GHCFEnsureAppCapacity(5)) return;
+static BOOL CFLYInitAppTablesDone = NO;
+static void CFLYInitAppTables(void) {
+if (CFLYInitAppTablesDone) return;
+CFLYInitAppTablesDone = YES;
+if (!CFLYEnsureAppCapacity(5)) return;
 static const char *fixedBids[5] = {"com.apple.calculator", "com.apple.mobiletimer", "com.apple.mobilenotes", "com.apple.Preferences", "com.apple.mobileslideshow"};
 static const char *fixedNames[5] = {"計算器", "時鐘", "備忘錄", "設置", "照片"};
 for (int i = 0; i < 5; i++) {
-strncpy(GHCFAppBundleIDs[i], fixedBids[i], 127);
-GHCFAppBundleIDs[i][127] = '\0';
-strncpy(GHCFAppNames[i], fixedNames[i], 127);
-GHCFAppNames[i][127] = '\0';
+strncpy(CFLYAppBundleIDs[i], fixedBids[i], 127);
+CFLYAppBundleIDs[i][127] = '\0';
+strncpy(CFLYAppNames[i], fixedNames[i], 127);
+CFLYAppNames[i][127] = '\0';
 }
-GHCFAppCount = 5;
-for (int i = 0; i < 5; i++) GHCFFrontOrder[i] = i;
+CFLYAppCount = 5;
+for (int i = 0; i < 5; i++) CFLYFrontOrder[i] = i;
 }
 // FrontOrder 跟著 App 總數走：保留原有順序、去掉越界／重複的、沒進表的按原順序補到後面。
-static void GHCFSyncFrontOrderToAppCount(void) {
-GHCFInitAppTables();
-if (!GHCFEnsureAppCapacity(GHCFAppCount)) return;
+static void CFLYSyncFrontOrderToAppCount(void) {
+CFLYInitAppTables();
+if (!CFLYEnsureAppCapacity(CFLYAppCount)) return;
 int write = 0;
-for (int i = 0; i < GHCFAppCount; i++) {
-int v = GHCFFrontOrder[i];
-if (v < 0 || v >= GHCFAppCount) continue;
+for (int i = 0; i < CFLYAppCount; i++) {
+int v = CFLYFrontOrder[i];
+if (v < 0 || v >= CFLYAppCount) continue;
 BOOL dup = NO;
-for (int j = 0; j < write; j++) if (GHCFFrontOrder[j] == v) { dup = YES; break; }
-if (!dup) GHCFFrontOrder[write++] = v;
+for (int j = 0; j < write; j++) if (CFLYFrontOrder[j] == v) { dup = YES; break; }
+if (!dup) CFLYFrontOrder[write++] = v;
 }
-for (int idx = 0; idx < GHCFAppCount; idx++) {
+for (int idx = 0; idx < CFLYAppCount; idx++) {
 BOOL inTable = NO;
-for (int j = 0; j < write; j++) if (GHCFFrontOrder[j] == idx) { inTable = YES; break; }
-if (!inTable) GHCFFrontOrder[write++] = idx;
+for (int j = 0; j < write; j++) if (CFLYFrontOrder[j] == idx) { inTable = YES; break; }
+if (!inTable) CFLYFrontOrder[write++] = idx;
 }
 }
 
@@ -1009,7 +1011,7 @@ if (!inTable) GHCFFrontOrder[write++] = idx;
 // _applicationIconImageForBundleIdentifier:format:scale:
 // 用运行时查找（objc_getClass + objc_msgSend），不链接私有框架。
 // 方法不存在或取不到就返回 nil（调用处用灰色方块代替，不崩）。
-static UIImage *GHCFAppIcon(const char *bundleID) {
+static UIImage *CFLYAppIcon(const char *bundleID) {
 NSString *bid = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
 if (!bid) return nil;
 Class UIImageClass = objc_getClass("UIImage");
@@ -1028,12 +1030,12 @@ return nil;
 }
 
 // ── 私有接口最小声明 ─────────────────────────────────────
-// 结构与接口名仿照 FrontBoardAppLauncher 的
+// 结构与接口名仿照 參考實現 的
 // UIKitPrivate+MultitaskSupport.h（作者 khanhduytran0，
 // Apache-2.0）。只声明类名与方法名，代码全部原创。
 // 注意：audit_token_t 是 32 字节的结构（8 个 uint32_t），这里用
 // 自己的同布局类型名，避免去找 bsm 头文件；传参布局完全一致。
-typedef struct { uint32_t val[8]; } GHCFAuditToken;
+typedef struct { uint32_t val[8]; } CFLYAuditToken;
 
 @interface BSTransaction : NSObject
 - (void)begin;
@@ -1056,7 +1058,7 @@ typedef struct { uint32_t val[8]; } GHCFAuditToken;
 @interface FBProcessManager : NSObject
 + (instancetype)sharedInstance;
 - (FBProcessExecutionContext *)launchProcessWithContext:(FBMutableProcessExecutionContext *)context;
-- (void)registerProcessForAuditToken:(GHCFAuditToken)token;
+- (void)registerProcessForAuditToken:(CFLYAuditToken)token;
 @end
 
 @interface RBSProcessIdentity : NSObject
@@ -1070,7 +1072,7 @@ typedef struct { uint32_t val[8]; } GHCFAuditToken;
 @interface RBSProcessHandle : NSObject
 @property (nonatomic, copy, readonly) RBSProcessIdentity *identity;
 + (instancetype)handleForPredicate:(RBSProcessPredicate *)predicate error:(NSError **)error;
-- (GHCFAuditToken)auditToken;
+- (CFLYAuditToken)auditToken;
 - (int)pid;
 @end
 
@@ -1194,22 +1196,22 @@ typedef struct { uint32_t val[8]; } GHCFAuditToken;
 - (_UIScenePresenter *)createPresenterWithIdentifier:(NSString *)identifier;
 @end
 
-@interface UIScreen (GHCFScenePrivate)
+@interface UIScreen (CFLYScenePrivate)
 - (id)displayConfiguration;
 @end
 
 // 感应带的视图：自己写的普通 UIView 子类，里面什么方法都没有
 //（v18/v21 已证明它在 macOS 编的包里是安全的）。
-@interface GHCFPlainStripView : UIView
+@interface CFLYPlainStripView : UIView
 @end
-@implementation GHCFPlainStripView
+@implementation CFLYPlainStripView
 @end
 
 // 5.1 唯一的自定义处理类：手势与按钮的目标、启动器的主人、
 // 5.2 托管悬浮窗的主人。视图全部用苹果的类，不再加自定义视图子类。
 // v42：它同时是浮窗設定卡片的 UITableView 資料源/代理（卡片的表
 // 格、開關、滑桿、分段控制都走它，不另加自訂類）。
-@interface GHCFLauncher : NSObject <UIGestureRecognizerDelegate, UIScrollViewDelegate>
+@interface CFLYLauncher : NSObject <UIGestureRecognizerDelegate, UIScrollViewDelegate>
 - (void)handleEdgeSwipe:(UIScreenEdgePanGestureRecognizer *)recognizer;
 - (void)handleFlyTriggerButtonDrag:(UIPanGestureRecognizer *)recognizer;
 - (void)handleFlyTriggerButtonLongPress:(UILongPressGestureRecognizer *)recognizer;
@@ -1238,6 +1240,12 @@ typedef struct { uint32_t val[8]; } GHCFAuditToken;
 - (void)handleScaleSliderEnded:(UISlider *)sender;
 - (void)handleTitleDrag:(UIPanGestureRecognizer *)recognizer;
 - (void)handleTopStripTap:(UITapGestureRecognizer *)recognizer;
+- (void)handleTopStripLongPress:(UILongPressGestureRecognizer *)recognizer;
+// ChinaFly（1.0.4）：窗口打開方式（7 種）——縮放條上的按鈕開動作表，
+// 選了就按那種方式擺當前這扇窗。
+- (void)handleWindowOpenModeButton:(UIButton *)sender;
+- (void)showWindowOpenModeSheet;
+- (void)applyWindowOpenMode:(int)mode;
 - (void)handleResizeDrag:(UIPanGestureRecognizer *)recognizer;
 // v42.3：小窗（peek）右下角手柄拖調尺寸（見下面 handleResizeDrag 的分支）。
 - (void)handlePeekResizeDrag:(UIPanGestureRecognizer *)recognizer;
@@ -1288,10 +1296,9 @@ typedef struct { uint32_t val[8]; } GHCFAuditToken;
 // v43.37（1.0.110，扇形轉盤，第 6 檔 trollfan）：轉盤拖動手勢（見 handleDialPan:）。
 // 1.0.107 e4af0c0 拿回來，門從 radial（0）改成 trollfan（5）。
 - (void)handleDialPan:(UIPanGestureRecognizer *)recognizer;
-// v43.42（1.0.115，表盘启动器，第 7 档 dial）：照 TrollOpen 参考图／影片
+// v43.42（1.0.115，表盘启动器，第 7 档 dial）：照 參考影片
 // 的排布，中心钮点一下收起启动器。
 - (CGFloat)addDialLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action;
-- (void)handleDialCenterButton:(UIButton *)sender;
 // ChinaFly（1.0.2，表盤菜單入口 A）：表盤頂上的菜單鈕（App ↔ 菜單動作切換）
 // 與菜單動作鈕、菜單鈕工廠。
 - (UIButton *)arcMenuButtonForMenuIndex:(NSInteger)midx atCenter:(CGPoint)center size:(CGFloat)size action:(SEL)action;
@@ -1325,138 +1332,148 @@ typedef struct { uint32_t val[8]; } GHCFAuditToken;
 - (void)handleTaskbarChipLongPress:(UILongPressGestureRecognizer *)recognizer;
 - (void)handleKeyboardWillShow:(NSNotification *)note;
 - (void)handleKeyboardWillHide:(NSNotification *)note;
-- (void)ghcfHandleKeyboardShowHeight:(CGFloat)kbHeight bundleID:(const char *)bid;
-- (void)ghcfHandleKeyboardHideBundleID:(const char *)bid;
-- (void)ghcfEnlargeWindowForKeyboardHeight:(CGFloat)kbHeight;
-- (void)ghcfRestoreEnlargedWindowForKeyboard;
+- (void)cflyHandleKeyboardShowHeight:(CGFloat)kbHeight bundleID:(const char *)bid;
+- (void)cflyHandleKeyboardHideBundleID:(const char *)bid;
+- (void)cflyEnlargeWindowForKeyboardHeight:(CGFloat)kbHeight;
+- (void)cflyRestoreEnlargedWindowForKeyboard;
 @end
 
 // 窗与状态要一直留着（静态变量拿着，不会被释放）。
-static UIWindow *GHCFStripWindow = nil;
-static UIWindow *GHCFStripWindowLeft = nil; // v43.32：左边缘感应带（触发侧左／双侧时用，右带不动）。
-static UIWindow *GHCFDebugTriggerWindow = nil; // v43.32：调试模式画触发区的窗（平时藏着，不接手势）。
-static UIView *GHCFDebugTriggerView = nil; // v43.32：调试画布（普通 UIView，红框／扇形／竖条都画在这里）。
-static int GHCFFlashZoneSide = -1; // v43.39：被挡闪框（-1＝没有闪，0＝闪左区，1＝闪右区）。
-static int GHCFFlashZoneGen = 0; // v43.39：闪框世代号（1.5 秒内再被挡就重开一轮，旧的收尾不盖新的）。
-static UIWindow *GHCFLauncherWindow = nil;
-static UIView *GHCFLauncherContentView = nil; // v55：ARC 啟動器透明覆蓋層（只有 App 圖標，沒有面板）。
+static UIWindow *CFLYStripWindow = nil;
+static UIWindow *CFLYStripWindowLeft = nil; // v43.32：左边缘感应带（触发侧左／双侧时用，右带不动）。
+static UIWindow *CFLYDebugTriggerWindow = nil; // v43.32：调试模式画触发区的窗（平时藏着，不接手势）。
+static UIView *CFLYDebugTriggerView = nil; // v43.32：调试画布（普通 UIView，红框／扇形／竖条都画在这里）。
+static int CFLYFlashZoneSide = -1; // v43.39：被挡闪框（-1＝没有闪，0＝闪左区，1＝闪右区）。
+static int CFLYFlashZoneGen = 0; // v43.39：闪框世代号（1.5 秒内再被挡就重开一轮，旧的收尾不盖新的）。
+static UIWindow *CFLYLauncherWindow = nil;
+static UIView *CFLYLauncherContentView = nil; // v55：ARC 啟動器透明覆蓋層（只有 App 圖標，沒有面板）。
 // v43.19：抽屜下滑關閉記面板起點 Y；橫向輪盤記 scroll view／卡片／
 // 圓點／頁寬（scrollViewDidScroll 時按中心卡片縮放＋改圓點）。
-static CGFloat GHCFDrawerPanelBaseY = 0;
-static UIScrollView *GHCFCarouselScrollView = nil;
-static NSArray *GHCFCarouselCards = nil;
-static UIPageControl *GHCFCarouselPageControl = nil;
-static CGFloat GHCFCarouselPageWidth = 0;
-static int GHCFCarouselPendingOpenIdx = -1; // v43.23：輪盤點左右卡後待打開的下標（滑到中間才開）。
-static CGFloat GHCFLauncherAnchorY = -1; // v55：啟動器弧心 Y（觸發鈕中心或邊緣滑動手指位置）。
-static CGFloat GHCFLauncherAnchorX = -1; // v43.23：啟動器弧心 X（底部出時圓心跟觸發位置的 X 走）。
-static UIWindow *GHCFLauncherBackdropWindow = nil;
-static char GHCFAppPickerBids[256][128]; // v41：選 App 頁每一行的 bundleID（開關 tag = 行號）。
-static int GHCFAppPickerCount = 0;
-static UIScreenEdgePanGestureRecognizer *GHCFLauncherEdgePan = nil; // v40：感应带上的右/左边缘滑动手势（跟小窗位置设定走，见 GHCFUpdateStripPosition）。
-static UIScreenEdgePanGestureRecognizer *GHCFLauncherEdgePanLeft = nil; // v43.32：左感应带上的左边缘滑动手势（触发侧左／双侧时用）。
-static GHCFLauncher *GHCFLauncherShared = nil;
-static BOOL GHCFLauncherVisible = NO;
+static CGFloat CFLYDrawerPanelBaseY = 0;
+static UIScrollView *CFLYCarouselScrollView = nil;
+static NSArray *CFLYCarouselCards = nil;
+static UIPageControl *CFLYCarouselPageControl = nil;
+static CGFloat CFLYCarouselPageWidth = 0;
+static int CFLYCarouselPendingOpenIdx = -1; // v43.23：輪盤點左右卡後待打開的下標（滑到中間才開）。
+static CGFloat CFLYLauncherAnchorY = -1; // v55：啟動器弧心 Y（觸發鈕中心或邊緣滑動手指位置）。
+static CGFloat CFLYLauncherAnchorX = -1; // v43.23：啟動器弧心 X（底部出時圓心跟觸發位置的 X 走）。
+static UIWindow *CFLYLauncherBackdropWindow = nil;
+static char CFLYAppPickerBids[256][128]; // v41：選 App 頁每一行的 bundleID（開關 tag = 行號）。
+static int CFLYAppPickerCount = 0;
+static UIScreenEdgePanGestureRecognizer *CFLYLauncherEdgePan = nil; // v40：感应带上的右/左边缘滑动手势（跟小窗位置设定走，见 CFLYUpdateStripPosition）。
+static UIScreenEdgePanGestureRecognizer *CFLYLauncherEdgePanLeft = nil; // v43.32：左感应带上的左边缘滑动手势（触发侧左／双侧时用）。
+static CFLYLauncher *CFLYLauncherShared = nil;
+static BOOL CFLYLauncherVisible = NO;
 // v43.37（1.0.110，扇形轉盤，第 6 檔 trollfan 才用；1.0.107 e4af0c0 拿回來，
 // 門從 radial（0）改成 trollfan（5））：每顆圖標的半徑／基準角（弧度，
 // 螢幕座標系）／中心點＋當前轉角。重建啟動器時清空、轉角歸零；
 // slideBottom 扇形不轉，不記。
-static NSMutableArray *GHCFDialButtons = nil;
-static NSMutableArray *GHCFDialRadii = nil;
-static NSMutableArray *GHCFDialAngles = nil;
-static CGPoint GHCFDialCenter = {0, 0};
-static double GHCFDialRotation = 0;
-static double GHCFDialLastTouchAngle = 0;
-static double GHCFDialLastTickRotation = 0;
-static int GHCFDialTotal = 0;
-static double GHCFDialSlot = 0; // v43.32：轉盤一格的角度（全圓 2π/總數；ARC 扇形時是扇角/(總數-1)，吸附＋tick 都走它）。
+static NSMutableArray *CFLYDialButtons = nil;
+static NSMutableArray *CFLYDialRadii = nil;
+static NSMutableArray *CFLYDialAngles = nil;
+static CGPoint CFLYDialCenter = {0, 0};
+static double CFLYDialRotation = 0;
+static double CFLYDialLastTouchAngle = 0;
+static double CFLYDialLastTickRotation = 0;
+static int CFLYDialTotal = 0;
+static double CFLYDialSlot = 0; // v43.32：轉盤一格的角度（全圓 2π/總數；ARC 扇形時是扇角/(總數-1)，吸附＋tick 都走它）。
 // v43.42（1.0.115，表盘启动器）：整个圆弧上移量（皇上 15:46 定 60pt，
 // 相对参考图：中心钮 y 424→364，最低图标底边 y≈942→≈882，离屏底 50pt）。
-static const CGFloat GHCFDialUpShift = 60.0;
+static const CGFloat CFLYDialUpShift = 60.0;
 // v43.42：表盘打开时藏了悬浮钮（关掉时放回；只记这一个布尔，不动钮位）。
-static BOOL GHCFDialHidFlyTriggerButton = NO;
+static BOOL CFLYDialHidFlyTriggerButton = NO;
 // 轉盤手勢裝在哪個 contentView 上（弱引用——窗每次打開都重建，
 // 視圖釋放後自動歸 nil，不留懸空指標）。
-static __weak UIView *GHCFDialPanView = nil;
+static __weak UIView *CFLYDialPanView = nil;
 // ChinaFly（1.0.0）：表盤指針角（居中全圓指正上方，扇形指扇區中角；
 // 選中圈就看哪顆離這個角最近）與表盤建造旗標（arcIconButtonForBundleID
 // 靠它認是不是在排表盤圖標——裁圓／缺圖底色只在表盤裡生效）。
-static double GHCFDialPointerAngle = -M_PI_2;
-static BOOL GHCFBuildingDialIcons = NO;
+static double CFLYDialPointerAngle = -M_PI_2;
+static BOOL CFLYBuildingDialIcons = NO;
 // ChinaFly（1.0.0）：表盤圖標狀態圈——指針指著的那顆（離指針角最近）
-// 描 dialIconSelectedColor；已開浮窗的描 dialIconEnabledColor；
-// 其餘描 dialIconNoneColor（淡）。撥動轉盤時跟著轉
-//（GHCFDialApplyRotation 尾巴調一次）。
-static UIColor *GHCFReadDialIconSelectedColor(void);
-static UIColor *GHCFReadDialIconNoneColor(void);
-static UIColor *GHCFReadDialIconEnabledColor(void);
-// ChinaFly（1.0.2，表盤菜單）：33 個菜單項的表（定義在菜單分發器前面，
+// 描 #3D8DFF；已開浮窗的描 #007AFF；其餘描白色（淡）。1.0.4 起顏色
+// 寫死，不再走設定行。撥動轉盤時跟著轉
+//（CFLYDialApplyRotation 尾巴調一次）。
+// ChinaFly（1.0.4，表盤菜單）：47 個菜單項的表（定義在菜單分發器前面，
 // 跟 MenuEdit.plist items 3–35 同順序；identifier 是 key 去掉 menuToggle_
 // 前綴）；表盤菜單模式旗標（開著時表盤排菜單動作，不排 App）。
-typedef struct { const char *identifier; const char *label; const char *symbol; BOOL working; } GHCFMenuItemDef;
-static BOOL GHCFDialMenuMode = NO;
-static int GHCFMenuItemIndexForIdentifier(const char *identifier);
-static NSArray *GHCFEnabledMenuIdentifiers(void);
-void GHCFMenuActionPerform(const char *identifier);
-// ChinaFly（1.0.2，表盤菜單）：33 個菜單項的表——identifier、設定頁標籤、
+typedef struct { const char *identifier; const char *label; const char *labelEn; const char *symbol; BOOL working; } CFLYMenuItemDef;
+static BOOL CFLYDialMenuMode = NO;
+static int CFLYMenuItemIndexForIdentifier(const char *identifier);
+static NSArray *CFLYEnabledMenuIdentifiers(void);
+void CFLYMenuActionPerform(const char *identifier);
+// ChinaFly（1.0.4，表盤菜單）：47 個菜單項的表——identifier、設定頁標籤、
 // SF Symbol、是否真能做（7 個真能做，其餘 26 個只存開關＋記日誌）。
-// 順序跟 MenuEdit.plist items 3–35 一致；identifier 是 key 去掉
-// menuToggle_ 前綴（智慧型反轉顏色那行 key 是 menuToggle__toggleSmartInvert，
-// 所以 identifier 是 _toggleSmartInvert，跟分發器那邊對得上）。
+// 順序跟菜單編輯頁一致；identifier 就是 key 去掉 menuToggle_ 前綴
+//（中性 key，例如 menuToggle_bluetooth；1.0.4 起不再用參考影片的識別碼）。
 // SF Symbol 名字一個一個對過：名字錯了圖就空白，工廠裡拿不到圖會記一行日誌。
 // （定義放這裡：const 陣列不能先暫定定義再定義，表盤那邊先用到它。）
-static const GHCFMenuItemDef GHCFMenuItems[33] = {
-{"ToggleBluetooth", "藍牙", "bluetooth", NO},
-{"ToggleWiFi", "Wi-Fi", "wifi", NO},
-{"ToggleVPN", "VPN", "lock.shield", NO},
-{"ToggleCellularData", "行動數據", "antenna.radiowaves.left.and.right", NO},
-{"ToggleTrueTone", "原彩顯示", "sun.max", NO},
-{"ToggleAirplaneMode", "飛航模式", "airplane", NO},
-{"TogglePersonalHotspot", "個人熱點", "personalhotspot", NO},
-{"ToggleLowPowerMode", "低耗電模式", "battery.25", NO},
-{"ToggleFlashlight", "手電筒", "flashlight.on.fill", YES},
-{"ToggleNightShift", "夜覽", "moon.fill", NO},
-{"_toggleSmartInvert", "智慧型反轉顏色", "circle.lefthalf.filled", NO},
-{"activateLockButton", "鎖定螢幕", "lock.fill", YES},
-{"activateSiri", "Siri", "mic.fill", NO},
-{"decreaseVolume", "降低音量", "speaker.wave.1.fill", YES},
-{"increaseVolume", "提高音量", "speaker.wave.3.fill", YES},
-{"toggleAppLibrary", "App 資源庫", "square.grid.3x3.fill", NO},
-{"toggleAppSwitcher", "App 切換器", "square.stack.3d.up.fill", NO},
-{"toggleCommandAndControl", "語音控制", "waveform", NO},
-{"toggleControlCenter", "控制中心", "switch.2", NO},
-{"toggleLiveSpeech", "即時語音", "person.wave.2", NO},
-{"toggleMute", "靜音", "speaker.slash.fill", NO},
-{"toggleNearbyDeviceControlPicker", "附近裝置控制", "airplayaudio", NO},
-{"toggleNotificationCenter", "通知中心", "bell.fill", NO},
-{"toggleWatchRemoteScreen", "Apple Watch 遠端螢幕", "applewatch", NO},
-{"toggleQuickNote", "快速備忘錄", "note.text", NO},
-{"toggleDock", "Dock", "dock.rectangle", NO},
-{"ToggleLocation", "定位服務", "location.fill", NO},
-{"takeScreenshot", "截圖", "camera.viewfinder", YES},
-{"takeScreenshotAndEdit", "截圖並編輯", "square.and.pencil", YES},
-{"ToggleAutoBrightness", "自動亮度", "sun.max.fill", NO},
-{"ToggleDND", "勿擾模式", "moon.zzz.fill", NO},
-{"screenshotToPasteboard", "截圖到剪貼簿", "doc.on.clipboard", YES},
-{"screenshotRegion", "區域截圖", "crop", NO},
+static const CFLYMenuItemDef CFLYMenuItems[47] = {
+{"spotlight", "聚焦搜尋", "Spotlight Search", "magnifyingglass", YES},
+{"console", "查看日誌", "View Logs", "terminal", YES},
+{"screenRecord", "螢幕錄影", "Screen Recording", "record.circle", YES},
+{"screenRecordMic", "有聲錄影", "Recording with Mic", "mic.fill", YES},
+{"silent", "靜音切換", "Silent Toggle", "bell.slash", YES},
+{"respring", "重啟桌面", "Restart SpringBoard", "arrow.counterclockwise", YES},
+{"reboot", "重新開機", "Reboot Device", "power", YES},
+{"orientation", "鎖定方向", "Orientation Lock", "lock.rotation", YES},
+{"appearance", "日夜切換", "Light / Dark", "moon.circle", YES},
+{"announce", "Siri 語音播報", "Announce Notifications", "megaphone", YES},
+{"bluetooth", "藍牙開關", "Bluetooth", "bluetooth", NO},
+{"wifi", "Wi-Fi 開關", "Wi-Fi", "wifi", NO},
+{"vpn", "VPN 開關", "VPN", "lock.shield", NO},
+{"cellular", "行動數據開關", "Cellular Data", "antenna.radiowaves.left.and.right", NO},
+{"trueTone", "原彩開關", "True Tone", "sun.max", NO},
+{"airplane", "飛航開關", "Airplane Mode", "airplane", NO},
+{"hotspot", "個人熱點開關", "Personal Hotspot", "personalhotspot", NO},
+{"lowPower", "省電開關", "Low Power Mode", "battery.25", NO},
+{"flashlight", "手電筒開關", "Flashlight", "flashlight.on.fill", YES},
+{"nightShift", "夜覽開關", "Night Shift", "moon.fill", NO},
+{"smartInvert", "智慧反色開關", "Smart Invert", "circle.lefthalf.filled", NO},
+{"lock", "鎖定螢幕", "Lock Screen", "lock.fill", YES},
+{"siri", "開啟 Siri", "Open Siri", "mic.fill", NO},
+{"volumeDown", "調低音量", "Volume Down", "speaker.wave.1.fill", YES},
+{"volumeUp", "調高音量", "Volume Up", "speaker.wave.3.fill", YES},
+{"appLibrary", "打開 App 資源庫", "App Library", "square.grid.3x3.fill", NO},
+{"appSwitcher", "打開多工切換", "App Switcher", "square.stack.3d.up.fill", NO},
+{"voiceControl", "語音操控", "Voice Control", "waveform", NO},
+{"controlCenter", "打開控制中心", "Control Center", "switch.2", NO},
+{"liveSpeech", "即時語音", "Live Speech", "person.wave.2", NO},
+{"mute", "靜音開關", "Mute", "speaker.slash.fill", NO},
+{"nearbyDevices", "控制附近裝置", "Nearby Devices", "airplayaudio", NO},
+{"notificationCenter", "打開通知中心", "Notification Center", "bell.fill", NO},
+{"watchRemote", "Watch 遠端螢幕", "Watch Remote Screen", "applewatch", NO},
+{"quickNote", "快速備忘錄", "Quick Note", "note.text", NO},
+{"dock", "顯示 Dock", "Show Dock", "dock.rectangle", NO},
+{"location", "定位開關", "Location Services", "location.fill", NO},
+{"screenshot", "螢幕截圖", "Screenshot", "camera.viewfinder", YES},
+{"screenshotEdit", "截圖並編輯", "Screenshot & Edit", "square.and.pencil", YES},
+{"autoBrightness", "自動亮度開關", "Auto-Brightness", "sun.max.fill", NO},
+{"dnd", "勿擾開關", "Do Not Disturb", "moon.zzz.fill", NO},
+{"screenshotCopy", "截圖複製", "Copy Screenshot", "doc.on.clipboard", YES},
+{"screenshotRegion", "選取區域截圖", "Screenshot Region", "crop", NO},
+{"floatForeground", "把前景變浮窗", "Float Foreground App", "rectangle.on.rectangle", YES},
+{"singleWindow", "只留一個浮窗", "Single Window Mode", "rectangle", YES},
+{"minimizeAll", "收起全部浮窗", "Minimize All", "chevron.down", YES},
+{"closeAll", "關掉全部浮窗", "Close All Windows", "xmark.circle", YES},
 };
-static void GHCFDialRefreshIconRings(void) {
-if (!GHCFDialButtons || !GHCFDialRadii || !GHCFDialAngles) return;
-NSUInteger n = [GHCFDialButtons count];
+static void CFLYDialRefreshIconRings(void) {
+if (!CFLYDialButtons || !CFLYDialRadii || !CFLYDialAngles) return;
+NSUInteger n = [CFLYDialButtons count];
 if (n == 0) return;
 NSUInteger best = 0;
 double bestDiff = 0;
 for (NSUInteger i = 0; i < n; i++) {
-NSNumber *aNum = (NSNumber *)[GHCFDialAngles objectAtIndex:i];
+NSNumber *aNum = (NSNumber *)[CFLYDialAngles objectAtIndex:i];
 if (!aNum) continue;
-double d = [aNum doubleValue] + GHCFDialRotation - GHCFDialPointerAngle;
+double d = [aNum doubleValue] + CFLYDialRotation - CFLYDialPointerAngle;
 while (d > M_PI) d -= 2.0 * M_PI;
 while (d < -M_PI) d += 2.0 * M_PI;
 d = fabs(d);
 if (i == 0 || d < bestDiff) { bestDiff = d; best = i; }
 }
 for (NSUInteger i = 0; i < n; i++) {
-UIButton *btn = (UIButton *)[GHCFDialButtons objectAtIndex:i];
+UIButton *btn = (UIButton *)[CFLYDialButtons objectAtIndex:i];
 if (!btn || [btn.subviews count] == 0) continue;
 UIView *iconView = (UIView *)[btn.subviews objectAtIndex:0];
 if (!iconView) continue;
@@ -1464,24 +1481,24 @@ UIColor *ring = nil;
 CGFloat width = 1.0;
 CGFloat alpha = 0.35;
 // ChinaFly（1.0.2，表盤菜單）：菜單模式下 tag 是菜單下標（0–32），不是
-// App 下標——不能拿它查 GHCFCacheWindows；灰掉的（enabled=NO）永遠只描
+// App 下標——不能拿它查 CFLYCacheWindows；灰掉的（enabled=NO）永遠只描
 // 淡圈，不搶選中圈。
-BOOL menuGrey = (GHCFDialMenuMode && !btn.enabled);
+BOOL menuGrey = (CFLYDialMenuMode && !btn.enabled);
 if (menuGrey) {
-ring = GHCFReadDialIconNoneColor();
+ring = [UIColor whiteColor];
 } else if (i == best) {
-ring = GHCFReadDialIconSelectedColor();
+ring = [UIColor colorWithRed:61.0/255.0 green:141.0/255.0 blue:1.0 alpha:1.0];
 width = 2.5;
 alpha = 1.0;
 } else {
 NSInteger tag = btn.tag;
-BOOL isOpen = (!GHCFDialMenuMode && tag >= 0 && tag < GHCFAppCount && GHCFCacheWindows[tag] && !GHCFCacheWindows[tag].hidden);
+BOOL isOpen = (!CFLYDialMenuMode && tag >= 0 && tag < CFLYAppCount && CFLYCacheWindows[tag] && !CFLYCacheWindows[tag].hidden);
 if (isOpen) {
-ring = GHCFReadDialIconEnabledColor();
+ring = [UIColor colorWithRed:0.0 green:122.0/255.0 blue:1.0 alpha:1.0];
 width = 2.0;
 alpha = 1.0;
 } else {
-ring = GHCFReadDialIconNoneColor();
+ring = [UIColor whiteColor];
 }
 }
 iconView.layer.borderColor = [ring colorWithAlphaComponent:alpha].CGColor;
@@ -1489,121 +1506,121 @@ iconView.layer.borderWidth = width;
 }
 }
 // 轉盤按當前轉角重排圖標（基準角＋轉角，繞中心轉）。
-static void GHCFDialApplyRotation(void) {
-if (!GHCFDialButtons || !GHCFDialRadii || !GHCFDialAngles) return;
-NSUInteger n = [GHCFDialButtons count];
+static void CFLYDialApplyRotation(void) {
+if (!CFLYDialButtons || !CFLYDialRadii || !CFLYDialAngles) return;
+NSUInteger n = [CFLYDialButtons count];
 for (NSUInteger i = 0; i < n; i++) {
-UIButton *btn = (UIButton *)[GHCFDialButtons objectAtIndex:i];
-NSNumber *rNum = (NSNumber *)[GHCFDialRadii objectAtIndex:i];
-NSNumber *aNum = (NSNumber *)[GHCFDialAngles objectAtIndex:i];
+UIButton *btn = (UIButton *)[CFLYDialButtons objectAtIndex:i];
+NSNumber *rNum = (NSNumber *)[CFLYDialRadii objectAtIndex:i];
+NSNumber *aNum = (NSNumber *)[CFLYDialAngles objectAtIndex:i];
 if (!btn || !rNum || !aNum) continue;
 double r = [rNum doubleValue];
-double a = [aNum doubleValue] + GHCFDialRotation;
-btn.center = CGPointMake(GHCFDialCenter.x + r * cos(a), GHCFDialCenter.y + r * sin(a));
+double a = [aNum doubleValue] + CFLYDialRotation;
+btn.center = CGPointMake(CFLYDialCenter.x + r * cos(a), CFLYDialCenter.y + r * sin(a));
 }
-GHCFDialRefreshIconRings();
+CFLYDialRefreshIconRings();
 }
 // 上一次边缘滑动的时间（CFAbsoluteTime），用来做"滑两次才开"。
-static double GHCFLastSwipeTime = 0;
-static CGFloat GHCFLastSwipeStartY = -1; // v43.3：这次边缘滑动起手的 Y（屏幕坐标，触发区判定用；没起手过是 -1）。
+static double CFLYLastSwipeTime = 0;
+static CGFloat CFLYLastSwipeStartY = -1; // v43.3：这次边缘滑动起手的 Y（屏幕坐标，触发区判定用；没起手过是 -1）。
 
 // 5.2 托管悬浮窗的状态（一个窗，见 V5_DESIGN.md §5.2）。
-static UIWindow *GHCFHostedWindow = nil;
-static FBScene *GHCFHostedScene = nil;
-static _UIScenePresenter *GHCFHostedPresenter = nil;
+static UIWindow *CFLYHostedWindow = nil;
+static FBScene *CFLYHostedScene = nil;
+static _UIScenePresenter *CFLYHostedPresenter = nil;
 // v38：托管已有主 scene 的 layer host view（没有 presenter 时用它；
 // 见文件头 v38 节第 1 项）。presenter 与 layerHostView 有且只有一个
 // 非空——presenter!=nil 走新建 scene 的老路，layerHostView!=nil 走
 // 托管已有主 scene 的新路。
-static UIView *GHCFHostedLayerHostView = nil;
+static UIView *CFLYHostedLayerHostView = nil;
 // v38：窗顶上的 16pt 透明细条（拖动窗 + 点它展开/收起控制条，见
 // 文件头 v38 节第 2 项）。它是 container 的子视图，跟着窗走。
-static UIView *GHCFHostedTopStrip = nil;
+static UIView *CFLYHostedTopStrip = nil;
 // v38：觸發鈕单独的小窗（56x56，右边缘、竖直居中，见文件头
 // v38 节第 3 项）。感应带仍是 24pt 全高，只留右边缘滑动手势。
-static UIWindow *GHCFFlyTriggerButtonWindow = nil;
-static UIButton *GHCFFlyTriggerButton = nil;
-static UIView *GHCFHostedContainer = nil;
-static UIView *GHCFHostedContentView = nil;
-static UIView *GHCFHostedResizeHandle = nil;
-static NSString *GHCFHostedSceneID = nil;
-static char GHCFHostedBundleID[128] = {0};
-static int GHCFHostedPid = 0;
-static BOOL GHCFHostedMinimized = NO;
-static BOOL GHCFHostedLaunching = NO;
-static BOOL GHCFRestoreGateActive = NO; // v71：恢复门控进行中（窗藏着等 scene 就绪）。
+static UIWindow *CFLYFlyTriggerButtonWindow = nil;
+static UIButton *CFLYFlyTriggerButton = nil;
+static UIView *CFLYHostedContainer = nil;
+static UIView *CFLYHostedContentView = nil;
+static UIView *CFLYHostedResizeHandle = nil;
+static NSString *CFLYHostedSceneID = nil;
+static char CFLYHostedBundleID[128] = {0};
+static int CFLYHostedPid = 0;
+static BOOL CFLYHostedMinimized = NO;
+static BOOL CFLYHostedLaunching = NO;
+static BOOL CFLYRestoreGateActive = NO; // v71：恢复门控进行中（窗藏着等 scene 就绪）。
 // v72：门控 v2——不要有任何 App 闪黑边。超时不再直接显示黑窗：
 // 窗继续盖占位等、每 0.5 秒重看一次；卡在 contentState==0 熔斷約 2 秒就重建 scene
 //（v43.22：37.log 證明微信卡 0 兩次、0 次在門控內自己恢復，5 秒是純黑時間；
 // 尺寸門仍是 5 秒，只針對 cs==0 縮短；v35「session 内永不销毁」只对卡死 case 开例外）；
 // 占位是深灰底＋转圈＋App 名，绝不是全黑。
-static NSTimeInterval GHCFRestoreGateStart = 0; // v72：这次门控开始时间。
-static NSTimeInterval GHCFRestoreGateDeadline = 0; // v72：重建时间点（开始＋5 秒；不是显示时间——尺寸門用；卡 0 另有 2 秒熔斷）。
-static const NSTimeInterval GHCFRestoreGateStuckZeroTimeout = 2.0; // v43.22：卡 0 熔斷（開始＋2 秒，約 4 個 tick，只針對 contentState==0；尺寸門維持 5 秒）。
-static NSTimeInterval GHCFMinimizeTime = 0; // v43.17：这次收起的时间（点小卡 0.8 秒内不恢复，防误触）。
-static FBScene *GHCFRestoreGateScene = nil; // v71：门控盯着的 scene（换了就取消门控）。
-static CGFloat GHCFRestoreGateTargetAlpha = 1.0; // v71：淡入要回到的 alpha。
-static BOOL GHCFRestoreGateRebuilt = NO; // v72：这次门控已经重建过一次（只重建一次，不循环）。
-static BOOL GHCFRestoreGateStuckLogged = NO; // v72：重建后还是卡 0 只记一行（不每 0.5 秒刷日志）。
-static BOOL GHCFRestoreGateTimeoutDeferredLogged = NO; // v43.7：锁屏时门控超时延后只记一行（不每 0.5 秒刷日志）。
-static int GHCFRestoreGateTimeoutDeferCount = 0; // v43.12：这次门控超时延后次数（满 6 次约 3 秒还卡 0 就直接重建，不再无限 defer；门控开始时清零）。
+static NSTimeInterval CFLYRestoreGateStart = 0; // v72：这次门控开始时间。
+static NSTimeInterval CFLYRestoreGateDeadline = 0; // v72：重建时间点（开始＋5 秒；不是显示时间——尺寸門用；卡 0 另有 2 秒熔斷）。
+static const NSTimeInterval CFLYRestoreGateStuckZeroTimeout = 2.0; // v43.22：卡 0 熔斷（開始＋2 秒，約 4 個 tick，只針對 contentState==0；尺寸門維持 5 秒）。
+static NSTimeInterval CFLYMinimizeTime = 0; // v43.17：这次收起的时间（点小卡 0.8 秒内不恢复，防误触）。
+static FBScene *CFLYRestoreGateScene = nil; // v71：门控盯着的 scene（换了就取消门控）。
+static CGFloat CFLYRestoreGateTargetAlpha = 1.0; // v71：淡入要回到的 alpha。
+static BOOL CFLYRestoreGateRebuilt = NO; // v72：这次门控已经重建过一次（只重建一次，不循环）。
+static BOOL CFLYRestoreGateStuckLogged = NO; // v72：重建后还是卡 0 只记一行（不每 0.5 秒刷日志）。
+static BOOL CFLYRestoreGateTimeoutDeferredLogged = NO; // v43.7：锁屏时门控超时延后只记一行（不每 0.5 秒刷日志）。
+static int CFLYRestoreGateTimeoutDeferCount = 0; // v43.12：这次门控超时延后次数（满 6 次约 3 秒还卡 0 就直接重建，不再无限 defer；门控开始时清零）。
 // v43.12：lockToken 原本是 setup 函数里的局部变量（约 L9640），门控函数在前面
 // 用不到——提到文件级 static，setup 里直接用它注册，门控超时直接读它。
 static int lockToken = 0;
 // v43.13：設定變更通知令牌（設定頁 PostNotification 發
-// com.guhailong.fly.prefschanged 時用）。
+// com.chinafly.fly.prefschanged 時用）。
 static int prefsChangedToken = 0;
-static int GHCFRestoreGateMode = 0; // v72：门控模式——0 恢复（窗藏着，等就绪淡入显示）；1 已显示窗（promote／新窗，只盖占位、就绪淡出占位）。
-static BOOL GHCFSuppressSlideInOnce = NO; // v72：重建 scene 时下一次建窗不滑入（直接出现在原位）。
-static UIWindow *GHCFSnapshotAnimWindow = nil; // v72：快照动画的临时窗（播完就收掉）.
-static UIView *GHCFRestorePreSnap = nil; // v43.6：恢复前预抓的快照（改尺寸之前抓，layer 里还是小卡最后一帧活内容；动画用完就清）。
+static int CFLYRestoreGateMode = 0; // v72：门控模式——0 恢复（窗藏着，等就绪淡入显示）；1 已显示窗（promote／新窗，只盖占位、就绪淡出占位）。
+static BOOL CFLYSuppressSlideInOnce = NO; // v72：重建 scene 时下一次建窗不滑入（直接出现在原位）。
+static UIWindow *CFLYSnapshotAnimWindow = nil; // v72：快照动画的临时窗（播完就收掉）.
+static UIView *CFLYRestorePreSnap = nil; // v43.6：恢复前预抓的快照（改尺寸之前抓，layer 里还是小卡最后一帧活内容；动画用完就清）。
 
 // v73：尺寸門——scene 內容尺寸對上窗 frame 才算就緒（黑半邊修復）。
 // 1.0.72 影片：設定從小卡恢復成大窗，內容只佔左邊約 55%，右邊全黑約 2 秒——
 // 門控只看 contentState==2，但 scene 是在舊尺寸（小卡寬）下就緒的，窗放大後
 // scene 還沒重畫到新尺寸。追蹤最後一次推給 scene 的 frame 尺寸（下面三處推
-// frame 的地方都更新它：建窗初始 settings、GHCFApplyScaleToHostedWindow
-// 的防抖推、GHCFPushPeekScaleForIndex 的推），跟現在窗該有的尺寸比（誤差 3pt），
+// frame 的地方都更新它：建窗初始 settings、CFLYApplyScaleToHostedWindow
+// 的防抖推、CFLYPushPeekScaleForIndex 的推），跟現在窗該有的尺寸比（誤差 3pt），
 // 再比內容區 sublayerTransform 的縮放（誤差 0.03）——恢復時 transform 還停在
 // 小卡縮放（0.27）就是黑半邊的樣子。
-static CGSize GHCFHostedSceneFrameSize = {0, 0}; // v73：最後一次推給 scene 的 frame 尺寸。
-static BOOL GHCFHostedSceneFrameSizeValid = NO; // v73：上面那個尺寸有沒有推過。
-static BOOL GHCFSizeGatePreMatched = NO; // v73：門控決策時尺寸已經對上（resize 在快照動畫前就推了）。
-static BOOL GHCFSizeGateMatchedOnce = NO; // v73：尺寸在上一個 tick 已經對上一次（給 scene 半秒把新尺寸畫出來）。
-static BOOL GHCFSizeGateWaitingLogged = NO; // v73：尺寸等候只記一行（不每 0.5 秒刷日誌）。
+static CGSize CFLYHostedSceneFrameSize = {0, 0}; // v73：最後一次推給 scene 的 frame 尺寸。
+static BOOL CFLYHostedSceneFrameSizeValid = NO; // v73：上面那個尺寸有沒有推過。
+static BOOL CFLYSizeGatePreMatched = NO; // v73：門控決策時尺寸已經對上（resize 在快照動畫前就推了）。
+static BOOL CFLYSizeGateMatchedOnce = NO; // v73：尺寸在上一個 tick 已經對上一次（給 scene 半秒把新尺寸畫出來）。
+static BOOL CFLYSizeGateWaitingLogged = NO; // v73：尺寸等候只記一行（不每 0.5 秒刷日誌）。
 
 // v72：载入占位 helper（定义在门控 tick 前面；看门狗／建窗路在它前面就呼叫，
 // 这里先给原型）。
-static void GHCFShowPlaceholderForIndex(int idx);
-static void GHCFHidePlaceholderForIndex(int idx);
-static BOOL GHCFHostedSceneSizeMatchesWindow(void); // v73：尺寸門判斷（定義在門控 tick 前面）。
-static CGFloat GHCFScreenSafeTopInset(void); // v43：前向宣告（定义在下面 v54 处，分屏几何要用）。
+static void CFLYShowPlaceholderForIndex(int idx);
+static void CFLYHidePlaceholderForIndex(int idx);
+static BOOL CFLYHostedSceneSizeMatchesWindow(void); // v73：尺寸門判斷（定義在門控 tick 前面）。
+static CGFloat CFLYScreenSafeTopInset(void); // v43：前向宣告（定义在下面 v54 处，分屏几何要用）。
 
 // v38：每窗一个 scaleRatio（反向耦合缩放，见文件头 v38 节）。
 // 活动窗的 scale 存在这里；切走时存缓存、切回来时读缓存。
 // 计算器默认 0.77（窗 320x737），别的 App 默认 1.0。
-static CGFloat GHCFHostedScaleRatio = 1.0;
+static CGFloat CFLYHostedScaleRatio = 1.0;
 // v60：标题栏拿掉，± 钮跟着没了；缩放滑杆条（UISlider + 百分比）
 // 还在，见 buildHostedWindow，点细条展开／收起。
-static UIView *GHCFHostedScaleSliderBar = nil;
-static UISlider *GHCFHostedScaleSlider = nil;
-static UILabel *GHCFHostedScaleLabel = nil;
+static UIView *CFLYHostedScaleSliderBar = nil;
+static UISlider *CFLYHostedScaleSlider = nil;
+static UILabel *CFLYHostedScaleLabel = nil;
 // v38：frame 更新防抖的令牌（FBAL 的 resizeWindowWithFrame 做法）。
 // 每次调缩放就 +1、0.05 秒后只跑最新的一次。
-static int GHCFScaleDebounceToken = 0;
+static int CFLYScaleDebounceToken = 0;
 
 // v32：锁屏时临时藏窗——悬浮窗是不是被锁屏藏起来的（不是被最小化）。
 // 只在"开着"时锁屏才设 YES；解锁时只有它是 YES 才把窗重新显示出来。
 // 最小化着的窗本来就藏着，解锁时不碰它（等用户点恢复）。
-static BOOL GHCFHostedHiddenByLock = NO;
+static BOOL CFLYHostedHiddenByLock = NO;
 
 // v35：每 App 一个悬浮窗的缓存——一个 SpringBoard 会话里永远不销毁
 // scene（见文件头 v35 节）。关窗（X）与切走都只藏窗（不推后台），不
 // 销毁；切回来直接复用缓存里的 scene + presenter + 窗。
 // v40：一次可以显示多个窗（5.3 多窗）。活动窗仍用原来那套静态量
-//（GHCFHostedWindow 等），是「最近互动的窗」；所有现成路径（关窗、
+//（CFLYHostedWindow 等），是「最近互动的窗」；所有现成路径（关窗、
 // 最小化、恢复、锁屏回调、重试、拖动、缩放）都先把活动量切到「手势
-// 所属的窗」再做事（GHCFSetActiveToWindow），原样不动；新窗创建时
+// 所属的窗」再做事（CFLYSetActiveToWindow），原样不动；新窗创建时
 // 不再藏旧窗，旧窗留在原地、层级降回基础。
 // 平行静态数组（强引用，ARC 安全）：不用 struct 存对象指针（ARC 不
 // 准 struct 里放强引用对象，__unsafe_unretained 又怕对象被系统释放
@@ -1619,146 +1636,146 @@ static BOOL GHCFHostedHiddenByLock = NO;
 // v70：懸掛（點窗外「懸掛」）：窗掛到最近的邊、只露 30pt，點那截恢復。
 // 跟 peek 點按層同一套做法：每 App 一個點按層＋記住掛起前的 frame。
 // v41：選 App 頁的窗（ARC 裡「＋」開的已安裝 App 清單；層級 Alert - 1）。
-static UIWindow *GHCFAppPickerWindow = nil;
+static UIWindow *CFLYAppPickerWindow = nil;
 // v41：通知橫幅的窗（新窗建好時短暫顯示「已打開 <App>」，自動藏）。
-static UIWindow *GHCFNotificationBannerWindow = nil;
-static UIWindow *GHCFDimOverlayWindow; // v40：点窗外事件的阴影背景窗（Alert - 4.5，主屏之上、感应带/觸發鈕之下、宿主窗之下；开关开着、且有浮窗看得见时显示）
-static BOOL GHCFDragDockLeft = NO; // v40：这次拖动贴边收起往哪边（Began 时读一次位置设定，拖动中不变——每动一下都读 prefs 太费）。
-static CGFloat GHCFDragSafeDistance = 50.0; // v40：这次拖动的安全距离（Began 时读一次，同上）。
-static BOOL GHCFDragDisabled = NO; // v41：這次拖動被調度設定關掉了（Began 時讀一次浮窗拖動手勢開關）。
-static CGFloat GHCFDragFlickUpThreshold = 1000.0; // v43.3：这次拖动的上甩速度门槛 pt/s（Began 时读一次，同上）。
-static BOOL GHCFFlyTriggerLongPressed = NO; // v40：觸發鈕刚被长按过（长按关全部窗；点按处理里看到它就 suppress 启动器、清掉；拖动钮时也清掉——长按后拖出按钮外、TouchUpInside 不触发时的兜底）。
+static UIWindow *CFLYNotificationBannerWindow = nil;
+static UIWindow *CFLYDimOverlayWindow; // v40：点窗外事件的阴影背景窗（Alert - 4.5，主屏之上、感应带/觸發鈕之下、宿主窗之下；开关开着、且有浮窗看得见时显示）
+static BOOL CFLYDragDockLeft = NO; // v40：这次拖动贴边收起往哪边（Began 时读一次位置设定，拖动中不变——每动一下都读 prefs 太费）。
+static CGFloat CFLYDragSafeDistance = 50.0; // v40：这次拖动的安全距离（Began 时读一次，同上）。
+static BOOL CFLYDragDisabled = NO; // v41：這次拖動被調度設定關掉了（Began 時讀一次浮窗拖動手勢開關）。
+static CGFloat CFLYDragFlickUpThreshold = 1000.0; // v43.3：这次拖动的上甩速度门槛 pt/s（Began 时读一次，同上）。
+static BOOL CFLYFlyTriggerLongPressed = NO; // v40：觸發鈕刚被长按过（长按关全部窗；点按处理里看到它就 suppress 启动器、清掉；拖动钮时也清掉——长按后拖出按钮外、TouchUpInside 不触发时的兜底）。
 // v38：每 App 的 scaleRatio + 缩放 UI（和上面那套平行数组同一做法）。
 // v42：底部任務欄、設定卡片（見下面宣告；v53：懸浮球已整個拿掉）。
 // v54：系統橫幅探針（見 showNotificationBannerWithText 下面，先聲明）。
-static void GHCFCheckSystemBanner(void);
-static UIWindow *GHCFSettingsTaskbarWindow = nil;
-static BOOL GHCFLowBatteryDocked = NO;
-static int GHCFPeriodicTickCount = 0;
-static BOOL GHCFScreenLocked = NO; // v64：鎖屏旗標（看門狗用：鎖著時不推前景，不跟鎖屏回調打架）。
+static void CFLYCheckSystemBanner(void);
+static UIWindow *CFLYSettingsTaskbarWindow = nil;
+static BOOL CFLYLowBatteryDocked = NO;
+static int CFLYPeriodicTickCount = 0;
+static BOOL CFLYScreenLocked = NO; // v64：鎖屏旗標（看門狗用：鎖著時不推前景，不跟鎖屏回調打架）。
 // v54：任務欄快照已拿掉（v43.21 起芯片只顯示 App 圖標，不抓快照）。
-static BOOL GHCFKeyboardShifted = NO;
-static CGRect GHCFKeyboardSavedFrame = {{0, 0}, {0, 0}};
-static BOOL GHCFKeyboardEnlarged = NO; // v43.5：橫屏放大中（鍵盤彈出時放大、收起恢復原尺寸）。
-static CGRect GHCFKeyboardEnlargedSavedFrame = {{0, 0}, {0, 0}}; // v43.5：放大前原尺寸。
-static NSTimeInterval GHCFKeyboardHideLastTime = 0; // v43.22：上次 hide 的時間（1 秒內同一 bundle 第二次 hide 忽略）。
-static char GHCFKeyboardHideLastBid[128] = {0}; // v43.22：上次 hide 的 bundle。
+static BOOL CFLYKeyboardShifted = NO;
+static CGRect CFLYKeyboardSavedFrame = {{0, 0}, {0, 0}};
+static BOOL CFLYKeyboardEnlarged = NO; // v43.5：橫屏放大中（鍵盤彈出時放大、收起恢復原尺寸）。
+static CGRect CFLYKeyboardEnlargedSavedFrame = {{0, 0}, {0, 0}}; // v43.5：放大前原尺寸。
+static NSTimeInterval CFLYKeyboardHideLastTime = 0; // v43.22：上次 hide 的時間（1 秒內同一 bundle 第二次 hide 忽略）。
+static char CFLYKeyboardHideLastBid[128] = {0}; // v43.22：上次 hide 的 bundle。
 // 当前活动的是缓存里的第几个 App（-1 = 没有活动窗）。
-static int GHCFActiveAppIndex = -1;
+static int CFLYActiveAppIndex = -1;
 
-// v38：默认 scaleRatio（下面定义；GHCFLoadCacheToActive 要用，先声明）。
-static CGFloat GHCFDefaultScaleRatioForBundleID(const char *bundleID);
-// v41：先声明（下面定义；GHCFIsWindowPositionLeft 等讀值 helper 要用，先声明）。
-static BOOL GHCFIsWindowPositionLeft(void);
+// v38：默认 scaleRatio（下面定义；CFLYLoadCacheToActive 要用，先声明）。
+static CGFloat CFLYDefaultScaleRatioForBundleID(const char *bundleID);
+// v41：先声明（下面定义；CFLYIsWindowPositionLeft 等讀值 helper 要用，先声明）。
+static BOOL CFLYIsWindowPositionLeft(void);
 // ChinaFly（1.0.0）：先声明（下面定义；新讀值器的 fallback 與表盤狀態圈要用）。
-static BOOL GHCFPrefsHasKey(const char *key);
+static BOOL CFLYPrefsHasKey(const char *key);
 // v42：先声明（下面定义；%ctor 与各处要用，先声明）。
-static void GHCFUpdateTaskbar(void);
-static void GHCFPushForegroundCachedSceneAtIndex(int idx, const char *logLine);
-static void GHCFCheckLowBattery(void);
-static void GHCFSchedulePeriodicTick(void);
-static void GHCFPeekWatchdogTick(void);
-static void GHCFSaveRestoreList(void);
-static BOOL GHCFIsWindowPinned(const char *bundleID);
-static NSArray *GHCFReadIDList(const char *key);
-static void GHCFWriteIDList(const char *key, NSArray *ids);
+static void CFLYUpdateTaskbar(void);
+static void CFLYPushForegroundCachedSceneAtIndex(int idx, const char *logLine);
+static void CFLYCheckLowBattery(void);
+static void CFLYSchedulePeriodicTick(void);
+static void CFLYPeekWatchdogTick(void);
+static void CFLYSaveRestoreList(void);
+static BOOL CFLYIsWindowPinned(const char *bundleID);
+static NSArray *CFLYReadIDList(const char *key);
+static void CFLYWriteIDList(const char *key, NSArray *ids);
 // v70：先声明（下面定义；各处要用，先声明）。
-static int GHCFReadExitAnimation(void);
-static int GHCFReadLauncherStyle(void);
-static BOOL GHCFReadLauncherStyleRadial(void);
-static CGFloat GHCFReadWindowSizePercent(void);
-static void GHCFHangWindowForIndex(int idx);
-static void GHCFRestoreHungWindowForIndex(int idx);
-static void GHCFClearHungStateForIndex(int idx);
-static BOOL GHCFListContainsBid(NSArray *ids, const char *bundleID);
-// v43.3：先声明（下面定义；GHCFBringWindowToFront 要调，先声明）。
+static int CFLYReadExitAnimation(void);
+static int CFLYReadLauncherStyle(void);
+static BOOL CFLYReadLauncherStyleRadial(void);
+static CGFloat CFLYReadWindowSizePercent(void);
+static void CFLYHangWindowForIndex(int idx);
+static void CFLYRestoreHungWindowForIndex(int idx);
+static void CFLYClearHungStateForIndex(int idx);
+static BOOL CFLYListContainsBid(NSArray *ids, const char *bundleID);
+// v43.3：先声明（下面定义；CFLYBringWindowToFront 要调，先声明）。
 static void GHLSEnforceWindowCap(UIWindow *window);
-// v53：先声明（下面定义；GHCFPresetSizeForBundleID 与
-// GHCFRefreshFlyTriggerButtonImageIfNeeded 要用，先声明）。
-static int GHCFReadWindowSizePreset(void);
-static UIImage *GHCFLoadFlyTriggerImage(void);
-static BOOL GHCFReadFlyTriggerIconCustom(void);
-static NSString *GHCFCustomFlyTriggerImagePath(void);
+// v53：先声明（下面定义；CFLYPresetSizeForBundleID 与
+// CFLYRefreshFlyTriggerButtonImageIfNeeded 要用，先声明）。
+static int CFLYReadWindowSizePreset(void);
+static UIImage *CFLYLoadFlyTriggerImage(void);
+static BOOL CFLYReadFlyTriggerIconCustom(void);
+static NSString *CFLYCustomFlyTriggerImagePath(void);
 
 // bundleID → 启动器下标（動態串列），找不到返回 -1。
-static int GHCFAppIndexForBundleID(const char *bundleID) {
+static int CFLYAppIndexForBundleID(const char *bundleID) {
 if (!bundleID) return -1;
-GHCFInitAppTables();
-for (int i = 0; i < GHCFAppCount; i++) {
-if (strcmp(GHCFAppBundleIDs[i], bundleID) == 0) return i;
+CFLYInitAppTables();
+for (int i = 0; i < CFLYAppCount; i++) {
+if (strcmp(CFLYAppBundleIDs[i], bundleID) == 0) return i;
 }
 return -1;
 }
 
 // 把活动量存进缓存（切走 / 新窗建成后调；调用前活动量必须是那个 App 的）。
-static void GHCFSaveActiveToCache(void) {
-if (GHCFActiveAppIndex < 0 || GHCFActiveAppIndex >= GHCFAppCount) return;
-int i = GHCFActiveAppIndex;
-GHCFCacheWindows[i] = GHCFHostedWindow;
-GHCFCacheScenes[i] = GHCFHostedScene;
-GHCFCachePresenters[i] = GHCFHostedPresenter;
-GHCFCacheLayerHostViews[i] = GHCFHostedLayerHostView;
-GHCFCacheTopStrips[i] = GHCFHostedTopStrip;
-GHCFCacheContainers[i] = GHCFHostedContainer;
-GHCFCacheContentViews[i] = GHCFHostedContentView;
-GHCFCacheResizeHandles[i] = GHCFHostedResizeHandle;
-GHCFCacheSceneIDs[i] = GHCFHostedSceneID;
-strncpy(GHCFCacheBundleIDs[i], GHCFHostedBundleID, sizeof(GHCFCacheBundleIDs[i]) - 1);
-GHCFCacheBundleIDs[i][sizeof(GHCFCacheBundleIDs[i]) - 1] = '\0';
-GHCFCachePids[i] = GHCFHostedPid;
-GHCFCacheMinimized[i] = GHCFHostedMinimized;
-GHCFCacheHiddenByLock[i] = GHCFHostedHiddenByLock;
-GHCFCacheScaleRatios[i] = GHCFHostedScaleRatio;
-GHCFCacheScaleSliderBars[i] = GHCFHostedScaleSliderBar;
-GHCFCacheScaleSliders[i] = GHCFHostedScaleSlider;
-GHCFCacheScaleLabels[i] = GHCFHostedScaleLabel;
+static void CFLYSaveActiveToCache(void) {
+if (CFLYActiveAppIndex < 0 || CFLYActiveAppIndex >= CFLYAppCount) return;
+int i = CFLYActiveAppIndex;
+CFLYCacheWindows[i] = CFLYHostedWindow;
+CFLYCacheScenes[i] = CFLYHostedScene;
+CFLYCachePresenters[i] = CFLYHostedPresenter;
+CFLYCacheLayerHostViews[i] = CFLYHostedLayerHostView;
+CFLYCacheTopStrips[i] = CFLYHostedTopStrip;
+CFLYCacheContainers[i] = CFLYHostedContainer;
+CFLYCacheContentViews[i] = CFLYHostedContentView;
+CFLYCacheResizeHandles[i] = CFLYHostedResizeHandle;
+CFLYCacheSceneIDs[i] = CFLYHostedSceneID;
+strncpy(CFLYCacheBundleIDs[i], CFLYHostedBundleID, sizeof(CFLYCacheBundleIDs[i]) - 1);
+CFLYCacheBundleIDs[i][sizeof(CFLYCacheBundleIDs[i]) - 1] = '\0';
+CFLYCachePids[i] = CFLYHostedPid;
+CFLYCacheMinimized[i] = CFLYHostedMinimized;
+CFLYCacheHiddenByLock[i] = CFLYHostedHiddenByLock;
+CFLYCacheScaleRatios[i] = CFLYHostedScaleRatio;
+CFLYCacheScaleSliderBars[i] = CFLYHostedScaleSliderBar;
+CFLYCacheScaleSliders[i] = CFLYHostedScaleSlider;
+CFLYCacheScaleLabels[i] = CFLYHostedScaleLabel;
 }
 
 // 把缓存第 idx 项装回活动量（切回来复用时调）。
-static void GHCFLoadCacheToActive(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-GHCFHostedWindow = GHCFCacheWindows[idx];
-GHCFHostedScene = GHCFCacheScenes[idx];
-GHCFHostedPresenter = GHCFCachePresenters[idx];
-GHCFHostedLayerHostView = GHCFCacheLayerHostViews[idx];
-GHCFHostedTopStrip = GHCFCacheTopStrips[idx];
-GHCFHostedContainer = GHCFCacheContainers[idx];
-GHCFHostedContentView = GHCFCacheContentViews[idx];
-GHCFHostedResizeHandle = GHCFCacheResizeHandles[idx];
-GHCFHostedSceneID = GHCFCacheSceneIDs[idx];
-strncpy(GHCFHostedBundleID, GHCFCacheBundleIDs[idx], sizeof(GHCFHostedBundleID) - 1);
-GHCFHostedBundleID[sizeof(GHCFHostedBundleID) - 1] = '\0';
-GHCFHostedPid = GHCFCachePids[idx];
-GHCFHostedMinimized = GHCFCacheMinimized[idx];
-GHCFHostedHiddenByLock = GHCFCacheHiddenByLock[idx];
-GHCFHostedScaleRatio = GHCFCacheScaleRatios[idx];
-if (GHCFHostedScaleRatio <= 0) GHCFHostedScaleRatio = GHCFDefaultScaleRatioForBundleID(GHCFCacheBundleIDs[idx]);
-GHCFHostedScaleSliderBar = GHCFCacheScaleSliderBars[idx];
-GHCFHostedScaleSlider = GHCFCacheScaleSliders[idx];
-GHCFHostedScaleLabel = GHCFCacheScaleLabels[idx];
-GHCFActiveAppIndex = idx;
+static void CFLYLoadCacheToActive(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+CFLYHostedWindow = CFLYCacheWindows[idx];
+CFLYHostedScene = CFLYCacheScenes[idx];
+CFLYHostedPresenter = CFLYCachePresenters[idx];
+CFLYHostedLayerHostView = CFLYCacheLayerHostViews[idx];
+CFLYHostedTopStrip = CFLYCacheTopStrips[idx];
+CFLYHostedContainer = CFLYCacheContainers[idx];
+CFLYHostedContentView = CFLYCacheContentViews[idx];
+CFLYHostedResizeHandle = CFLYCacheResizeHandles[idx];
+CFLYHostedSceneID = CFLYCacheSceneIDs[idx];
+strncpy(CFLYHostedBundleID, CFLYCacheBundleIDs[idx], sizeof(CFLYHostedBundleID) - 1);
+CFLYHostedBundleID[sizeof(CFLYHostedBundleID) - 1] = '\0';
+CFLYHostedPid = CFLYCachePids[idx];
+CFLYHostedMinimized = CFLYCacheMinimized[idx];
+CFLYHostedHiddenByLock = CFLYCacheHiddenByLock[idx];
+CFLYHostedScaleRatio = CFLYCacheScaleRatios[idx];
+if (CFLYHostedScaleRatio <= 0) CFLYHostedScaleRatio = CFLYDefaultScaleRatioForBundleID(CFLYCacheBundleIDs[idx]);
+CFLYHostedScaleSliderBar = CFLYCacheScaleSliderBars[idx];
+CFLYHostedScaleSlider = CFLYCacheScaleSliders[idx];
+CFLYHostedScaleLabel = CFLYCacheScaleLabels[idx];
+CFLYActiveAppIndex = idx;
 }
 
 // 清活动量（切走时存完缓存后调；缓存里的指针不受影响）。
-static void GHCFClearActive(void) {
-GHCFHostedWindow = nil;
-GHCFHostedScene = nil;
-GHCFHostedPresenter = nil;
-GHCFHostedLayerHostView = nil;
-GHCFHostedTopStrip = nil;
-GHCFHostedContainer = nil;
-GHCFHostedContentView = nil;
-GHCFHostedResizeHandle = nil;
-GHCFHostedSceneID = nil;
-GHCFHostedBundleID[0] = '\0';
-GHCFHostedPid = 0;
-GHCFHostedMinimized = NO;
-GHCFHostedHiddenByLock = NO;
-GHCFHostedScaleRatio = 1.0;
-GHCFHostedScaleSliderBar = nil;
-GHCFHostedScaleSlider = nil;
-GHCFHostedScaleLabel = nil;
-GHCFActiveAppIndex = -1;
+static void CFLYClearActive(void) {
+CFLYHostedWindow = nil;
+CFLYHostedScene = nil;
+CFLYHostedPresenter = nil;
+CFLYHostedLayerHostView = nil;
+CFLYHostedTopStrip = nil;
+CFLYHostedContainer = nil;
+CFLYHostedContentView = nil;
+CFLYHostedResizeHandle = nil;
+CFLYHostedSceneID = nil;
+CFLYHostedBundleID[0] = '\0';
+CFLYHostedPid = 0;
+CFLYHostedMinimized = NO;
+CFLYHostedHiddenByLock = NO;
+CFLYHostedScaleRatio = 1.0;
+CFLYHostedScaleSliderBar = nil;
+CFLYHostedScaleSlider = nil;
+CFLYHostedScaleLabel = nil;
+CFLYActiveAppIndex = -1;
 }
 
 // v35：销毁缓存里第 idx 项的 scene + presenter。只在复用守卫判旧时
@@ -1773,106 +1790,106 @@ GHCFActiveAppIndex = -1;
 // v41 前向声明：貼邊 peek 收掉（定义在后面工具函数区；销毁缓存项时也要
 // 收掉对应的 peek，不然死进程的舊窗會一直貼在邊緣）。
 // v42.3 前向声明：貼邊 peek 收成（自動縮窗時調，定義在後面，跟收掉同一區）。
-static void GHCFHideDockPeekForIndex(int idx);
-static void GHCFShowDockPeekForIndex(int idx);
+static void CFLYHideDockPeekForIndex(int idx);
+static void CFLYShowDockPeekForIndex(int idx);
 
-static void GHCFDestroyCachedEntryAtIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheScenes[idx] && !GHCFCacheWindows[idx]) return;
-if (GHCFCacheWindows[idx]) GHCFCacheWindows[idx].hidden = YES;
+static void CFLYDestroyCachedEntryAtIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheScenes[idx] && !CFLYCacheWindows[idx]) return;
+if (CFLYCacheWindows[idx]) CFLYCacheWindows[idx].hidden = YES;
 // v38：layer-host 的项（有 layerHostView、没有 presenter）只清引用。
-if (GHCFCacheLayerHostViews[idx] && !GHCFCachePresenters[idx]) {
-GHCFLogLine("v57 layer host entry cleared (scene kept)");
+if (CFLYCacheLayerHostViews[idx] && !CFLYCachePresenters[idx]) {
+CFLYLogLine("v57 layer host entry cleared (scene kept)");
 } else {
 @try {
-if (GHCFCacheSceneIDs[idx]) {
+if (CFLYCacheSceneIDs[idx]) {
 char dbuf[256];
-snprintf(dbuf, sizeof(dbuf), "v57 destroying scene %s", [GHCFCacheSceneIDs[idx] UTF8String]);
-GHCFLogLine(dbuf);
-[[FBSceneManager sharedInstance] destroyScene:GHCFCacheSceneIDs[idx] withTransitionContext:nil];
+snprintf(dbuf, sizeof(dbuf), "v57 destroying scene %s", [CFLYCacheSceneIDs[idx] UTF8String]);
+CFLYLogLine(dbuf);
+[[FBSceneManager sharedInstance] destroyScene:CFLYCacheSceneIDs[idx] withTransitionContext:nil];
 }
-if (GHCFCachePresenters[idx]) {
-[GHCFCachePresenters[idx] deactivate];
-[GHCFCachePresenters[idx] invalidate];
+if (CFLYCachePresenters[idx]) {
+[CFLYCachePresenters[idx] deactivate];
+[CFLYCachePresenters[idx] invalidate];
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 destroy failed");
+CFLYLogLine("v57 destroy failed");
 }
 }
-GHCFCacheWindows[idx] = nil;
-GHCFCacheScenes[idx] = nil;
-GHCFCachePresenters[idx] = nil;
-GHCFCacheLayerHostViews[idx] = nil;
-GHCFCacheTopStrips[idx] = nil;
-GHCFCacheContainers[idx] = nil;
-GHCFCacheContentViews[idx] = nil;
+CFLYCacheWindows[idx] = nil;
+CFLYCacheScenes[idx] = nil;
+CFLYCachePresenters[idx] = nil;
+CFLYCacheLayerHostViews[idx] = nil;
+CFLYCacheTopStrips[idx] = nil;
+CFLYCacheContainers[idx] = nil;
+CFLYCacheContentViews[idx] = nil;
 // v72：占位跟着 container 一起丢掉——指针清掉，不留野指针。
 // v43.22：凍結快照同理（container 丟了它也跟著丟，指標不清會變野指標）。
-GHCFGatePlaceholders[idx] = nil;
-GHCFGateFrozenSnaps[idx] = nil;
-GHCFPeekDockSnaps[idx] = nil; // v43.23：第 7 件——dock 快照指標同清。
-GHCFCacheResizeHandles[idx] = nil;
-GHCFPeekTapOverlays[idx] = nil;
-GHCFCacheSceneIDs[idx] = nil;
-GHCFCacheBundleIDs[idx][0] = '\0';
-GHCFCachePids[idx] = 0;
-GHCFCacheMinimized[idx] = NO;
-GHCFCacheHiddenByLock[idx] = NO;
-GHCFCacheScaleRatios[idx] = 1.0;
-GHCFCacheScaleSliderBars[idx] = nil;
-GHCFCacheScaleSliders[idx] = nil;
-GHCFCacheScaleLabels[idx] = nil;
+CFLYGatePlaceholders[idx] = nil;
+CFLYGateFrozenSnaps[idx] = nil;
+CFLYPeekDockSnaps[idx] = nil; // v43.23：第 7 件——dock 快照指標同清。
+CFLYCacheResizeHandles[idx] = nil;
+CFLYPeekTapOverlays[idx] = nil;
+CFLYCacheSceneIDs[idx] = nil;
+CFLYCacheBundleIDs[idx][0] = '\0';
+CFLYCachePids[idx] = 0;
+CFLYCacheMinimized[idx] = NO;
+CFLYCacheHiddenByLock[idx] = NO;
+CFLYCacheScaleRatios[idx] = 1.0;
+CFLYCacheScaleSliderBars[idx] = nil;
+CFLYCacheScaleSliders[idx] = nil;
+CFLYCacheScaleLabels[idx] = nil;
 // v41：销毁缓存项时收掉对应的貼邊 peek（死进程的舊窗不能留着）。
-GHCFHideDockPeekForIndex(idx);
-if (idx == GHCFActiveAppIndex) {
-GHCFClearActive();
+CFLYHideDockPeekForIndex(idx);
+if (idx == CFLYActiveAppIndex) {
+CFLYClearActive();
 }
-GHCFLogLine("v57 scene destroyed");
+CFLYLogLine("v57 scene destroyed");
 }
 
 // v43.20: drop a cached entry WITHOUT destroying its scene (long-press direct
-// close). Unlike GHCFDestroyCachedEntryAtIndex, never calls destroyScene and
+// close). Unlike CFLYDestroyCachedEntryAtIndex, never calls destroyScene and
 // never invalidates the presenter — the app process keeps running and the
 // scene stays alive in the system; reopening re-hosts the existing scene via
-// GHCFExistingMainSceneForBundleID. Dropping the window pointer is what makes
-// the taskbar chip disappear (GHCFUpdateTaskbar draws a chip for every
+// CFLYExistingMainSceneForBundleID. Dropping the window pointer is what makes
+// the taskbar chip disappear (CFLYUpdateTaskbar draws a chip for every
 // non-nil cache window). The window itself is already hidden by
 // closeHostedWindow's exit-animation completion.
-static void GHCFDropCachedEntryKeepingScene(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheScenes[idx] && !GHCFCacheWindows[idx]) return;
-if (GHCFCacheWindows[idx]) GHCFCacheWindows[idx].hidden = YES;
-GHCFCacheWindows[idx] = nil;
-GHCFCacheScenes[idx] = nil;
-GHCFCachePresenters[idx] = nil;
-GHCFCacheLayerHostViews[idx] = nil;
-GHCFCacheTopStrips[idx] = nil;
-GHCFCacheContainers[idx] = nil;
-GHCFCacheContentViews[idx] = nil;
-GHCFGatePlaceholders[idx] = nil;
-GHCFGateFrozenSnaps[idx] = nil; // v43.22：凍結快照指標同清（窗藏了，凍結幀不留）。
-GHCFPeekDockSnaps[idx] = nil; // v43.23：第 7 件——dock 快照指標同清。
-GHCFCacheResizeHandles[idx] = nil;
-GHCFPeekTapOverlays[idx] = nil;
-GHCFCacheSceneIDs[idx] = nil;
-GHCFCacheBundleIDs[idx][0] = '\0';
-GHCFCachePids[idx] = 0;
-GHCFCacheMinimized[idx] = NO;
-GHCFCacheHiddenByLock[idx] = NO;
-GHCFCacheScaleRatios[idx] = 1.0;
-GHCFCacheScaleSliderBars[idx] = nil;
-GHCFCacheScaleSliders[idx] = nil;
-GHCFCacheScaleLabels[idx] = nil;
-GHCFHideDockPeekForIndex(idx);
-if (idx == GHCFActiveAppIndex) {
-GHCFClearActive();
+static void CFLYDropCachedEntryKeepingScene(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheScenes[idx] && !CFLYCacheWindows[idx]) return;
+if (CFLYCacheWindows[idx]) CFLYCacheWindows[idx].hidden = YES;
+CFLYCacheWindows[idx] = nil;
+CFLYCacheScenes[idx] = nil;
+CFLYCachePresenters[idx] = nil;
+CFLYCacheLayerHostViews[idx] = nil;
+CFLYCacheTopStrips[idx] = nil;
+CFLYCacheContainers[idx] = nil;
+CFLYCacheContentViews[idx] = nil;
+CFLYGatePlaceholders[idx] = nil;
+CFLYGateFrozenSnaps[idx] = nil; // v43.22：凍結快照指標同清（窗藏了，凍結幀不留）。
+CFLYPeekDockSnaps[idx] = nil; // v43.23：第 7 件——dock 快照指標同清。
+CFLYCacheResizeHandles[idx] = nil;
+CFLYPeekTapOverlays[idx] = nil;
+CFLYCacheSceneIDs[idx] = nil;
+CFLYCacheBundleIDs[idx][0] = '\0';
+CFLYCachePids[idx] = 0;
+CFLYCacheMinimized[idx] = NO;
+CFLYCacheHiddenByLock[idx] = NO;
+CFLYCacheScaleRatios[idx] = 1.0;
+CFLYCacheScaleSliderBars[idx] = nil;
+CFLYCacheScaleSliders[idx] = nil;
+CFLYCacheScaleLabels[idx] = nil;
+CFLYHideDockPeekForIndex(idx);
+if (idx == CFLYActiveAppIndex) {
+CFLYClearActive();
 }
 }
 
-// v53：GHCFBackgroundHostedScene 已刪（關窗後不再把 scene 推後台，
+// v53：CFLYBackgroundHostedScene 已刪（關窗後不再把 scene 推後台，
 // 唯一呼叫處是 closeHostedWindow）。v66：鎖屏推後台的
-// GHCFBackgroundCachedSceneAtIndex 也刪了（全程不黑屏，鎖屏不再推後台）。
+// CFLYBackgroundCachedSceneAtIndex 也刪了（全程不黑屏，鎖屏不再推後台）。
 
 // v38：悬浮窗的尺寸——没有标题栏了，内容区就是整个窗；圆角 35。
 // 一般 App 内容 350x757（85% 宽，757 是按屏高宽比算的：350/414×
@@ -1884,48 +1901,48 @@ GHCFClearActive();
 // 太细、太透明，找不到地方抓；建窗与 resize 都用这个常量，会自动
 // 一起改；pill 36x5、alpha 0.7，细条保持透明——App 内容透出来；
 // v60：标题栏整个拿掉，滑杆条改贴细条（y=24）。
-#define GHCF_HOSTED_CONTENT_W 350.0
-#define GHCF_HOSTED_CONTENT_H 757.0
-#define GHCF_HOSTED_CALC_W 320.0
-#define GHCF_HOSTED_STRIP_H 24.0
+#define CFLY_HOSTED_CONTENT_W 350.0
+#define CFLY_HOSTED_CONTENT_H 757.0
+#define CFLY_HOSTED_CALC_W 320.0
+#define CFLY_HOSTED_STRIP_H 24.0
 // v63：浮窗固定尺寸——皇上 2026-11-16 照片裡百度貼吧浮窗量到約 346×769pt
 //（窗寬佔屏寬 0.836、窗高佔屏高 0.858，iPhone 11 邏輯尺寸 414×896；
 // 透視誤差 ±10pt）。一律開這個尺寸，拉大拉小後續再做。
 // v67：窗高改 749（皇上 2026-11-16 挑 A：346×769 的寬高比和屏幕
 // 414×896 對不上，內容按寬等比縮後高只剩 749，底部露 20pt 黑底；
 // 改成 346×749，寬高佔屏都是 0.836，內容正好填滿）。
-#define GHCF_FIXED_WINDOW_W 346.0
-#define GHCF_FIXED_WINDOW_H 749.0
+#define CFLY_FIXED_WINDOW_W 346.0
+#define CFLY_FIXED_WINDOW_H 749.0
 // v41：圓角改走設定（cornerRadius，預設 30，v43.3 照 S2 值改；上面三處已改讀設定）。
 
 // v40：多窗层级（锁屏 2000 之下）：宿主窗基础 Alert - 2（1998）、
 // 带到最前 Alert - 1.75（1998.25）、贴边小卡 Alert - 1.5（1998.5）、
 // 阴影背景 Alert - 4.5（1995.5，在主屏之上、感应带/觸發鈕 1996 之下、
 // 宿主窗之下——点浮窗本身、点觸發鈕、滑感应带都不受影响）。
-#define GHCF_HOSTED_BASE_LEVEL (UIWindowLevelAlert - 2.0)
-#define GHCF_HOSTED_FRONT_LEVEL (UIWindowLevelAlert - 1.75)
-#define GHCF_DOCK_LEVEL (UIWindowLevelAlert - 1.5)
-#define GHCF_DIM_OVERLAY_LEVEL (UIWindowLevelAlert - 4.5)
+#define CFLY_HOSTED_BASE_LEVEL (UIWindowLevelAlert - 2.0)
+#define CFLY_HOSTED_FRONT_LEVEL (UIWindowLevelAlert - 1.75)
+#define CFLY_DOCK_LEVEL (UIWindowLevelAlert - 1.5)
+#define CFLY_DIM_OVERLAY_LEVEL (UIWindowLevelAlert - 4.5)
 // v43.30：釘選窗的層級（Alert - 1.25，高於主窗與貼邊小卡，低於啟動器與鎖屏）。
-#define GHCF_PINNED_LEVEL (UIWindowLevelAlert - 1.25)
+#define CFLY_PINNED_LEVEL (UIWindowLevelAlert - 1.25)
 // v41：貼邊 peek 的尺寸（圖 1 的樣子：縮到邊緣、露出一截活內容）。
 // 寬 112、高 242，上下疊著排，間距 8。
-#define GHCF_DOCK_PEEK_W 112.0
-#define GHCF_DOCK_PEEK_H 242.0
-#define GHCF_DOCK_PEEK_GAP 8.0
-// v41：貼邊 peek 的尺寸在上面（GHCF_DOCK_PEEK_W/H/GAP）；v40 的
+#define CFLY_DOCK_PEEK_W 112.0
+#define CFLY_DOCK_PEEK_H 242.0
+#define CFLY_DOCK_PEEK_GAP 8.0
+// v41：貼邊 peek 的尺寸在上面（CFLY_DOCK_PEEK_W/H/GAP）；v40 的
 // 68x76 小卡窗已刪（peek 就是宿主窗本身縮到邊緣，不另建卡窗）。
 // v40：新窗错位放的步进（每多一个看得见的窗错开 44pt，横竖交错、夹在屏幕里）。
-#define GHCF_NEW_WINDOW_OFFSET 44.0
+#define CFLY_NEW_WINDOW_OFFSET 44.0
 // v40：拖到右邊緣贴边收起的门槛——放手时窗中心进了右缘 60pt 内才收。
-#define GHCF_DOCK_DRAG_THRESHOLD 60.0
+#define CFLY_DOCK_DRAG_THRESHOLD 60.0
 
 // 取一个可用的 UIWindowScene（iOS 13+ 的窗必须挂 scene 才会显示）：
 // 从 connectedScenes 里找第一个 UIWindowScene，没有就返回 nil
 //（调用处记日志）。全部是公开 API 的方法调用，不用字串常量。
 // 注意：不能用已废弃的取主窗口 API 做退路——它在 iOS 13 起已废弃，Theos
 // 默认 -Werror 会把它当编译错误（v23 首编就是这么失败的）。
-static UIWindowScene *GHCFActiveWindowScene(void) {
+static UIWindowScene *CFLYActiveWindowScene(void) {
 UIApplication *app = [UIApplication sharedApplication];
 if (!app) return nil;
 NSSet *scenes = [app connectedScenes];
@@ -1939,11 +1956,11 @@ return nil;
 // 计算器默认 320/屏宽 ≈ 0.77（窗 320x737 的那个缩放，v36 证实过）；
 // 别的 App 默认 1.0（scene frame 就是内容尺寸，不缩放）。屏幕尺寸
 // 运行时读，不写死 414/896。
-static CGFloat GHCFDefaultScaleRatioForBundleID(const char *bundleID) {
+static CGFloat CFLYDefaultScaleRatioForBundleID(const char *bundleID) {
 if (bundleID && strcmp(bundleID, "com.apple.calculator") == 0) {
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
 if (screenSize.width > 0) {
-return GHCF_HOSTED_CALC_W / screenSize.width;
+return CFLY_HOSTED_CALC_W / screenSize.width;
 }
 }
 return 1.0;
@@ -1954,7 +1971,7 @@ return 1.0;
 // 這些 App 的 peek 走整體縮放：scene 保持自然佈局尺寸（計算器 320x693、
 // 文件 320x480），整窗等比縮進 peek 並置中。會重排版的 App（設置、
 // 時鐘類標準 UIKit）不在這裡，走老路推 frame。
-static BOOL GHCFIsFixedLayoutBundleID(const char *bundleID) {
+static BOOL CFLYIsFixedLayoutBundleID(const char *bundleID) {
 if (!bundleID) return NO;
 return strcmp(bundleID, "com.apple.calculator") == 0 || strcmp(bundleID, "com.apple.DocumentsApp") == 0;
 }
@@ -1963,7 +1980,7 @@ return strcmp(bundleID, "com.apple.calculator") == 0 || strcmp(bundleID, "com.ap
 // 这个尺寸里排版；另一半是内容区 layer 的 sublayerTransform 缩回）。
 // scale<=0 当 1.0 用。计算器：内容 320x693 ÷ 0.77 ≈ 414x896（屏
 // 幕尺寸，和 v36 一样）；别的 App：320x480 ÷ 1.0 = 320x480。
-static CGSize GHCFSceneFrameSizeForContentSizeAndScale(CGSize contentSize, CGFloat scale) {
+static CGSize CFLYSceneFrameSizeForContentSizeAndScale(CGSize contentSize, CGFloat scale) {
 if (scale <= 0) scale = 1.0;
 return CGSizeMake(contentSize.width / scale, contentSize.height / scale);
 }
@@ -1974,23 +1991,23 @@ return CGSizeMake(contentSize.width / scale, contentSize.height / scale);
 // 下，上下各留约 80pt；运行时算，不写死 414/896）。别的 App 拿
 // 320x480（它们按 scene frame 排版，内容区就是 scene frame，已经
 // 贴边填满，不用改）。
-static CGSize GHCFHostedContentSizeForBundleID(const char *bundleID) {
+static CGSize CFLYHostedContentSizeForBundleID(const char *bundleID) {
 if (bundleID && strcmp(bundleID, "com.apple.calculator") == 0) {
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
 if (screenSize.width > 0) {
-return CGSizeMake(GHCF_HOSTED_CALC_W, screenSize.height * (GHCF_HOSTED_CALC_W / screenSize.width));
+return CGSizeMake(CFLY_HOSTED_CALC_W, screenSize.height * (CFLY_HOSTED_CALC_W / screenSize.width));
 }
 }
-return CGSizeMake(GHCF_HOSTED_CONTENT_W, GHCF_HOSTED_CONTENT_H);
+return CGSizeMake(CFLY_HOSTED_CONTENT_W, CFLY_HOSTED_CONTENT_H);
 }
 
 // v38：一个 App 的 scene frame 尺寸（默认 scale 下）——计算器拿屏幕
 // 尺寸（内容 320x693 ÷ 0.77 ≈ 414x896），别的 App 拿 320x480 内
 // 容尺寸。建 scene 时用（初始 settings.frame）。
-static CGSize GHCFSceneFrameSizeForBundleID(const char *bundleID) {
-CGSize contentSize = GHCFHostedContentSizeForBundleID(bundleID);
-CGFloat scale = GHCFDefaultScaleRatioForBundleID(bundleID);
-return GHCFSceneFrameSizeForContentSizeAndScale(contentSize, scale);
+static CGSize CFLYSceneFrameSizeForBundleID(const char *bundleID) {
+CGSize contentSize = CFLYHostedContentSizeForBundleID(bundleID);
+CGFloat scale = CFLYDefaultScaleRatioForBundleID(bundleID);
+return CFLYSceneFrameSizeForContentSizeAndScale(contentSize, scale);
 }
 
 
@@ -2001,16 +2018,16 @@ return GHCFSceneFrameSizeForContentSizeAndScale(contentSize, scale);
 // 320×693（內容就是窗）。橫屏：寬高對調
 // 再夾進屏幕（橫屏時寬高對調）。
 // v70：浮窗大小滑桿——100% 就是 346×749，調小等比縮（寬高比鎖住）。
-static void GHCFPresetSizeForBundleID(const char *bundleID, CGFloat *outW, CGFloat *outH) {
-CGFloat w = GHCF_FIXED_WINDOW_W;
-CGFloat h = GHCF_FIXED_WINDOW_H;
+static void CFLYPresetSizeForBundleID(const char *bundleID, CGFloat *outW, CGFloat *outH) {
+CGFloat w = CFLY_FIXED_WINDOW_W;
+CGFloat h = CFLY_FIXED_WINDOW_H;
 if (bundleID && strcmp(bundleID, "com.apple.calculator") == 0) {
-CGSize content = GHCFHostedContentSizeForBundleID(bundleID);
+CGSize content = CFLYHostedContentSizeForBundleID(bundleID);
 w = content.width;
 h = content.height;
 } else {
 // v70：浮窗大小滑桿（50–100%）：寬高一起縮、寬高比鎖住，黑邊不會回來。
-CGFloat pct = GHCFReadWindowSizePercent() / 100.0;
+CGFloat pct = CFLYReadWindowSizePercent() / 100.0;
 w *= pct;
 h *= pct;
 }
@@ -2034,7 +2051,7 @@ if (outH) *outH = h;
 // 任何一步失败就返回 nil（调用处走老路 createScene，不崩、不拦）。
 // ivar 名用 class_getInstanceVariable 拿（不用 MSHookIvar 宏——我们
 // 不用 Logos hook，改用 <objc/runtime.h> 的 object_getIvar，已在用）。
-static FBScene *GHCFExistingMainSceneForBundleID(const char *bundleID) {
+static FBScene *CFLYExistingMainSceneForBundleID(const char *bundleID) {
 if (!bundleID) return nil;
 FBSceneManager *manager = [FBSceneManager sharedInstance];
 if (!manager) return nil;
@@ -2075,22 +2092,22 @@ return nil;
 // 显示永远是内容尺寸）不一样——layer-host 的 scene frame 改不了，
 // 只能靠显示 scale 缩放。
 // v53：displayScale 帶指定 ratio 的變體（peek 用：收起的窗不是活動窗，
-// 不能讀活動量的 GHCFHostedScaleRatio，要用自己的快取 ratio）。
-static CGFloat GHCFLayerHostDisplayScaleForContentSizeAndBundleIDAndRatio(CGSize contentSize, const char *bundleID, CGFloat ratio) {
+// 不能讀活動量的 CFLYHostedScaleRatio，要用自己的快取 ratio）。
+static CGFloat CFLYLayerHostDisplayScaleForContentSizeAndBundleIDAndRatio(CGSize contentSize, const char *bundleID, CGFloat ratio) {
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
 if (screenSize.width <= 0 || contentSize.width <= 0) return 1.0;
 CGFloat fitScale = contentSize.width / screenSize.width;
-CGFloat defaultScale = GHCFDefaultScaleRatioForBundleID(bundleID);
+CGFloat defaultScale = CFLYDefaultScaleRatioForBundleID(bundleID);
 if (defaultScale <= 0) defaultScale = 1.0;
 if (ratio < 0.5) ratio = 0.5;
 if (ratio > 2.0) ratio = 2.0;
 return fitScale * (ratio / defaultScale);
 }
-static CGFloat GHCFLayerHostDisplayScaleForContentSizeAndBundleID(CGSize contentSize, const char *bundleID) {
-return GHCFLayerHostDisplayScaleForContentSizeAndBundleIDAndRatio(contentSize, bundleID, GHCFHostedScaleRatio);
+static CGFloat CFLYLayerHostDisplayScaleForContentSizeAndBundleID(CGSize contentSize, const char *bundleID) {
+return CFLYLayerHostDisplayScaleForContentSizeAndBundleIDAndRatio(contentSize, bundleID, CFLYHostedScaleRatio);
 }
 
-// v38：反向耦合缩放（仿照 FrontBoardAppLauncher 的做法，见文件头
+// v38：反向耦合缩放（仿照 參考實現 的做法，见文件头
 // v38 节——只仿结构，代码原创）：scene frame = 内容尺寸 ÷ scale，
 // 内容区 layer 的 sublayerTransform = CATransform3DMakeScale(scale,
 // scale, 1) 把图层缩回窗尺寸。一除一乘，任意 App、任意窗尺寸都填
@@ -2106,80 +2123,80 @@ return GHCFLayerHostDisplayScaleForContentSizeAndBundleIDAndRatio(contentSize, b
 // 区 insets 重设为 0（第 3 项：LiveContainer 窗口模式规则，frame 更
 // 新时附带安全区 block）。立即改 bounds + transform（视觉立即跟
 // 手），frame 只防抖推一次。触摸由 transform 自动映射。
-static void GHCFApplyScaleToHostedWindow(BOOL pushFrame) {
-if (!GHCFHostedContentView || !GHCFHostedScene) return;
+static void CFLYApplyScaleToHostedWindow(BOOL pushFrame) {
+if (!CFLYHostedContentView || !CFLYHostedScene) return;
 // v38：layer-host 路（没有 presenter，有 layerHostView）——只改
 // view 的 bounds + sublayerTransform，**不推 scene frame**（已有主
 // scene 的 frame 就是屏幕尺寸，不能改）。显示 scale 用
-// GHCFLayerHostDisplayScaleForContentSize（内容宽 ÷ 屏宽 × 用户
+// CFLYLayerHostDisplayScaleForContentSize（内容宽 ÷ 屏宽 × 用户
 // 缩放相对默认的倍数）。layer host view 的 bounds = 屏幕尺寸
 //（scene 的 frame 尺寸），anchorPoint (0,0)、position (0,0)。
-if (GHCFHostedLayerHostView && !GHCFHostedPresenter) {
-CGSize contentSize = GHCFHostedContentView.bounds.size;
+if (CFLYHostedLayerHostView && !CFLYHostedPresenter) {
+CGSize contentSize = CFLYHostedContentView.bounds.size;
 if (contentSize.width <= 0 || contentSize.height <= 0) return;
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
 if (screenSize.width <= 0 || screenSize.height <= 0) return;
-CGFloat displayScale = GHCFLayerHostDisplayScaleForContentSizeAndBundleID(contentSize, GHCFHostedBundleID);
-UIView *layerHostView = GHCFHostedLayerHostView;
+CGFloat displayScale = CFLYLayerHostDisplayScaleForContentSizeAndBundleID(contentSize, CFLYHostedBundleID);
+UIView *layerHostView = CFLYHostedLayerHostView;
 layerHostView.bounds = CGRectMake(0, 0, screenSize.width, screenSize.height);
 layerHostView.layer.anchorPoint = CGPointMake(0, 0);
 layerHostView.layer.position = CGPointMake(0, 0);
 // v39：錨點重申為左上（建窗時已設，這裡防萬一被 layout 改回中心）。
-GHCFHostedContentView.layer.anchorPoint = CGPointMake(0, 0);
-GHCFHostedContentView.layer.position = CGPointMake(0, 0);
-GHCFHostedContentView.layer.sublayerTransform = CATransform3DMakeScale(displayScale, displayScale, 1.0);
-GHCFHostedSceneFrameSize = screenSize; // v73：layer-host 路 scene frame 恆為屏幕尺寸（尺寸門用）。
-GHCFHostedSceneFrameSizeValid = YES;
+CFLYHostedContentView.layer.anchorPoint = CGPointMake(0, 0);
+CFLYHostedContentView.layer.position = CGPointMake(0, 0);
+CFLYHostedContentView.layer.sublayerTransform = CATransform3DMakeScale(displayScale, displayScale, 1.0);
+CFLYHostedSceneFrameSize = screenSize; // v73：layer-host 路 scene frame 恆為屏幕尺寸（尺寸門用）。
+CFLYHostedSceneFrameSizeValid = YES;
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 layer host scaled %d%%", (int)(displayScale * 100.0));
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 // pushFrame 对 layer-host 没有意义（scene frame 不能推），直接返回。
 return;
 }
-if (!GHCFHostedPresenter || !GHCFHostedPresenter.presentationView) return;
-CGFloat scale = GHCFHostedScaleRatio;
+if (!CFLYHostedPresenter || !CFLYHostedPresenter.presentationView) return;
+CGFloat scale = CFLYHostedScaleRatio;
 if (scale < 0.5) scale = 0.5;
 if (scale > 2.0) scale = 2.0;
-GHCFHostedScaleRatio = scale;
-CGSize contentSize = GHCFHostedContentView.bounds.size;
+CFLYHostedScaleRatio = scale;
+CGSize contentSize = CFLYHostedContentView.bounds.size;
 if (contentSize.width <= 0 || contentSize.height <= 0) return;
-CGSize frameSize = GHCFSceneFrameSizeForContentSizeAndScale(contentSize, scale);
-UIView *presenterView = GHCFHostedPresenter.presentationView;
+CGSize frameSize = CFLYSceneFrameSizeForContentSizeAndScale(contentSize, scale);
+UIView *presenterView = CFLYHostedPresenter.presentationView;
 presenterView.bounds = CGRectMake(0, 0, frameSize.width, frameSize.height);
 presenterView.layer.anchorPoint = CGPointMake(0, 0);
 presenterView.layer.position = CGPointMake(0, 0);
 // v39：錨點重申為左上（建窗時已設，這裡防萬一被 layout 改回中心）。
-GHCFHostedContentView.layer.anchorPoint = CGPointMake(0, 0);
-GHCFHostedContentView.layer.position = CGPointMake(0, 0);
-GHCFHostedContentView.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0);
+CFLYHostedContentView.layer.anchorPoint = CGPointMake(0, 0);
+CFLYHostedContentView.layer.position = CGPointMake(0, 0);
+CFLYHostedContentView.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0);
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 scene scaled %d%%", (int)(scale * 100.0));
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 if (!pushFrame) return;
-int token = ++GHCFScaleDebounceToken;
+int token = ++CFLYScaleDebounceToken;
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-if (token != GHCFScaleDebounceToken) return;
-if (!GHCFHostedScene || !GHCFHostedContentView) return;
-CGSize curContentSize = GHCFHostedContentView.bounds.size;
-CGFloat curScale = GHCFHostedScaleRatio;
+if (token != CFLYScaleDebounceToken) return;
+if (!CFLYHostedScene || !CFLYHostedContentView) return;
+CGSize curContentSize = CFLYHostedContentView.bounds.size;
+CGFloat curScale = CFLYHostedScaleRatio;
 if (curScale <= 0) curScale = 1.0;
-CGSize curFrameSize = GHCFSceneFrameSizeForContentSizeAndScale(curContentSize, curScale);
+CGSize curFrameSize = CFLYSceneFrameSizeForContentSizeAndScale(curContentSize, curScale);
 @try {
-[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+[CFLYHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.frame = CGRectMake(0, 0, curFrameSize.width, curFrameSize.height);
 settings.interfaceOrientation = UIInterfaceOrientationPortrait;
 settings.deviceOrientation = UIDeviceOrientationPortrait;
 settings.peripheryInsets = UIEdgeInsetsZero;
 settings.safeAreaInsetsPortrait = UIEdgeInsetsZero;
 }];
-GHCFHostedSceneFrameSize = curFrameSize; // v73：追蹤推給 scene 的 frame 尺寸（尺寸門用）。
-GHCFHostedSceneFrameSizeValid = YES;
+CFLYHostedSceneFrameSize = curFrameSize; // v73：追蹤推給 scene 的 frame 尺寸（尺寸門用）。
+CFLYHostedSceneFrameSizeValid = YES;
 char fbuf[128];
 snprintf(fbuf, sizeof(fbuf), "v57 scene frame updated %dx%d scale %d%%", (int)curFrameSize.width, (int)curFrameSize.height, (int)(curScale * 100.0));
-GHCFLogLine(fbuf);
+CFLYLogLine(fbuf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 scene frame update failed");
+CFLYLogLine("v57 scene frame update failed");
 }
 });
 }
@@ -2189,9 +2206,9 @@ GHCFLogLine("v57 scene frame update failed");
 // v40：读一个 prefs BOOL（没有就回默认值）。CFPreferencesAppSynchronize
 // 先同步（设置页改完立刻生效，不用等）；零字面量规则：key 与 domain
 // 都用 CFStringCreateWithCString 现做；不用通知中心（那个被禁）。
-static BOOL GHCFReadPrefsBool(const char *key, BOOL defaultValue) {
+static BOOL CFLYReadPrefsBool(const char *key, BOOL defaultValue) {
 if (!key) return defaultValue;
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
 BOOL result = defaultValue;
 if (domain && keyRef) {
@@ -2210,9 +2227,9 @@ return result;
 }
 
 // v40：读一个 prefs 数字（没有/不是数字就回默认值；滑杆存的是 NSNumber）。
-static double GHCFReadPrefsDouble(const char *key, double defaultValue) {
+static double CFLYReadPrefsDouble(const char *key, double defaultValue) {
 if (!key) return defaultValue;
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
 double result = defaultValue;
 if (domain && keyRef) {
@@ -2233,9 +2250,9 @@ return result;
 
 // v40：读一个 prefs 字串（返回 malloc 的 C 字串，调用处 free；
 // 没有/不是字串就返回 NULL）。
-static char *GHCFReadPrefsCString(const char *key) {
+static char *CFLYReadPrefsCString(const char *key) {
 if (!key) return NULL;
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
 char *out = NULL;
 if (domain && keyRef) {
@@ -2261,8 +2278,8 @@ return out;
 
 // v40：刘海安全距离（prefs 里的 safeDistance，0–100，默认 50；
 // 超出范围就夹到 0–100）。
-static CGFloat GHCFReadSafeDistance(void) {
-double v = GHCFReadPrefsDouble("safeDistance", 50.0);
+static CGFloat CFLYReadSafeDistance(void) {
+double v = CFLYReadPrefsDouble("safeDistance", 50.0);
 if (v < 0) v = 0;
 if (v > 100) v = 100;
 return (CGFloat)v;
@@ -2273,48 +2290,65 @@ return (CGFloat)v;
 // 浮窗設置：陰影開關（預設開）、圓角滑桿（0–50，預設 35）、豎屏開窗
 // 固定中心（預設關——開了新窗一律居中開，不恢復記住的位置；關了才
 // 恢復上次位置，保住 v40 第 6 項）、通知橫幅（預設開）。
-static BOOL GHCFReadShadowEnabled(void) {
-return GHCFReadPrefsBool("shadowEnabled", YES);
+static BOOL CFLYReadShadowEnabled(void) {
+return CFLYReadPrefsBool("shadowEnabled", YES);
 }
 // ChinaFly（1.0.0）：浮窗圓角走 cornerRadius4（分屏設置，影片值 60.00）；
 // 沒設過 cornerRadius4 時回落舊鍵 cornerRadius（30.0）；都沒設過回 60。
-static CGFloat GHCFReadCornerRadius(void) {
+static CGFloat CFLYReadCornerRadius(void) {
 double v;
-if (GHCFPrefsHasKey("cornerRadius4")) v = GHCFReadPrefsDouble("cornerRadius4", 60.0);
-else if (GHCFPrefsHasKey("cornerRadius")) v = GHCFReadPrefsDouble("cornerRadius", 30.0);
+if (CFLYPrefsHasKey("cornerRadius4")) v = CFLYReadPrefsDouble("cornerRadius4", 60.0);
+else if (CFLYPrefsHasKey("cornerRadius")) v = CFLYReadPrefsDouble("cornerRadius", 30.0);
 else v = 60.0;
 if (v < 0) v = 0;
 if (v > 80) v = 80;
 return (CGFloat)v;
 }
-static BOOL GHCFReadCenterOnOpen(void) {
-return GHCFReadPrefsBool("centerOnOpen", NO);
+// ChinaFly（1.0.4，小浮窗不要橢圓形）：圓角按窗的當前尺寸封頂——
+// 設定值再大，圓角也不超過短邊的 1/4。貼邊小卡 112x242 封頂 28
+//（圓角矩形，不再是兩頭全圓的膠囊）；大窗短邊夠寬，設定值 60 原樣用。
+static CGFloat CFLYCornerRadiusForSize(CGSize size) {
+CGFloat setting = CFLYReadCornerRadius();
+CGFloat cap = MIN(size.width, size.height) * 0.25;
+if (cap < 0) cap = 0;
+return MIN(setting, cap);
 }
-static BOOL GHCFReadNotificationBanner(void) {
-return GHCFReadPrefsBool("notificationBanner", YES);
+// 按活動窗當前框重算圓角，寫到窗 layer 和內容容器上（收起／恢復／
+// 改尺寸時都要再調一次，不然小卡還是舊的 60）。
+static void CFLYApplyHostedWindowCornerRadius(void) {
+if (!CFLYHostedWindow) return;
+CGFloat r = CFLYCornerRadiusForSize(CFLYHostedWindow.frame.size);
+CFLYHostedWindow.layer.cornerRadius = r;
+if (CFLYHostedContainer) CFLYHostedContainer.layer.cornerRadius = r;
+}
+static BOOL CFLYReadCenterOnOpen(void) {
+return CFLYReadPrefsBool("centerOnOpen", NO);
+}
+static BOOL CFLYReadNotificationBanner(void) {
+return CFLYReadPrefsBool("notificationBanner", YES);
 }
 // v54：通知橫幅打開浮窗：(a) 點插件自己的橫幅叫回浮窗；
 // (b) 系統橫幅出現時為那個 App 開浮窗（沒有可靠 hook 點——這套代碼不用
 // Logos hook，SpringBoard 橫幅呈現也沒有通知可聽）。
 // ChinaFly（1.0.0）：bannerTap（分屏設置，預設關）接這個機制；
 // 沒設過 bannerTap 時回落舊鍵 bannerOpensFloatingWindow。
-static BOOL GHCFReadBannerOpensFloatingWindow(void) {
-if (GHCFPrefsHasKey("bannerTap")) return GHCFReadPrefsBool("bannerTap", NO);
-return GHCFReadPrefsBool("bannerOpensFloatingWindow", NO);
+static BOOL CFLYReadBannerOpensFloatingWindow(void) {
+if (CFLYPrefsHasKey("bannerTap")) return CFLYReadPrefsBool("bannerTap", NO);
+return CFLYReadPrefsBool("bannerOpensFloatingWindow", NO);
 }
 // 調度窗口設置：邊緣滑幾次開 ARC（1 或 2，預設 2）、滑哪邊（沒設就跟
 // 小窗顯示位置走）、浮窗拖動手勢開關（預設開）、觸發鈕雙擊輪切開關
 // （預設開）、長按多久關全部（0.3–1.0 秒，預設 0.5）。
-static int GHCFReadEdgeSwipeCount(void) {
-double v = GHCFReadPrefsDouble("edgeSwipeCount", 2.0);
+static int CFLYReadEdgeSwipeCount(void) {
+double v = CFLYReadPrefsDouble("edgeSwipeCount", 2.0);
 return (v <= 1.0) ? 1 : 2;
 }
 // v43.32：觸發方式三選（Trigger.plist，triggerMode：arc／edge／bar，
 // 預設 edge——以前一直是邊緣滑動叫出啟動器，預設不變才不改行為）。
 // 0＝ARC（扇形轉盤角度那套），1＝邊緣（左右矩形那套），2＝懸浮條
 // （位置＋大小兩行是假設值，觸發本身還沒接行為）。
-static int GHCFReadTriggerMode(void) {
-char *v = GHCFReadPrefsCString("triggerMode");
+static int CFLYReadTriggerMode(void) {
+char *v = CFLYReadPrefsCString("triggerMode");
 int m = 1;
 if (v) {
 if (strcmp(v, "arc") == 0) m = 0;
@@ -2323,13 +2357,13 @@ free(v);
 }
 return m;
 }
-static BOOL GHCFReadTriggerModeIsARC(void) {
-return GHCFReadTriggerMode() == 0;
+static BOOL CFLYReadTriggerModeIsARC(void) {
+return CFLYReadTriggerMode() == 0;
 }
 // v43.32：觸發側三段（Trigger.plist，沿用 edgeSwipeSide 鍵，皇上存過的
 // left／right 直接帶過來；新加 both，預設雙側）。0＝左，1＝右，2＝雙側。
-static int GHCFReadTriggerSide(void) {
-char *side = GHCFReadPrefsCString("edgeSwipeSide");
+static int CFLYReadTriggerSide(void) {
+char *side = CFLYReadPrefsCString("edgeSwipeSide");
 int s = 2;
 if (side) {
 if (strcmp(side, "left") == 0) s = 0;
@@ -2340,33 +2374,33 @@ return s;
 }
 // v43.32：調試模式（triggerDebugMode，預設關）——開起來屏幕上直接
 // 畫出當前方式的觸發區（ARC 畫扇形、邊緣畫左右矩形、懸浮條畫那條）。
-static BOOL GHCFReadTriggerDebugMode(void) {
-return GHCFReadPrefsBool("triggerDebugMode", NO);
+static BOOL CFLYReadTriggerDebugMode(void) {
+return CFLYReadPrefsBool("triggerDebugMode", NO);
 }
-// v43.32：ARC 扇形角度（Trigger.plist，TrollOpen 照片上的數就是預設）：
+// v43.32：ARC 扇形角度（Trigger.plist，參考照片上的數就是預設）：
 // 起始角度 0–360（從右側基準逆時針算，90＝正上方），扇形大小 30–360。
-static double GHCFReadARCStartAngle(void) {
-double v = GHCFReadPrefsDouble("arcStartAngle", 90.0);
+static double CFLYReadARCStartAngle(void) {
+double v = CFLYReadPrefsDouble("arcStartAngle", 90.0);
 if (v < 0) v = 0;
 if (v > 360) v = 360;
 return v;
 }
-static double GHCFReadARCFanAngle(void) {
-double v = GHCFReadPrefsDouble("arcFanAngle", 180.0);
+static double CFLYReadARCFanAngle(void) {
+double v = CFLYReadPrefsDouble("arcFanAngle", 180.0);
 if (v < 30) v = 30;
 if (v > 360) v = 360;
 return v;
 }
 // v43.32：懸浮條位置／大小（Trigger.plist，假設值——影片和照片裡都沒
 // 拍到懸浮條那頁，等皇上看過再定；觸發本身還沒接行為）。
-static double GHCFReadFloatingBarY(void) {
-double v = GHCFReadPrefsDouble("floatingBarY", 0.5);
+static double CFLYReadFloatingBarY(void) {
+double v = CFLYReadPrefsDouble("floatingBarY", 0.5);
 if (v < 0.05) v = 0.05;
 if (v > 0.95) v = 0.95;
 return v;
 }
-static double GHCFReadFloatingBarSize(void) {
-double v = GHCFReadPrefsDouble("floatingBarSize", 60.0);
+static double CFLYReadFloatingBarSize(void) {
+double v = CFLYReadPrefsDouble("floatingBarSize", 60.0);
 if (v < 20) v = 20;
 if (v > 200) v = 200;
 return v;
@@ -2376,20 +2410,20 @@ return v;
 // 右預設 171.73），位置＝矩形中心的 Y%（0.05–0.95；左預設 0.77、
 // 右預設 0.84）。橫屏那組預設先跟豎屏同一組數（照片上沒拍到橫屏那頁）。
 // 取代舊的上／下觸發高度（topTriggerHeight／bottomTriggerHeight 已刪）。
-static CGRect GHCFReadTriggerZoneRect(BOOL left, BOOL landscape) {
+static CGRect CFLYReadTriggerZoneRect(BOOL left, BOOL landscape) {
 char key[64];
 const char *side = left ? "Left" : "Right";
 const char *orient = landscape ? "Landscape" : "Portrait";
 snprintf(key, sizeof(key), "trigger%sWidth%s", side, orient);
-double w = GHCFReadPrefsDouble(key, 20.0);
+double w = CFLYReadPrefsDouble(key, 20.0);
 if (w < 5) w = 5;
 if (w > 100) w = 100;
 snprintf(key, sizeof(key), "trigger%sHeight%s", side, orient);
-double h = GHCFReadPrefsDouble(key, left ? 300.0 : 171.73);
+double h = CFLYReadPrefsDouble(key, left ? 300.0 : 171.73);
 if (h < 50) h = 50;
 if (h > 800) h = 800;
 snprintf(key, sizeof(key), "trigger%sY%s", side, orient);
-double y = GHCFReadPrefsDouble(key, left ? 0.77 : 0.84);
+double y = CFLYReadPrefsDouble(key, left ? 0.77 : 0.84);
 if (y < 0.05) y = 0.05;
 if (y > 0.95) y = 0.95;
 CGRect sb = [UIScreen mainScreen].bounds;
@@ -2397,35 +2431,29 @@ CGFloat cy = (CGFloat)(y * (double)sb.size.height);
 CGFloat x = left ? 0 : sb.size.width - (CGFloat)w;
 return CGRectMake(x, cy - (CGFloat)h / 2.0, (CGFloat)w, (CGFloat)h);
 }
-static BOOL GHCFReadWindowDragEnabled(void) {
-return GHCFReadPrefsBool("windowDragEnabled", YES);
+static BOOL CFLYReadWindowDragEnabled(void) {
+return CFLYReadPrefsBool("windowDragEnabled", YES);
 }
-static BOOL GHCFReadFlyTriggerDoubleTapEnabled(void) {
-return GHCFReadPrefsBool("flyTriggerDoubleTapEnabled", YES);
+static BOOL CFLYReadFlyTriggerDoubleTapEnabled(void) {
+return CFLYReadPrefsBool("flyTriggerDoubleTapEnabled", YES);
 }
 // v43.43（1.0.115，觸發鈕開關）：顯示開關（預設開；關了鈕藏起來）。
-static BOOL GHCFReadFlyTriggerButtonEnabled(void) {
-return GHCFReadPrefsBool("flyTriggerButtonEnabled", YES);
-}
-static double GHCFReadLongPressDuration(void) {
-double v = GHCFReadPrefsDouble("longPressDuration", 0.5);
-if (v < 0.3) v = 0.3;
-if (v > 1.0) v = 1.0;
-return v;
+static BOOL CFLYReadFlyTriggerButtonEnabled(void) {
+return CFLYReadPrefsBool("flyTriggerButtonEnabled", YES);
 }
 // v41：觸發鈕上次拖到的中心高度（沒設 = -1，%ctor 用居中）。
-static double GHCFReadFlyTriggerButtonY(void) {
-return GHCFReadPrefsDouble("flyTriggerButtonY", -1.0);
+static double CFLYReadFlyTriggerButtonY(void) {
+return CFLYReadPrefsDouble("flyTriggerButtonY", -1.0);
 }
 // v51：觸發鈕上次拖到的中心 x（沒設 = -1，沒拖過時落回邊緣邏輯）。
-static double GHCFReadFlyTriggerButtonX(void) {
-return GHCFReadPrefsDouble("flyTriggerButtonX", -1.0);
+static double CFLYReadFlyTriggerButtonX(void) {
+return CFLYReadPrefsDouble("flyTriggerButtonX", -1.0);
 }
 // ── v42：新設定鍵的讀法（全部走上面三個現成 helper） ──
 // C1 浮窗大小預設（small 280x600 / medium 350x757 / large 414x800，預設 medium；
 // 計算器在 medium 時仍用自己的 320x693，見 buildHostedWindow）。
-static int GHCFReadWindowSizePreset(void) {
-char *v = GHCFReadPrefsCString("windowSizePreset");
+static int CFLYReadWindowSizePreset(void) {
+char *v = CFLYReadPrefsCString("windowSizePreset");
 int p = 1;
 if (v) {
 if (strcmp(v, "small") == 0) p = 0;
@@ -2436,26 +2464,26 @@ return p;
 }
 // C2 某 App 的窗是不是釘選（pinnedWindowIDs 清單裡有它就算；
 // 釘住的窗層級提到遊戲最前、別的窗蓋不住）。
-static BOOL GHCFIsWindowPinned(const char *bundleID) {
+static BOOL CFLYIsWindowPinned(const char *bundleID) {
 if (!bundleID || bundleID[0] == '\0') return NO;
-return GHCFListContainsBid(GHCFReadIDList("pinnedWindowIDs"), bundleID);
+return CFLYListContainsBid(CFLYReadIDList("pinnedWindowIDs"), bundleID);
 }
 // C4 重啟後自動恢復浮窗（預設開；scene 撐不過重啟，恢復是重建 scene 重新開 App）。
 // ChinaFly（1.0.0）：persistentMemory（分屏設置，預設開）接這個機制；
 // 沒設過 persistentMemory 時回落舊鍵 restoreWindowsAfterRespring。
-static BOOL GHCFReadRestoreWindowsAfterRespring(void) {
-if (GHCFPrefsHasKey("persistentMemory")) return GHCFReadPrefsBool("persistentMemory", YES);
-return GHCFReadPrefsBool("restoreWindowsAfterRespring", YES);
+static BOOL CFLYReadRestoreWindowsAfterRespring(void) {
+if (CFLYPrefsHasKey("persistentMemory")) return CFLYReadPrefsBool("persistentMemory", YES);
+return CFLYReadPrefsBool("restoreWindowsAfterRespring", YES);
 }
 // v53：啟用分屏開關（預設關，跟設定頁預設一致；關了要真的停用——
 // v57：開關加回來（§144-1：還原 1.0.55 寫法，讀 enabled 鍵；
 // 1.0.56 取消開關時改成永遠回 YES 的寫法作廢）。
-static BOOL GHCFReadEnabled(void) {
-return GHCFReadPrefsBool("enabled", NO);
+static BOOL CFLYReadEnabled(void) {
+return CFLYReadPrefsBool("enabled", NO);
 }
 // ChinaFly（1.0.0，防撞）：讀舊域 com.guhailong.splitscreen 的 enabled 鍵。
-// 舊插件開著時 China Fly 休眠（見 GHCFDeferredSetupRun 開頭）。
-static BOOL GHCFReadOldSplitscreenEnabled(void) {
+// 舊插件開著時 China Fly 休眠（見 CFLYDeferredSetupRun 開頭）。
+static BOOL CFLYReadOldSplitscreenEnabled(void) {
 CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.splitscreen", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, "enabled", kCFStringEncodingUTF8);
 BOOL result = NO;
@@ -2473,7 +2501,7 @@ return result;
 }
 // ChinaFly（1.0.3）：舊分屏的 dylib 文件還在不在。先查 rootless 路徑
 // /var/jb/...，再查 /Library/...（跟程式碼裡既有的 rootless-first 寫法一致）。
-static BOOL GHCFReadOldSplitscreenDylibExists(void) {
+static BOOL CFLYReadOldSplitscreenDylibExists(void) {
 NSString *jbPath = [NSString stringWithCString:"/var/jb/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib" encoding:NSUTF8StringEncoding];
 NSString *libPath = [NSString stringWithCString:"/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib" encoding:NSUTF8StringEncoding];
 NSFileManager *fm = [NSFileManager defaultManager];
@@ -2483,24 +2511,24 @@ return NO;
 }
 // ChinaFly（1.0.3）：休眠條件改成「舊開關開著 AND 舊 dylib 文件還在」。
 // 舊包刪了、只剩殘留 prefs（開關還開著）時不再休眠——dylib 一載入就醒。
-static BOOL GHCFShouldDormantForOldSplitscreen(void) {
-return GHCFReadOldSplitscreenEnabled() && GHCFReadOldSplitscreenDylibExists();
+static BOOL CFLYShouldDormantForOldSplitscreen(void) {
+return CFLYReadOldSplitscreenEnabled() && CFLYReadOldSplitscreenDylibExists();
 }
 // v53：C5 全屏時觸發鈕自動藏已取消（功能＋設定行都拿掉；鈕永遠顯示）。
 // C6 鍵盤彈出時浮窗自動上移（Keyboard.plist 的 keyboardAvoidEnabled，預設開；
 // 探針：通知可能到不了 SpringBoard，見 §115）。
-static BOOL GHCFReadKeyboardAvoidEnabled(void) {
-return GHCFReadPrefsBool("keyboardAvoidEnabled", YES);
+static BOOL CFLYReadKeyboardAvoidEnabled(void) {
+return CFLYReadPrefsBool("keyboardAvoidEnabled", YES);
 }
 // v43.18：鍵盤模式合一——先讀單鍵 keyboardMode；沒有讀分向舊鍵
 // keyboardPopupModePortrait／keyboardPopupModeLandscape；再讀舊單鍵
 // keyboardPopupMode；最後預設豎屏內彈出／橫屏外彈出照舊。0＝浮窗內彈出
 //（鍵盤出現在浮窗內／浮窗為鍵盤上移）；1＝外彈出（鍵盤出現在浮窗外、
 // 浮窗不為它上移；真出浮窗外要開真外置鍵盤實驗開關，見鍵盤助手）。
-static int GHCFReadKeyboardPopupModeForOrientation(BOOL landscape) {
-char *mode = GHCFReadPrefsCString("keyboardMode");
-if (!mode) mode = GHCFReadPrefsCString(landscape ? "keyboardPopupModeLandscape" : "keyboardPopupModePortrait");
-if (!mode) mode = GHCFReadPrefsCString("keyboardPopupMode");
+static int CFLYReadKeyboardPopupModeForOrientation(BOOL landscape) {
+char *mode = CFLYReadPrefsCString("keyboardMode");
+if (!mode) mode = CFLYReadPrefsCString(landscape ? "keyboardPopupModeLandscape" : "keyboardPopupModePortrait");
+if (!mode) mode = CFLYReadPrefsCString("keyboardPopupMode");
 int m = landscape ? 1 : 0;
 if (mode) {
 m = (strcmp(mode, "outer") == 0) ? 1 : 0;
@@ -2509,46 +2537,46 @@ free(mode);
 return m;
 }
 // v43.5：橫屏鍵盤彈起放大浮窗（landscapeEnlargeOnKeyboard，預設開，照 S2）。
-static BOOL GHCFReadLandscapeEnlargeOnKeyboard(void) {
-return GHCFReadPrefsBool("landscapeEnlargeOnKeyboard", YES);
+static BOOL CFLYReadLandscapeEnlargeOnKeyboard(void) {
+return CFLYReadPrefsBool("landscapeEnlargeOnKeyboard", YES);
 }
 // v43.18：內置模式豎屏放大開關（enlargeOnKeyboardPortrait，預設開）。
-static BOOL GHCFReadEnlargeOnKeyboardPortrait(void) {
-return GHCFReadPrefsBool("enlargeOnKeyboardPortrait", YES);
+static BOOL CFLYReadEnlargeOnKeyboardPortrait(void) {
+return CFLYReadPrefsBool("enlargeOnKeyboardPortrait", YES);
 }
 // v43.18：外置模式放大開關（enlargeOnExternalKeyboard，預設關）。
-static BOOL GHCFReadEnlargeOnExternalKeyboard(void) {
-return GHCFReadPrefsBool("enlargeOnExternalKeyboard", NO);
+static BOOL CFLYReadEnlargeOnExternalKeyboard(void) {
+return CFLYReadPrefsBool("enlargeOnExternalKeyboard", NO);
 }
 // C7 底部任務欄（預設關；開了 2 秒內建欄，不用 respring）。
-static BOOL GHCFReadTaskbarEnabled(void) {
-return GHCFReadPrefsBool("taskbarEnabled", NO);
+static BOOL CFLYReadTaskbarEnabled(void) {
+return CFLYReadPrefsBool("taskbarEnabled", NO);
 }
 // v43.16 C：任務欄位置（bottom/top，預設 bottom）、透明度（0–1 乘子，
 // 預設 1.0＝現在樣子，套在 0.85 黑底上）、大小（0.7–1.3 倍，預設 1.0＝現在尺寸）。
-static BOOL GHCFReadTaskbarIsTop(void) {
-char *v = GHCFReadPrefsCString("taskbarPosition");
+static BOOL CFLYReadTaskbarIsTop(void) {
+char *v = CFLYReadPrefsCString("taskbarPosition");
 BOOL top = (v && strcmp(v, "top") == 0);
 if (v) free(v);
 return top;
 }
-static CGFloat GHCFReadTaskbarOpacity(void) {
-double v = GHCFReadPrefsDouble("taskbarOpacity", 1.0);
+static CGFloat CFLYReadTaskbarOpacity(void) {
+double v = CFLYReadPrefsDouble("taskbarOpacity", 1.0);
 if (v < 0.0) v = 0.0;
 if (v > 1.0) v = 1.0;
 return (CGFloat)v;
 }
-static CGFloat GHCFReadTaskbarScale(void) {
-double v = GHCFReadPrefsDouble("taskbarScale", 1.0);
+static CGFloat CFLYReadTaskbarScale(void) {
+double v = CFLYReadPrefsDouble("taskbarScale", 1.0);
 if (v < 0.7) v = 0.7;
 if (v > 1.3) v = 1.3;
 return (CGFloat)v;
 }
 // v43.21：任務欄樣式（taskbarStyle 字串）：nobar 無底條（預設，B：
 // 圖標直接浮著，沒底沒框）／gold 金邊膠囊（C：黑底細金邊膠囊）。
-// 未知值當預設；切換走 prefschanged → GHCFUpdateTaskbar 立刻生效。
-static int GHCFReadTaskbarStyle(void) {
-char *v = GHCFReadPrefsCString("taskbarStyle");
+// 未知值當預設；切換走 prefschanged → CFLYUpdateTaskbar 立刻生效。
+static int CFLYReadTaskbarStyle(void) {
+char *v = CFLYReadPrefsCString("taskbarStyle");
 int s = 0;
 if (v) {
 if (strcmp(v, "gold") == 0) s = 1;
@@ -2558,29 +2586,29 @@ return s;
 }
 // C8 浮窗透明度：全域預設（0.5–1.0，預設 1.0）與每窗值（winOpacity_<bid>，
 // 沒設就走全域；調的是窗的 alpha）。
-static CGFloat GHCFReadWindowOpacityGlobal(void) {
-double v = GHCFReadPrefsDouble("windowOpacityGlobal", 1.0);
+static CGFloat CFLYReadWindowOpacityGlobal(void) {
+double v = CFLYReadPrefsDouble("windowOpacityGlobal", 1.0);
 if (v < 0.5) v = 0.5;
 if (v > 1.0) v = 1.0;
 return (CGFloat)v;
 }
-static CGFloat GHCFReadWindowOpacityForBundleID(const char *bundleID) {
-if (!bundleID || bundleID[0] == '\0') return GHCFReadWindowOpacityGlobal();
+static CGFloat CFLYReadWindowOpacityForBundleID(const char *bundleID) {
+if (!bundleID || bundleID[0] == '\0') return CFLYReadWindowOpacityGlobal();
 char key[192];
 snprintf(key, sizeof(key), "winOpacity_%s", bundleID);
-double v = GHCFReadPrefsDouble(key, -1.0);
-if (v < 0) return GHCFReadWindowOpacityGlobal();
+double v = CFLYReadPrefsDouble(key, -1.0);
+if (v < 0) return CFLYReadWindowOpacityGlobal();
 if (v < 0.5) v = 0.5;
 if (v > 1.0) v = 1.0;
 return (CGFloat)v;
 }
 // v53：G4 懸浮球已整個拿掉（只留一個觸發鈕按鈕）。
 // G6 低電量自動收窗（預設開）與閾值（10–30%，預設 20%）。
-static BOOL GHCFReadLowBatteryAutoDock(void) {
-return GHCFReadPrefsBool("lowBatteryAutoDock", YES);
+static BOOL CFLYReadLowBatteryAutoDock(void) {
+return CFLYReadPrefsBool("lowBatteryAutoDock", YES);
 }
-static double GHCFReadLowBatteryThreshold(void) {
-double v = GHCFReadPrefsDouble("lowBatteryThreshold", 20.0);
+static double CFLYReadLowBatteryThreshold(void) {
+double v = CFLYReadPrefsDouble("lowBatteryThreshold", 20.0);
 if (v < 10) v = 10;
 if (v > 30) v = 30;
 return v;
@@ -2593,8 +2621,8 @@ return v;
 // 預設開）、截圖錄屏隱藏 ARC（arcHideOnScreenshot，預設開）、震動反饋
 // （arcHaptics，預設開）、觸控音效（arcTouchSound，預設開）。
 // v56：arcEdgeDistance 已刪（死設定，沒人讀）；arcColumnSide 也已刪。
-static int GHCFReadARCMenuOpenMode(void) {
-char *mode = GHCFReadPrefsCString("arcOpenMode");
+static int CFLYReadARCMenuOpenMode(void) {
+char *mode = CFLYReadPrefsCString("arcOpenMode");
 int m = 1;
 if (mode) {
 if (strcmp(mode, "fullscreen") == 0) m = 0;
@@ -2602,8 +2630,8 @@ free(mode);
 }
 return m;
 }
-static CGFloat GHCFReadARCIconSize(void) {
-double v = GHCFReadPrefsDouble("arcIconSize", 56.0);
+static CGFloat CFLYReadARCIconSize(void) {
+double v = CFLYReadPrefsDouble("arcIconSize", 56.0);
 if (v < 40) v = 40;
 if (v > 72) v = 72;
 return (CGFloat)v;
@@ -2613,8 +2641,8 @@ return (CGFloat)v;
 //（floatingWindowSlideSide）是兩個設定，各管各的。
 // v43.23：第 3 件——加第三檔「從底部出」（bottom）：圓環版從底部往上展開、
 // 圓心跟觸發位置走；左／右兩檔行為不動（圓心仍是屏幕中心）。
-static int GHCFReadARCSlideSide(void) {
-char *side = GHCFReadPrefsCString("arcSlideSide");
+static int CFLYReadARCSlideSide(void) {
+char *side = CFLYReadPrefsCString("arcSlideSide");
 int s = 1;
 if (side) {
 if (strcmp(side, "left") == 0) s = 0;
@@ -2623,21 +2651,21 @@ free(side);
 }
 return s;
 }
-static BOOL GHCFIsARCSlideLeft(void) {
-return GHCFReadARCSlideSide() == 0;
+static BOOL CFLYIsARCSlideLeft(void) {
+return CFLYReadARCSlideSide() == 0;
 }
-static BOOL GHCFIsARCSlideBottom(void) {
-return GHCFReadARCSlideSide() == 2;
+static BOOL CFLYIsARCSlideBottom(void) {
+return CFLYReadARCSlideSide() == 2;
 }
 // v54 M：ARC 層數（arcLayerCount，ARCButtons.plist）：ARC 浮窗裡 App 圖標
 // 的弧圈層數（同心弧），1–5 層，預設 2 層。改了下次開 ARC 生效
 //（rebuildARCContent 按層數排圖標，見 addARCIconsForBids）。
 // 注意：LinkList 存的是字串（"1".."5"），走字串讀法（跟 windowSizePreset
-// 同款）；GHCFReadPrefsDouble 只認 CFNumber，讀字串會永遠回預設。
+// 同款）；CFLYReadPrefsDouble 只認 CFNumber，讀字串會永遠回預設。
 // v63：讀到的值夾到 1–5（防舊值／髒值超範圍）；陣列見 addARCIconsForBids
 //（weights／counts／rems／radii 全是 [5]，L=5 時不越界）。
-static int GHCFReadARCLayerCount(void) {
-char *v = GHCFReadPrefsCString("arcLayerCount");
+static int CFLYReadARCLayerCount(void) {
+char *v = CFLYReadPrefsCString("arcLayerCount");
 int n = 2;
 if (v) {
 if (strcmp(v, "1") == 0) n = 1;
@@ -2652,8 +2680,8 @@ return n;
 }
 // v70：浮窗退出動畫（exitAnimation 字串：island／shrink／slide／sink／
 // shatter，預設 island＝現有的彈簧滑出＋淡出）。
-static int GHCFReadExitAnimation(void) {
-char *v = GHCFReadPrefsCString("exitAnimation");
+static int CFLYReadExitAnimation(void) {
+char *v = CFLYReadPrefsCString("exitAnimation");
 int a = 0;
 if (v) {
 if (strcmp(v, "shrink") == 0) a = 1;
@@ -2667,11 +2695,11 @@ return a;
 // v43.19：啟動器樣式七檔（launcherStyle 字串）：radial 圓環、
 // sidebar 側邊欄、drawer 抽屜、carousel 橫向輪盤、tile 磁貼、trollfan 扇形轉盤
 //（1.0.110，v43.37：撥動轉盤切頁，見 handleDialPan:）、dial 表盘启动器
-//（1.0.115，v43.42：照 TrollOpen 参考图／影片的排布，见 addDialLauncherIconsForBids）。
+//（1.0.115，v43.42：照 參考影片的排布，见 addDialLauncherIconsForBids）。
 // ChinaFly（1.0.0）：預設走表盤（沒設過／未知值都當 dial）；舊樣式代碼留著
 // 休眠不刪，明確存過舊值才走。grid 已刪，存過的 "grid" 也當表盤。
-static int GHCFReadLauncherStyle(void) {
-char *v = GHCFReadPrefsCString("launcherStyle");
+static int CFLYReadLauncherStyle(void) {
+char *v = CFLYReadPrefsCString("launcherStyle");
 int s = 6;
 if (v) {
 if (strcmp(v, "radial") == 0) s = 0;
@@ -2685,30 +2713,30 @@ free(v);
 }
 return s;
 }
-static BOOL GHCFReadLauncherStyleRadial(void) {
-return GHCFReadLauncherStyle() == 0;
+static BOOL CFLYReadLauncherStyleRadial(void) {
+return CFLYReadLauncherStyle() == 0;
 }
 // v43.37（1.0.110，扇形轉盤）：trollfan 樣式才走轉盤（1.0.107 e4af0c0 拿回來）。
-static BOOL GHCFReadLauncherStyleTrollFan(void) {
-return GHCFReadLauncherStyle() == 5;
+static BOOL CFLYReadLauncherStyleTrollFan(void) {
+return CFLYReadLauncherStyle() == 5;
 }
 // v43.42（1.0.115，表盘启动器）：第 7 档 dial 才走表盘排布。
-static BOOL GHCFReadLauncherStyleDial(void) {
-return GHCFReadLauncherStyle() == 6;
+static BOOL CFLYReadLauncherStyleDial(void) {
+return CFLYReadLauncherStyle() == 6;
 }
 // 扇形轉盤開關（trollfan 樣式才用；預設開）。
-static BOOL GHCFReadCarouselEnabled(void) {
-return GHCFReadPrefsBool("dialEnabled", YES);
+static BOOL CFLYReadCarouselEnabled(void) {
+return CFLYReadPrefsBool("dialEnabled", YES);
 }
 // 轉盤專用震動／音效（跟 1.0.99 的 arcHaptics／arcTouchSound 分開，
 // 只管轉盤轉動與選中；音效走 dialSoundChoice 12 選一，預設水滴 1057）。
-static BOOL GHCFReadDialHapticEnabled(void) {
-return GHCFReadPrefsBool("dialHapticEnabled", YES);
+static BOOL CFLYReadDialHapticEnabled(void) {
+return CFLYReadPrefsBool("dialHapticEnabled", YES);
 }
 // 轉盤震動強度：字串 "heavy"/"medium"/"light"，預設 "medium"；
 // 回 2 重／1 中／0 輕（UIImpactFeedbackStyle 對應值）。
-static int GHCFReadDialHapticStyle(void) {
-char *s = GHCFReadPrefsCString("dialHapticStrength");
+static int CFLYReadDialHapticStyle(void) {
+char *s = CFLYReadPrefsCString("dialHapticStrength");
 int style = 1;
 if (s) {
 if (strcmp(s, "heavy") == 0) style = 2;
@@ -2717,15 +2745,15 @@ free(s);
 }
 return style;
 }
-static BOOL GHCFReadDialSoundEnabled(void) {
-return GHCFReadPrefsBool("dialSoundEnabled", YES);
+static BOOL CFLYReadDialSoundEnabled(void) {
+return CFLYReadPrefsBool("dialSoundEnabled", YES);
 }
 // v43.42（1.0.115，轉盤音效 12 選一）：dialSoundChoice 字串 → 系統音效 ID。
 // 預設 drop（1057 Tink，清脆高亮的水滴聲，比舊 1104 Tock 響得多）；
 // 沒設／不認識的值也回 1057，保證預設音一定響。映射是最佳推測，
 // 皇上在真機上按耳朵挑。
-static SystemSoundID GHCFReadDialSoundID(void) {
-char *s = GHCFReadPrefsCString("dialSoundChoice");
+static SystemSoundID CFLYReadDialSoundID(void) {
+char *s = CFLYReadPrefsCString("dialSoundChoice");
 SystemSoundID sid = 1057;
 if (s) {
 if (strcmp(s, "drop") == 0) sid = 1057;
@@ -2747,118 +2775,47 @@ return sid;
 // v43.42（1.0.115，表盘启动器，导航台设置）：只定义这版用到的读值器；
 // 指针加速（dialPointerAccel，默认 2.00）、圆形中心裁剪
 //（dialCircleCenterCrop，默认 0.04）、首行应用（dialFirstRowApps，
-// 默认 4）三项只存设定值，含义待真机对照 TrollOpen 再定，这版不驱动排布
+// 默认 4）三项只存设定值，含义待真机对照 參考影片 再定，这版不驱动排布
 //（首行 4 若硬塞进最内圈会跟参考图冲突——参考最内圈只有 1 颗）。
-static BOOL GHCFReadDialModeEnabled(void) {
-return GHCFReadPrefsBool("dialMode", YES);
+static BOOL CFLYReadDialModeEnabled(void) {
+return CFLYReadPrefsBool("dialMode", YES);
 }
-static BOOL GHCFReadDialCentered(void) {
-return GHCFReadPrefsBool("dialCentered", YES);
+static BOOL CFLYReadDialCentered(void) {
+return CFLYReadPrefsBool("dialCentered", YES);
 }
-static BOOL GHCFReadDialHidePointer(void) {
-return GHCFReadPrefsBool("dialHidePointer", NO);
+static BOOL CFLYReadDialHidePointer(void) {
+return CFLYReadPrefsBool("dialHidePointer", YES);
 }
-static BOOL GHCFReadDialGradientBg(void) {
-return GHCFReadPrefsBool("dialGradientBg", YES);
-}
-static BOOL GHCFReadDialCircleBg(void) {
-return GHCFReadPrefsBool("dialCircleBg", YES);
-}
-static double GHCFReadDialCircleBgOpacity(void) {
-double v = GHCFReadPrefsDouble("dialCircleBgOpacity", 0.40);
-if (v < 0.05) v = 0.05;
-if (v > 1.0) v = 1.0;
-return v;
-}
-static double GHCFReadDialIconSize(void) {
-double v = GHCFReadPrefsDouble("dialIconSize", 36.0);
-if (v < 28.0) v = 28.0;
+static double CFLYReadDialIconSize(void) {
+double v = CFLYReadPrefsDouble("dialIconSize", 26.0);
+if (v < 20.0) v = 20.0;
 if (v > 64.0) v = 64.0;
 return v;
 }
-static double GHCFReadDialElementSpacing(void) {
-double v = GHCFReadPrefsDouble("dialElementSpacing", 8.0);
+static double CFLYReadDialElementSpacing(void) {
+double v = CFLYReadPrefsDouble("dialElementSpacing", 8.0);
 if (v < 0.0) v = 0.0;
 if (v > 24.0) v = 24.0;
 return v;
 }
 
-// ChinaFly（1.0.0，表盤顏色鍵）：7 個顏色鍵真的驅動表盤渲染——
-// 漸變起止色／圓形背景色走 addDialLauncherIconsForBids 的漸變層與圓盤底色；
-// 圖標選中／無狀態／啟用／關閉色走圖標狀態圈與缺圖底色
-//（見 GHCFDialRefreshIconRings、arcIconButtonForBundleID）。
-// 值是 #RRGGBB 字串；寫壞／沒設就回影片預設值。
-static UIColor *GHCFDialColorFromHex(const char *hex, unsigned int fallbackRGB) {
-unsigned int rgb = fallbackRGB;
-if (hex && hex[0] == '#') {
-char *end = NULL;
-unsigned long parsed = strtoul(hex + 1, &end, 16);
-if (end && end != hex + 1 && parsed <= 0xFFFFFF) rgb = (unsigned int)parsed;
-}
-CGFloat r = (CGFloat)((rgb >> 16) & 0xFF) / 255.0;
-CGFloat g = (CGFloat)((rgb >> 8) & 0xFF) / 255.0;
-CGFloat b = (CGFloat)(rgb & 0xFF) / 255.0;
-return [UIColor colorWithRed:r green:g blue:b alpha:1.0];
-}
-static UIColor *GHCFReadDialGradientStartColor(void) {
-char *s = GHCFReadPrefsCString("dialGradientStartColor");
-UIColor *c = GHCFDialColorFromHex(s, 0x000000);
-if (s) free(s);
-return c;
-}
-static UIColor *GHCFReadDialGradientEndColor(void) {
-char *s = GHCFReadPrefsCString("dialGradientEndColor");
-UIColor *c = GHCFDialColorFromHex(s, 0x000000);
-if (s) free(s);
-return c;
-}
-static UIColor *GHCFReadDialCircleBgColor(void) {
-char *s = GHCFReadPrefsCString("dialCircleBgColor");
-UIColor *c = GHCFDialColorFromHex(s, 0xFFFFFF);
-if (s) free(s);
-return c;
-}
-static UIColor *GHCFReadDialIconSelectedColor(void) {
-char *s = GHCFReadPrefsCString("dialIconSelectedColor");
-UIColor *c = GHCFDialColorFromHex(s, 0x3D8DFF);
-if (s) free(s);
-return c;
-}
-static UIColor *GHCFReadDialIconNoneColor(void) {
-char *s = GHCFReadPrefsCString("dialIconNoneColor");
-UIColor *c = GHCFDialColorFromHex(s, 0xFFFFFF);
-if (s) free(s);
-return c;
-}
-static UIColor *GHCFReadDialIconEnabledColor(void) {
-char *s = GHCFReadPrefsCString("dialIconEnabledColor");
-UIColor *c = GHCFDialColorFromHex(s, 0x007AFF);
-if (s) free(s);
-return c;
-}
-static UIColor *GHCFReadDialIconDisabledColor(void) {
-char *s = GHCFReadPrefsCString("dialIconDisabledColor");
-UIColor *c = GHCFDialColorFromHex(s, 0x8E8E93);
-if (s) free(s);
-return c;
-}
 // ChinaFly（1.0.0，dialCropCircle）：開關早就有（Dial.plist），
 // 1.0.115 裡讀值器沒有、完全沒接線；這裡補讀值器，接線見
 // arcIconButtonForBundleID（表盤裡的圖標裁成圓形）。
-static BOOL GHCFReadDialCropCircle(void) {
-return GHCFReadPrefsBool("dialCropCircle", NO);
+static BOOL CFLYReadDialCropCircle(void) {
+return CFLYReadPrefsBool("dialCropCircle", NO);
 }
 // v43.37（1.0.110，扇形轉盤）：轉盤專用 tick 反饋——震動強度走
 // dialHapticStrength（重／中／輕），音效走 dialSoundChoice 12 選一
-//（GHCFReadDialSoundID，預設水滴 1057 Tink）。
+//（CFLYReadDialSoundID，預設水滴 1057 Tink）。
 // v43.42（1.0.115）：舊 1104 是鍵盤 Tock，又短又輕，皇上在真機上聽不見
 //（只感到震動）；預設改成 1057 Tink，響亮得多，另加 12 選一讓皇上按耳朵挑。
 // 放 readers 後面（它讀 prefs，定義要在 readers 之後）。
-static void GHCFDialTickFeedback(void) {
-if (GHCFReadDialHapticEnabled()) {
+static void CFLYDialTickFeedback(void) {
+if (CFLYReadDialHapticEnabled()) {
 @try {
 UIImpactFeedbackStyle style = UIImpactFeedbackStyleMedium;
-int s = GHCFReadDialHapticStyle();
+int s = CFLYReadDialHapticStyle();
 if (s == 2) style = UIImpactFeedbackStyleHeavy;
 else if (s == 0) style = UIImpactFeedbackStyleLight;
 UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:style];
@@ -2867,25 +2824,25 @@ UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithS
 (void)e;
 }
 }
-if (GHCFReadDialSoundEnabled()) {
-AudioServicesPlaySystemSound(GHCFReadDialSoundID());
+if (CFLYReadDialSoundEnabled()) {
+AudioServicesPlaySystemSound(CFLYReadDialSoundID());
 }
 }
 // v70：浮窗大小百分比（windowSizePercent 50–100，預設 100（1.0.80 改回：
 // 55 太小，Lee 要上一版的尺寸；v43.3 曾照 S2 值改成 55）；夾住）。
-static CGFloat GHCFReadWindowSizePercent(void) {
-double v = GHCFReadPrefsDouble("windowSizePercent", 100.0);
+static CGFloat CFLYReadWindowSizePercent(void) {
+double v = CFLYReadPrefsDouble("windowSizePercent", 100.0);
 if (v < 50.0) v = 50.0;
 if (v > 100.0) v = 100.0;
 return (CGFloat)v;
 }
 // v43.32：上／下触发高度已删——触发区改走 Trigger.plist 边缘那套
-// 每边一个矩形（GHCFReadTriggerZoneRect），见上面触发读值那组。
+// 每边一个矩形（CFLYReadTriggerZoneRect），见上面触发读值那组。
 // v43.3：上甩速度阈值（flickUpThreshold，0–100 S2 刻度，预设 40）：
 // 浮窗往上甩的速度门槛，换算成 pt/s 是设定值 ×25（40 → 1000 pt/s，
 // 一次干脆利落的上甩）；行为在 handleTitleDrag。
-static CGFloat GHCFReadFlickUpVelocityThreshold(void) {
-double v = GHCFReadPrefsDouble("flickUpThreshold", 40.0);
+static CGFloat CFLYReadFlickUpVelocityThreshold(void) {
+double v = CFLYReadPrefsDouble("flickUpThreshold", 40.0);
 if (v < 0) v = 0;
 if (v > 100) v = 100;
 return (CGFloat)(v * 25.0);
@@ -2894,34 +2851,34 @@ return (CGFloat)(v * 25.0);
 // 自动收成小卡（GHLSEnforceWindowCap）。
 // ChinaFly（1.0.0）：onlineWindows（分屏設置，影片值 5）是上限；
 // 沒設過 onlineWindows 時回落舊鍵 windowCap（8）；都沒設過回 5。
-static int GHCFReadWindowCap(void) {
+static int CFLYReadWindowCap(void) {
 double v;
-if (GHCFPrefsHasKey("onlineWindows")) v = GHCFReadPrefsDouble("onlineWindows", 5.0);
-else if (GHCFPrefsHasKey("windowCap")) v = GHCFReadPrefsDouble("windowCap", 8.0);
+if (CFLYPrefsHasKey("onlineWindows")) v = CFLYReadPrefsDouble("onlineWindows", 5.0);
+else if (CFLYPrefsHasKey("windowCap")) v = CFLYReadPrefsDouble("windowCap", 8.0);
 else v = 5.0;
 if (v < 1) v = 1;
 if (v > 12) v = 12;
 return (int)lround(v);
 }
-static BOOL GHCFReadARCShowOpenDots(void) {
-return GHCFReadPrefsBool("arcShowOpenDots", YES);
+static BOOL CFLYReadARCShowOpenDots(void) {
+return CFLYReadPrefsBool("arcShowOpenDots", YES);
 }
-static BOOL GHCFReadARCShowNames(void) {
-return GHCFReadPrefsBool("arcShowNames", YES);
+static BOOL CFLYReadARCShowNames(void) {
+return CFLYReadPrefsBool("arcShowNames", YES);
 }
-static BOOL GHCFReadARCHideOnScreenshot(void) {
-return GHCFReadPrefsBool("arcHideOnScreenshot", YES);
+static BOOL CFLYReadARCHideOnScreenshot(void) {
+return CFLYReadPrefsBool("arcHideOnScreenshot", YES);
 }
-static BOOL GHCFReadARCHaptics(void) {
-return GHCFReadPrefsBool("arcHaptics", YES);
+static BOOL CFLYReadARCHaptics(void) {
+return CFLYReadPrefsBool("arcHaptics", YES);
 }
-static BOOL GHCFReadARCTouchSound(void) {
-return GHCFReadPrefsBool("arcTouchSound", YES);
+static BOOL CFLYReadARCTouchSound(void) {
+return CFLYReadPrefsBool("arcTouchSound", YES);
 }
 // v43.24：第 5 件——啟動器點按回饋（輕震＋系統點按音），六檔共用：震動走現成
 // arcHaptics 開關（不新開關、不動 Lee 的開關值），音效走現成 arcTouchSound 開關。
-static void GHCFLauncherTapFeedback(void) {
-if (GHCFReadARCHaptics()) {
+static void CFLYLauncherTapFeedback(void) {
+if (CFLYReadARCHaptics()) {
 @try {
 UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
 [haptic impactOccurred];
@@ -2929,7 +2886,7 @@ UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithS
 (void)e;
 }
 }
-if (GHCFReadARCTouchSound()) {
+if (CFLYReadARCTouchSound()) {
 AudioServicesPlaySystemSound(1104);
 }
 }
@@ -2939,32 +2896,32 @@ AudioServicesPlaySystemSound(1104);
 // 位置）；鈕顯示開關（flyTriggerButtonEnabled，預設開，v43.43 加回——v52
 // 拿掉過，皇上 17:27 要加進 1.0.115）。鍵盤/相機兩個開關只存偏好
 // （見 BUILD_LOG §113：鍵盤在浮窗內的表現、相機授權都不是這個開關能直接改的，誠實記為待真機驗證/未實作）。
-static CGFloat GHCFReadShadowOpacity(void) {
-double v = GHCFReadPrefsDouble("shadowOpacity", 0.5);
+static CGFloat CFLYReadShadowOpacity(void) {
+double v = CFLYReadPrefsDouble("shadowOpacity", 0.5);
 if (v < 0) v = 0;
 if (v > 1) v = 1;
 return (CGFloat)v;
 }
-static CGFloat GHCFReadShadowRadius(void) {
-double v = GHCFReadPrefsDouble("shadowRadius", 12.0);
+static CGFloat CFLYReadShadowRadius(void) {
+double v = CFLYReadPrefsDouble("shadowRadius", 12.0);
 if (v < 0) v = 0;
 if (v > 30) v = 30;
 return (CGFloat)v;
 }
-static double GHCFReadBannerDuration(void) {
-double v = GHCFReadPrefsDouble("bannerDuration", 1.5);
+static double CFLYReadBannerDuration(void) {
+double v = CFLYReadPrefsDouble("bannerDuration", 1.5);
 if (v < 1.0) v = 1.0;
 if (v > 3.0) v = 3.0;
 return v;
 }
-static CGFloat GHCFReadFlyTriggerIconSize(void) {
-double v = GHCFReadPrefsDouble("flyTriggerIconSize", 56.0);
+static CGFloat CFLYReadFlyTriggerIconSize(void) {
+double v = CFLYReadPrefsDouble("flyTriggerIconSize", 56.0);
 if (v < 44) v = 44;
 if (v > 72) v = 72;
 return (CGFloat)v;
 }
-static BOOL GHCFIsFlyTriggerSideLeft(void) {
-char *side = GHCFReadPrefsCString("flyTriggerSide");
+static BOOL CFLYIsFlyTriggerSideLeft(void) {
+char *side = CFLYReadPrefsCString("flyTriggerSide");
 BOOL isLeft = NO;
 if (side) {
 isLeft = (strcmp(side, "left") == 0);
@@ -2982,9 +2939,9 @@ return isLeft;
 
 // v40：写一个 prefs 数字（CFPreferencesSetAppValue + 同步，立刻落盘；
 // 零字面量规则：key 与 domain 都用 CFStringCreateWithCString 现做）。
-static void GHCFWritePrefsDouble(const char *key, double value) {
+static void CFLYWritePrefsDouble(const char *key, double value) {
 if (!key) return;
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
 if (domain && keyRef) {
 CFNumberRef num = CFNumberCreate(NULL, kCFNumberDoubleType, &value);
@@ -3003,13 +2960,13 @@ if (keyRef) CFRelease(keyRef);
 // v41：前 5 個固定 App 用上面那張前綴表；自選槽位（idx>=5）用
 // "geoCustom<槽號>" 當前綴（例："geoCustom5X"），不依賴 bundle ID，
 // 換了 App 也認得回來。
-static void GHCFGeoKeyForIndex(int idx, const char *field, char *buf, size_t bufSize) {
-if (idx < 0 || idx >= GHCFAppCount || !field || !buf || bufSize == 0) {
+static void CFLYGeoKeyForIndex(int idx, const char *field, char *buf, size_t bufSize) {
+if (idx < 0 || idx >= CFLYAppCount || !field || !buf || bufSize == 0) {
 if (buf && bufSize > 0) buf[0] = '\0';
 return;
 }
 if (idx < 5) {
-snprintf(buf, bufSize, "geo%s%s", GHCFGeoAppKeys[idx], field);
+snprintf(buf, bufSize, "geo%s%s", CFLYGeoAppKeys[idx], field);
 } else {
 snprintf(buf, bufSize, "geoCustom%d%s", idx - 5, field);
 }
@@ -3019,67 +2976,67 @@ snprintf(buf, bufSize, "geoCustom%d%s", idx - 5, field);
 // 缩放改变、收起/关窗、调尺寸结束时调）。存的是窗中心 (x,y) + 窗尺寸
 // (w,h) + scale；没有窗就不存。活动窗的 scale 用活动量（缓存里的
 // scaleRatio 可能还没同步滑杆的最新值）。
-static void GHCFSaveGeometryForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-UIWindow *w = GHCFCacheWindows[idx];
+static void CFLYSaveGeometryForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+UIWindow *w = CFLYCacheWindows[idx];
 if (!w) return;
 char key[64];
 CGPoint c = w.center;
 CGSize s = w.bounds.size;
-CGFloat scale = GHCFCacheScaleRatios[idx];
-if (idx == GHCFActiveAppIndex && GHCFHostedScaleRatio > 0) scale = GHCFHostedScaleRatio;
+CGFloat scale = CFLYCacheScaleRatios[idx];
+if (idx == CFLYActiveAppIndex && CFLYHostedScaleRatio > 0) scale = CFLYHostedScaleRatio;
 if (scale <= 0) scale = 1.0;
 // v53：豎屏固定中心開著時也記尺寸（只記 W/H/Scale，不記 X/Y）——
 // 主窗拖調尺寸後要記住（皇上 23:45）；位置照舊不記，開窗仍居中。
 // 以前整條不記（16.log／17.log 共 70 次 geometry not saved），
 // 拖完的尺寸、恢復的尺寸全丟了。
-if (GHCFReadCenterOnOpen()) {
-GHCFGeoKeyForIndex(idx, "W", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)s.width);
-GHCFGeoKeyForIndex(idx, "H", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)s.height);
-GHCFGeoKeyForIndex(idx, "Scale", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)scale);
+if (CFLYReadCenterOnOpen()) {
+CFLYGeoKeyForIndex(idx, "W", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)s.width);
+CFLYGeoKeyForIndex(idx, "H", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)s.height);
+CFLYGeoKeyForIndex(idx, "Scale", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)scale);
 char buf[128];
-snprintf(buf, sizeof(buf), "v57 geometry saved size only %s %dx%d scale %d%%", GHCFCacheBundleIDs[idx], (int)s.width, (int)s.height, (int)(scale * 100.0));
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 geometry saved size only %s %dx%d scale %d%%", CFLYCacheBundleIDs[idx], (int)s.width, (int)s.height, (int)(scale * 100.0));
+CFLYLogLine(buf);
 return;
 }
-GHCFGeoKeyForIndex(idx, "X", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)c.x);
-GHCFGeoKeyForIndex(idx, "Y", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)c.y);
-GHCFGeoKeyForIndex(idx, "W", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)s.width);
-GHCFGeoKeyForIndex(idx, "H", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)s.height);
-GHCFGeoKeyForIndex(idx, "Scale", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)scale);
+CFLYGeoKeyForIndex(idx, "X", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)c.x);
+CFLYGeoKeyForIndex(idx, "Y", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)c.y);
+CFLYGeoKeyForIndex(idx, "W", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)s.width);
+CFLYGeoKeyForIndex(idx, "H", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)s.height);
+CFLYGeoKeyForIndex(idx, "Scale", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)scale);
 char buf[128];
-snprintf(buf, sizeof(buf), "v57 geometry saved %s %dx%d scale %d%%", GHCFCacheBundleIDs[idx], (int)s.width, (int)s.height, (int)(scale * 100.0));
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 geometry saved %s %dx%d scale %d%%", CFLYCacheBundleIDs[idx], (int)s.width, (int)s.height, (int)(scale * 100.0));
+CFLYLogLine(buf);
 }
 
 // v40：读第 idx 个 App 存过的位置/大小/缩放（有存过就回 YES，输出
 // 中心/尺寸/缩放；没存过、或尺寸不合法就回 NO，走默认+错位）。
 // W、H 没存过时读到 0（默认 0），尺寸下限 200x300（调尺寸的下限），
 // 小于它就是没存过。中心没存过时读到 0，恢复处会夹到屏幕内。
-static BOOL GHCFRestoreGeometryForIndex(int idx, CGFloat *outCX, CGFloat *outCY, CGFloat *outW, CGFloat *outH, CGFloat *outScale) {
-if (idx < 0 || idx >= GHCFAppCount) return NO;
+static BOOL CFLYRestoreGeometryForIndex(int idx, CGFloat *outCX, CGFloat *outCY, CGFloat *outW, CGFloat *outH, CGFloat *outScale) {
+if (idx < 0 || idx >= CFLYAppCount) return NO;
 char key[64];
 double w = 0, h = 0;
-GHCFGeoKeyForIndex(idx, "W", key, sizeof(key));
-w = GHCFReadPrefsDouble(key, 0);
-GHCFGeoKeyForIndex(idx, "H", key, sizeof(key));
-h = GHCFReadPrefsDouble(key, 0);
+CFLYGeoKeyForIndex(idx, "W", key, sizeof(key));
+w = CFLYReadPrefsDouble(key, 0);
+CFLYGeoKeyForIndex(idx, "H", key, sizeof(key));
+h = CFLYReadPrefsDouble(key, 0);
 if (w < 200.0 || h < 300.0) return NO;
 double cx = 0, cy = 0, scale = 1.0;
-GHCFGeoKeyForIndex(idx, "X", key, sizeof(key));
-cx = GHCFReadPrefsDouble(key, 0);
-GHCFGeoKeyForIndex(idx, "Y", key, sizeof(key));
-cy = GHCFReadPrefsDouble(key, 0);
-GHCFGeoKeyForIndex(idx, "Scale", key, sizeof(key));
-scale = GHCFReadPrefsDouble(key, 1.0);
+CFLYGeoKeyForIndex(idx, "X", key, sizeof(key));
+cx = CFLYReadPrefsDouble(key, 0);
+CFLYGeoKeyForIndex(idx, "Y", key, sizeof(key));
+cy = CFLYReadPrefsDouble(key, 0);
+CFLYGeoKeyForIndex(idx, "Scale", key, sizeof(key));
+scale = CFLYReadPrefsDouble(key, 1.0);
 if (scale < 0.5) scale = 0.5;
 if (scale > 2.0) scale = 2.0;
 if (outCX) *outCX = (CGFloat)cx;
@@ -3092,20 +3049,20 @@ return YES;
 
 
 // v42.3：每 App 的小窗（peek）尺寸——存 prefs（鍵 geo<前綴>PeekW/PeekH，
-// 跟記位置一樣 per-App，GHCFGeoKeyForIndex 同一個做法）。沒存過就回預設
+// 跟記位置一樣 per-App，CFLYGeoKeyForIndex 同一個做法）。沒存過就回預設
 // 112x242；夾在 [112, 屏寬-4] x [242, 屏高-4]（收成 peek 時讀，拖完記）。
-static void GHCFPeekSizeForIndex(int idx, CGFloat *outW, CGFloat *outH) {
-CGFloat w = GHCF_DOCK_PEEK_W;
-CGFloat h = GHCF_DOCK_PEEK_H;
-if (idx >= 0 && idx < GHCFAppCount) {
+static void CFLYPeekSizeForIndex(int idx, CGFloat *outW, CGFloat *outH) {
+CGFloat w = CFLY_DOCK_PEEK_W;
+CGFloat h = CFLY_DOCK_PEEK_H;
+if (idx >= 0 && idx < CFLYAppCount) {
 char key[64];
 double v = 0;
-GHCFGeoKeyForIndex(idx, "PeekW", key, sizeof(key));
-v = GHCFReadPrefsDouble(key, 0);
-if (v >= GHCF_DOCK_PEEK_W) w = (CGFloat)v;
-GHCFGeoKeyForIndex(idx, "PeekH", key, sizeof(key));
-v = GHCFReadPrefsDouble(key, 0);
-if (v >= GHCF_DOCK_PEEK_H) h = (CGFloat)v;
+CFLYGeoKeyForIndex(idx, "PeekW", key, sizeof(key));
+v = CFLYReadPrefsDouble(key, 0);
+if (v >= CFLY_DOCK_PEEK_W) w = (CGFloat)v;
+CFLYGeoKeyForIndex(idx, "PeekH", key, sizeof(key));
+v = CFLYReadPrefsDouble(key, 0);
+if (v >= CFLY_DOCK_PEEK_H) h = (CGFloat)v;
 }
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
 if (w > screenSize.width - 4.0) w = screenSize.width - 4.0;
@@ -3113,27 +3070,27 @@ if (h > screenSize.height - 4.0) h = screenSize.height - 4.0;
 if (outW) *outW = w;
 if (outH) *outH = h;
 }
-static void GHCFSavePeekSizeForIndex(int idx, CGFloat w, CGFloat h) {
-if (idx < 0 || idx >= GHCFAppCount) return;
+static void CFLYSavePeekSizeForIndex(int idx, CGFloat w, CGFloat h) {
+if (idx < 0 || idx >= CFLYAppCount) return;
 char key[64];
-GHCFGeoKeyForIndex(idx, "PeekW", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)w);
-GHCFGeoKeyForIndex(idx, "PeekH", key, sizeof(key));
-GHCFWritePrefsDouble(key, (double)h);
+CFLYGeoKeyForIndex(idx, "PeekW", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)w);
+CFLYGeoKeyForIndex(idx, "PeekH", key, sizeof(key));
+CFLYWritePrefsDouble(key, (double)h);
 }
 
 // v42.3：滿窗尺寸（小窗拖調尺寸的上限 + 升大窗的 80% 門檻）——存過的
 // 位置/大小優先，沒存過走預設內容尺寸（計算器 320x693，其他 350x757）。
-static void GHCFFullSizeForIndex(int idx, CGFloat *outW, CGFloat *outH) {
-CGFloat w = GHCF_HOSTED_CONTENT_W;
-CGFloat h = GHCF_HOSTED_CONTENT_H;
-if (idx >= 0 && idx < GHCFAppCount) {
+static void CFLYFullSizeForIndex(int idx, CGFloat *outW, CGFloat *outH) {
+CGFloat w = CFLY_HOSTED_CONTENT_W;
+CGFloat h = CFLY_HOSTED_CONTENT_H;
+if (idx >= 0 && idx < CFLYAppCount) {
 CGFloat geoCX, geoCY, geoW, geoH, geoScale;
-if (GHCFRestoreGeometryForIndex(idx, &geoCX, &geoCY, &geoW, &geoH, &geoScale)) {
+if (CFLYRestoreGeometryForIndex(idx, &geoCX, &geoCY, &geoW, &geoH, &geoScale)) {
 w = geoW;
 h = geoH;
 } else {
-CGSize def = GHCFHostedContentSizeForBundleID(GHCFCacheBundleIDs[idx]);
+CGSize def = CFLYHostedContentSizeForBundleID(CFLYCacheBundleIDs[idx]);
 w = def.width;
 h = def.height;
 }
@@ -3148,55 +3105,55 @@ if (outH) *outH = h;
 // 存的高 < 242 的讀時也會回 242；但存過且寬高都 ≥ 新下限的（拖大過的）
 // 讀時會保留、寬高比不對就還有黑條，所以一次清掉全部已存的 PeekW/PeekH
 // （寫 0＝沒存過），全部回到 112×242；以後想改大再拖。照 v53 自愈的寫法。
-static void GHCFResetStoredPeekSizesOnce(void) {
+static void CFLYResetStoredPeekSizesOnce(void) {
 static BOOL reset = NO;
 if (reset) return;
 reset = YES;
 int cleared = 0;
-for (int i = 0; i < GHCFAppCount; i++) {
+for (int i = 0; i < CFLYAppCount; i++) {
 char key[64];
 double w = 0, h = 0;
-GHCFGeoKeyForIndex(i, "PeekW", key, sizeof(key));
-w = GHCFReadPrefsDouble(key, 0);
-GHCFGeoKeyForIndex(i, "PeekH", key, sizeof(key));
-h = GHCFReadPrefsDouble(key, 0);
+CFLYGeoKeyForIndex(i, "PeekW", key, sizeof(key));
+w = CFLYReadPrefsDouble(key, 0);
+CFLYGeoKeyForIndex(i, "PeekH", key, sizeof(key));
+h = CFLYReadPrefsDouble(key, 0);
 if (w > 0 || h > 0) {
-GHCFGeoKeyForIndex(i, "PeekW", key, sizeof(key));
-GHCFWritePrefsDouble(key, 0);
-GHCFGeoKeyForIndex(i, "PeekH", key, sizeof(key));
-GHCFWritePrefsDouble(key, 0);
+CFLYGeoKeyForIndex(i, "PeekW", key, sizeof(key));
+CFLYWritePrefsDouble(key, 0);
+CFLYGeoKeyForIndex(i, "PeekH", key, sizeof(key));
+CFLYWritePrefsDouble(key, 0);
 cleared++;
 }
 }
 if (cleared > 0) {
 char buf[128];
 snprintf(buf, sizeof(buf), "v69 stored peek sizes reset, cleared %d", cleared);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 }
 
 // v40：点窗外事件开关（prefs 里的 tapOutsideEnabled，默认开）。
-static BOOL GHCFReadTapOutsideEnabled(void) {
-return GHCFReadPrefsBool("tapOutsideEnabled", YES);
+static BOOL CFLYReadTapOutsideEnabled(void) {
+return CFLYReadPrefsBool("tapOutsideEnabled", YES);
 }
 
 // v43.24：第 6 件——取第 idx 個 App 的開關 key：固定 5 個走 app*Enabled，
 // 自選走 sel-<bundleID>（串列裡的順序換了，key 跟著 bundleID 走，不跟槽位）。
-static void GHCFAppEnabledKeyForIndex(int idx, char *buf, size_t bufSize) {
+static void CFLYAppEnabledKeyForIndex(int idx, char *buf, size_t bufSize) {
 if (!buf || bufSize == 0) return;
 buf[0] = '\0';
-if (idx < 0 || idx >= GHCFAppCount) return;
+if (idx < 0 || idx >= CFLYAppCount) return;
 if (idx < 5) {
-strncpy(buf, GHCFAppEnabledKeysFixed[idx], bufSize - 1);
+strncpy(buf, CFLYAppEnabledKeysFixed[idx], bufSize - 1);
 buf[bufSize - 1] = '\0';
 } else {
-snprintf(buf, bufSize, "sel-%s", GHCFAppBundleIDs[idx]);
+snprintf(buf, bufSize, "sel-%s", CFLYAppBundleIDs[idx]);
 }
 }
-// ChinaFly（1.0.0）：首次默認開的 8 個 App（照 TrollOpen 影片裡機主的
+// ChinaFly（1.0.0）：首次默認開的 8 個 App（照 參考影片裡機主的
 // 選擇，跟設定頁同一份：抖音、汽水音樂 Plus、設置、DynamicCow、
 // Facebook、Messenger、QQ、Telegram）。
-static BOOL GHCFIsDefaultOnAppBid(const char *bid) {
+static BOOL CFLYIsDefaultOnAppBid(const char *bid) {
 if (!bid || bid[0] == '\0') return NO;
 static const char *defaults8[8] = {
 "com.ss.iphone.ugc.Aweme",
@@ -3216,21 +3173,21 @@ return NO;
 // v40：这个 App 在设定页里开着没有（固定 App：键不存在就回 YES；
 // 自選 App：sel-<bid> 寫過就照它，沒寫過看是不是默認開的 8 個——
 // 跟設定頁同一套判定規則）。
-static BOOL GHCFIsAppEnabled(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return NO;
+static BOOL CFLYIsAppEnabled(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return NO;
 char key[160];
-GHCFAppEnabledKeyForIndex(idx, key, sizeof(key));
+CFLYAppEnabledKeyForIndex(idx, key, sizeof(key));
 if (key[0] == '\0') return NO;
-if (idx >= 5 && !GHCFPrefsHasKey(key)) return GHCFIsDefaultOnAppBid(GHCFAppBundleIDs[idx]);
-return GHCFReadPrefsBool(key, YES);
+if (idx >= 5 && !CFLYPrefsHasKey(key)) return CFLYIsDefaultOnAppBid(CFLYAppBundleIDs[idx]);
+return CFLYReadPrefsBool(key, YES);
 }
 
 // ── v41：寫 prefs（BOOL / 字串） ──
 // 字串傳 NULL 或空字串 = 清掉那個鍵（CFPreferencesSetAppValue 傳 NULL
 // 就是刪除）。立刻落盤。
-static void GHCFWritePrefsBool(const char *key, BOOL value) {
+static void CFLYWritePrefsBool(const char *key, BOOL value) {
 if (!key) return;
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
 if (domain && keyRef) {
 CFPreferencesSetAppValue(keyRef, value ? kCFBooleanTrue : kCFBooleanFalse, domain);
@@ -3239,9 +3196,9 @@ CFPreferencesAppSynchronize(domain);
 if (domain) CFRelease(domain);
 if (keyRef) CFRelease(keyRef);
 }
-static void GHCFWritePrefsCString(const char *key, const char *value) {
+static void CFLYWritePrefsCString(const char *key, const char *value) {
 if (!key) return;
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
 if (domain && keyRef) {
 if (value && value[0] != '\0') {
@@ -3260,9 +3217,9 @@ if (keyRef) CFRelease(keyRef);
 }
 
 // v43.18：這個 prefs 鍵有沒有存過值（BOOL 鍵用 CString 讀不到，用這個判）。
-static BOOL GHCFPrefsHasKey(const char *key) {
+static BOOL CFLYPrefsHasKey(const char *key) {
 if (!key) return NO;
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
 BOOL has = NO;
 if (domain && keyRef) {
@@ -3278,15 +3235,15 @@ return has;
 // ── v41：已安裝 App 清單（ARC 的「＋」與設定頁選擇器共用） ──
 // 緩存檔：/var/mobile/Library/Preferences/ChinaFly-apps.plist，
 // 內容是 NSArray<NSDictionary{bundleID, name}>。列舉在後台做（見下面
-// GHCFRefreshInstalledAppListInBackground），讀緩存只讀檔、很快，
+// CFLYRefreshInstalledAppListInBackground），讀緩存只讀檔、很快，
 // 主線程讀沒問題。緩存不存在/空時，選擇器只列 5 個固定 App。
 // v52：列舉改走 LSApplicationWorkspace allApplications（只讀列舉；
 // openApplicationWithBundleID 仍是禁區——同步調用會堵主線程 ≥5 秒）。
-static NSString *GHCFAppListCachePath(void) {
+static NSString *CFLYAppListCachePath(void) {
 return [NSString stringWithCString:"/var/mobile/Library/Preferences/ChinaFly-apps.plist" encoding:NSUTF8StringEncoding];
 }
-static NSArray *GHCFCachedInstalledAppList(void) {
-NSString *path = GHCFAppListCachePath();
+static NSArray *CFLYCachedInstalledAppList(void) {
+NSString *path = CFLYAppListCachePath();
 if (!path) return nil;
 NSArray *list = [NSArray arrayWithContentsOfFile:path];
 if (![list isKindOfClass:[NSArray class]]) return nil;
@@ -3294,9 +3251,9 @@ return list;
 }
 // 從緩存檔查一個 bundle ID 的顯示名（回傳 malloc 的 C 字串，調用處 free；
 // 查不到回 NULL）。
-static char *GHCFCachedAppNameForBundleID(const char *bundleID) {
+static char *CFLYCachedAppNameForBundleID(const char *bundleID) {
 if (!bundleID || bundleID[0] == '\0') return NULL;
-NSArray *list = GHCFCachedInstalledAppList();
+NSArray *list = CFLYCachedInstalledAppList();
 if (!list) return NULL;
 NSString *bidKey = [NSString stringWithCString:"bundleID" encoding:NSUTF8StringEncoding];
 NSString *nameKey = [NSString stringWithCString:"name" encoding:NSUTF8StringEncoding];
@@ -3320,19 +3277,19 @@ return NULL;
 return NULL;
 }
 // 自選 App 存在 prefs 鍵 customAppBundleIDs（逗號串起來的 bundle ID 串列，
-// 跟 pinnedAppIDs／recentAppIDs 同一套 GHCFReadIDList／GHCFWriteIDList 做法）。
+// 跟 pinnedAppIDs／recentAppIDs 同一套 CFLYReadIDList／CFLYWriteIDList 做法）。
 // 啟動時讀進動態串列（固定 5 個後面接自選）；舊版 customAppNBundleID 槽位
 // 第一次讀到就遷移過來（開關也一起遷成 sel-<bundleID>），遷完清掉舊鍵。
 // 啟動時調一次，ARC 打開與選完 App 後也調（立刻生效）。
-static void GHCFLoadCustomApps(void) {
-GHCFInitAppTables();
-GHCFAppCount = 5;
+static void CFLYLoadCustomApps(void) {
+CFLYInitAppTables();
+CFLYAppCount = 5;
 BOOL migrated = NO;
-NSMutableArray *list = [NSMutableArray arrayWithArray:GHCFReadIDList("customAppBundleIDs")];
+NSMutableArray *list = [NSMutableArray arrayWithArray:CFLYReadIDList("customAppBundleIDs")];
 for (int s = 0; s < 20; s++) {
 char key[32];
 snprintf(key, sizeof(key), "customApp%dBundleID", s + 1);
-char *bid = GHCFReadPrefsCString(key);
+char *bid = CFLYReadPrefsCString(key);
 if (bid && bid[0] != '\0') {
 NSString *bidStr = [NSString stringWithCString:bid encoding:NSUTF8StringEncoding];
 if (bidStr && ![list containsObject:bidStr]) [list addObject:bidStr];
@@ -3340,19 +3297,19 @@ char selKey[160];
 snprintf(selKey, sizeof(selKey), "sel-%s", bid);
 char oldKey[32];
 snprintf(oldKey, sizeof(oldKey), "customApp%dEnabled", s + 1);
-GHCFWritePrefsBool(selKey, GHCFReadPrefsBool(oldKey, YES));
-GHCFWritePrefsCString(oldKey, NULL);
+CFLYWritePrefsBool(selKey, CFLYReadPrefsBool(oldKey, YES));
+CFLYWritePrefsCString(oldKey, NULL);
 migrated = YES;
 }
-GHCFWritePrefsCString(key, NULL);
+CFLYWritePrefsCString(key, NULL);
 if (bid) free(bid);
 }
-if (migrated) GHCFWriteIDList("customAppBundleIDs", list);
+if (migrated) CFLYWriteIDList("customAppBundleIDs", list);
 // ChinaFly（1.0.0）：首次默認開的 8 個——設置是固定 App（開關預設開）；
 // 其餘 7 個播進 customAppBundleIDs＋sel-<bid> 開（跟設定頁第一次打開
 // 挑選器時播的同一份，只播一次，寫 appPickerDefaultsSeeded 標記；
 // 親手關掉的（sel 寫過 NO）不會被蓋回來——沒寫過 sel 才播）。
-if (!GHCFPrefsHasKey("appPickerDefaultsSeeded")) {
+if (!CFLYPrefsHasKey("appPickerDefaultsSeeded")) {
 static const char *seedBids[7] = {
 "com.ss.iphone.ugc.Aweme",
 "com.soda.music",
@@ -3365,106 +3322,106 @@ static const char *seedBids[7] = {
 for (int si = 0; si < 7; si++) {
 char selKey[160];
 snprintf(selKey, sizeof(selKey), "sel-%s", seedBids[si]);
-if (GHCFPrefsHasKey(selKey)) continue;
+if (CFLYPrefsHasKey(selKey)) continue;
 NSString *bidStr = [NSString stringWithCString:seedBids[si] encoding:NSUTF8StringEncoding];
 if (bidStr && ![list containsObject:bidStr]) [list addObject:bidStr];
-GHCFWritePrefsBool(selKey, YES);
+CFLYWritePrefsBool(selKey, YES);
 }
-if (!GHCFPrefsHasKey("appSettingsEnabled")) GHCFWritePrefsBool("appSettingsEnabled", YES);
-GHCFWritePrefsBool("appPickerDefaultsSeeded", YES);
-GHCFWriteIDList("customAppBundleIDs", list);
-GHCFLogLine("ChinaFly seeded default 8 apps");
+if (!CFLYPrefsHasKey("appSettingsEnabled")) CFLYWritePrefsBool("appSettingsEnabled", YES);
+CFLYWritePrefsBool("appPickerDefaultsSeeded", YES);
+CFLYWriteIDList("customAppBundleIDs", list);
+CFLYLogLine("ChinaFly seeded default 8 apps");
 }
 for (id item in list) {
 if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
 if (!bid || bid[0] == '\0') continue;
-if (!GHCFEnsureAppCapacity(GHCFAppCount + 1)) break;
-strncpy(GHCFAppBundleIDs[GHCFAppCount], bid, 127);
-GHCFAppBundleIDs[GHCFAppCount][127] = '\0';
-char *name = GHCFCachedAppNameForBundleID(bid);
+if (!CFLYEnsureAppCapacity(CFLYAppCount + 1)) break;
+strncpy(CFLYAppBundleIDs[CFLYAppCount], bid, 127);
+CFLYAppBundleIDs[CFLYAppCount][127] = '\0';
+char *name = CFLYCachedAppNameForBundleID(bid);
 if (name && name[0] != '\0') {
-strncpy(GHCFAppNames[GHCFAppCount], name, 127);
-GHCFAppNames[GHCFAppCount][127] = '\0';
+strncpy(CFLYAppNames[CFLYAppCount], name, 127);
+CFLYAppNames[CFLYAppCount][127] = '\0';
 free(name);
 } else {
 const char *lastDot = strrchr(bid, '.');
 const char *shortName = lastDot ? lastDot + 1 : bid;
-strncpy(GHCFAppNames[GHCFAppCount], shortName, 127);
-GHCFAppNames[GHCFAppCount][127] = '\0';
+strncpy(CFLYAppNames[CFLYAppCount], shortName, 127);
+CFLYAppNames[CFLYAppCount][127] = '\0';
 }
-GHCFAppCount++;
+CFLYAppCount++;
 }
-GHCFSyncFrontOrderToAppCount();
+CFLYSyncFrontOrderToAppCount();
 }
 // 這個 bundle ID 現在在不在啟動器裡（固定槽看 app*Enabled，自選槽看
 // customAppNEnabled；空槽不算）。
-static BOOL GHCFIsAppInLauncher(const char *bundleID) {
+static BOOL CFLYIsAppInLauncher(const char *bundleID) {
 if (!bundleID || bundleID[0] == '\0') return NO;
-int idx = GHCFAppIndexForBundleID(bundleID);
+int idx = CFLYAppIndexForBundleID(bundleID);
 if (idx < 0) return NO;
-return GHCFIsAppEnabled(idx);
+return CFLYIsAppEnabled(idx);
 }
 // 把一個 App 加進/移出啟動器（ARC 的「＋」與設定頁選擇器共用同一份鍵，
 // 兩邊改了都同步）。固定 App 只改它的開關；自選 App：開時加進串列＋
 // sel-<bid> 開，關時從串列拿掉＋ sel-<bid> 關；沒有數量上限。
-static BOOL GHCFSetAppInLauncher(const char *bundleID, BOOL inLauncher) {
+static BOOL CFLYSetAppInLauncher(const char *bundleID, BOOL inLauncher) {
 if (!bundleID || bundleID[0] == '\0') return NO;
-GHCFInitAppTables();
-int idx = GHCFAppIndexForBundleID(bundleID);
+CFLYInitAppTables();
+int idx = CFLYAppIndexForBundleID(bundleID);
 char buf[256];
 if (idx >= 0 && idx < 5) {
 char key[64];
-GHCFAppEnabledKeyForIndex(idx, key, sizeof(key));
-GHCFWritePrefsBool(key, inLauncher);
+CFLYAppEnabledKeyForIndex(idx, key, sizeof(key));
+CFLYWritePrefsBool(key, inLauncher);
 snprintf(buf, sizeof(buf), "v57 app selector %s %s", bundleID, inLauncher ? "on" : "off");
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 return YES;
 }
 if (idx >= 5) {
 char key[160];
-GHCFAppEnabledKeyForIndex(idx, key, sizeof(key));
+CFLYAppEnabledKeyForIndex(idx, key, sizeof(key));
 if (inLauncher) {
-GHCFWritePrefsBool(key, YES);
+CFLYWritePrefsBool(key, YES);
 } else {
-NSMutableArray *list = [NSMutableArray arrayWithArray:GHCFReadIDList("customAppBundleIDs")];
+NSMutableArray *list = [NSMutableArray arrayWithArray:CFLYReadIDList("customAppBundleIDs")];
 NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
 [list removeObject:bidStr];
-GHCFWriteIDList("customAppBundleIDs", list);
-GHCFWritePrefsBool(key, NO);
-GHCFLoadCustomApps();
+CFLYWriteIDList("customAppBundleIDs", list);
+CFLYWritePrefsBool(key, NO);
+CFLYLoadCustomApps();
 }
 snprintf(buf, sizeof(buf), "v57 app selector %s %s", bundleID, inLauncher ? "on" : "off");
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 return YES;
 }
 if (!inLauncher) return YES;
-NSMutableArray *list = [NSMutableArray arrayWithArray:GHCFReadIDList("customAppBundleIDs")];
+NSMutableArray *list = [NSMutableArray arrayWithArray:CFLYReadIDList("customAppBundleIDs")];
 NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
 if (![list containsObject:bidStr]) {
 [list addObject:bidStr];
-GHCFWriteIDList("customAppBundleIDs", list);
+CFLYWriteIDList("customAppBundleIDs", list);
 }
 char key[160];
 snprintf(key, sizeof(key), "sel-%s", bundleID);
-GHCFWritePrefsBool(key, YES);
-GHCFLoadCustomApps();
+CFLYWritePrefsBool(key, YES);
+CFLYLoadCustomApps();
 snprintf(buf, sizeof(buf), "v57 app selector %s on", bundleID);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 return YES;
 }
 // v41：取一個 bundleID 的顯示名（啟動器槽位優先，其次緩存清單，
 // 都沒有就用 bundle ID 最後一段）。輸出寫進 out（呼叫處備好 buffer）。
-static void GHCFAppNameForBundleID(const char *bundleID, char *out, size_t outSize) {
+static void CFLYAppNameForBundleID(const char *bundleID, char *out, size_t outSize) {
 if (!bundleID || !out || outSize == 0) return;
 out[0] = '\0';
-int idx = GHCFAppIndexForBundleID(bundleID);
-if (idx >= 0 && GHCFAppNames[idx][0] != '\0') {
-strncpy(out, GHCFAppNames[idx], outSize - 1);
+int idx = CFLYAppIndexForBundleID(bundleID);
+if (idx >= 0 && CFLYAppNames[idx][0] != '\0') {
+strncpy(out, CFLYAppNames[idx], outSize - 1);
 out[outSize - 1] = '\0';
 return;
 }
-char *cached = GHCFCachedAppNameForBundleID(bundleID);
+char *cached = CFLYCachedAppNameForBundleID(bundleID);
 if (cached) {
 strncpy(out, cached, outSize - 1);
 out[outSize - 1] = '\0';
@@ -3478,18 +3435,17 @@ out[outSize - 1] = '\0';
 }
 
 // ── ChinaFly（1.0.0）菜單順序默認值 ──
-// menuAppOrder 默認順序——跟設定頁同一份（照 TrollOpen 影片露出的前
+// menuAppOrder 默認順序——跟設定頁同一份（照 參考影片露出的前
 // 17 個，原樣保留；微信留三個；知道 bundleID 的存 bundleID，不知道的
 // 存顯示名，運行時按名找）。設定頁第一次打開菜單編輯頁才寫進 prefs；
-// 沒開過之前 dylib 讀不到 key，就用這份兜底（見 GHCFReadMenuAppOrder）。
-static NSArray *GHCFDefaultMenuAppOrder(void) {
+// 沒開過之前 dylib 讀不到 key，就用這份兜底（見 CFLYReadMenuAppOrder）。
+static NSArray *CFLYDefaultMenuAppOrder(void) {
 return [NSArray arrayWithObjects:
 [NSString stringWithCString:"com.apple.Preferences" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.tencent.xin" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.apple.calculator" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"AppsDump3" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.ss.iphone.ugc.Aweme" encoding:NSUTF8StringEncoding],
-[NSString stringWithCString:"巨魔注入器" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"愛思全能版" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.tencent.mqq" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.tencent.xin" encoding:NSUTF8StringEncoding],
@@ -3498,17 +3454,16 @@ return [NSArray arrayWithObjects:
 [NSString stringWithCString:"com.matteozappa.DynamicCowTS" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.facebook.Messenger" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"ph.telegra.Telegram" encoding:NSUTF8StringEncoding],
-[NSString stringWithCString:"TrollStore" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.facebook.Facebook" encoding:NSUTF8StringEncoding],
 [NSString stringWithCString:"com.tencent.xin" encoding:NSUTF8StringEncoding],
 nil];
 }
 // 讀 menuAppOrder（存過就照存的；沒存過／存壞了就回上面那份默認）。
-// 注意：menuAppOrder 存的是 NSArray，不是逗號字串，GHCFReadIDList 讀
+// 注意：menuAppOrder 存的是 NSArray，不是逗號字串，CFLYReadIDList 讀
 // 不到它（那個只拆字串），這裡直接讀 CFPreferences 的陣列值。
 // dylib 只讀不寫（dylib 不改菜單順序，寫是設定頁的事）。
-static NSArray *GHCFReadMenuAppOrder(void) {
-CFStringRef domain = CFStringCreateWithCString(NULL, "com.guhailong.fly", kCFStringEncodingUTF8);
+static NSArray *CFLYReadMenuAppOrder(void) {
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.chinafly.fly", kCFStringEncodingUTF8);
 CFStringRef keyRef = CFStringCreateWithCString(NULL, "menuAppOrder", kCFStringEncodingUTF8);
 NSArray *stored = nil;
 if (domain && keyRef) {
@@ -3528,15 +3483,15 @@ CFRelease(v);
 if (domain) CFRelease(domain);
 if (keyRef) CFRelease(keyRef);
 if (stored) return stored;
-return GHCFDefaultMenuAppOrder();
+return CFLYDefaultMenuAppOrder();
 }
 // 按 menuAppOrder 重排一個 App 串列（原地改；穩定：菜單裡有的按菜單順序
 // 在前，菜單裡沒有的保持原來相對順序沉底；重複的菜單項只認第一次）。
 // 條目可能是 bundleID，也可能是顯示名（沒有 bundleID 的那幾項，
-// 運行時按 GHCFAppNameForBundleID 記的顯示名找）。
-static void GHCFOrderAppsByMenuOrder(NSMutableArray *apps) {
+// 運行時按 CFLYAppNameForBundleID 記的顯示名找）。
+static void CFLYOrderAppsByMenuOrder(NSMutableArray *apps) {
 if (!apps || [apps count] < 2) return;
-NSArray *menu = GHCFReadMenuAppOrder();
+NSArray *menu = CFLYReadMenuAppOrder();
 NSMutableArray *ordered = [NSMutableArray array];
 NSMutableArray *rest = [NSMutableArray arrayWithArray:apps];
 for (id entry in menu) {
@@ -3551,7 +3506,7 @@ const char *bid = [bidStr UTF8String];
 BOOL match = (bid && strcmp(entryStr, bid) == 0);
 if (!match && entryIsName && bid) {
 char name[128];
-GHCFAppNameForBundleID(bid, name, sizeof(name));
+CFLYAppNameForBundleID(bid, name, sizeof(name));
 if (name[0] != '\0' && strcmp(entryStr, name) == 0) match = YES;
 }
 if (match) {
@@ -3566,12 +3521,12 @@ break;
 [apps addObjectsFromArray:ordered];
 }
 
-// 固定 5 個在 GHCFAppBundleIDs[0..4] 的槽位號（-1 = 不是固定 App）。
+// 固定 5 個在 CFLYAppBundleIDs[0..4] 的槽位號（-1 = 不是固定 App）。
 // 寫緩存時固定 5 個排最前面用。
-static int GHCFFixedSlotForBundleID(const char *bid) {
+static int CFLYFixedSlotForBundleID(const char *bid) {
 if (!bid) return -1;
 for (int i = 0; i < 5; i++) {
-if (strcmp(GHCFAppBundleIDs[i], bid) == 0) return i;
+if (strcmp(CFLYAppBundleIDs[i], bid) == 0) return i;
 }
 return -1;
 }
@@ -3582,7 +3537,7 @@ return -1;
 //（皇上 22:00 照片證實：選擇器裡只有 5 個固定 App＋一堆服務，
 // 沒有 QQ／微信／抖音）。只讀列舉，不調 openApplicationWithBundleID
 //（禁區——同步調用會堵主線程 ≥5 秒）。類名運行時查找
-//（objc_getClass + objc_msgSend，不連結私有框架，跟 GHCFAppIcon
+//（objc_getClass + objc_msgSend，不連結私有框架，跟 CFLYAppIcon
 // 同一套寫法），不留 OBJC_CLASS 符號。顯示名逐個 App 退
 //（localizedName → Info.plist 顯示名 → CFBundleName → 資料夾名；
 // 1.0.1 改：拿不到 localizedName 的 App 不再直接跳過，bundleID
@@ -3591,7 +3546,7 @@ return -1;
 // 若 workspace 叫不到／列出來是空的，退回檔案掃描（舊寫法），
 // 選擇器至少不空。列舉方法是探針：QQ／微信出不出來要皇上真機驗才算數。
 // ChinaFly 1.0.1: .app 資料夾名當顯示名（去 ".app" 後綴）。
-static NSString *GHCFAppFolderDisplayName(NSString *bundlePath) {
+static NSString *CFLYAppFolderDisplayName(NSString *bundlePath) {
 if (!bundlePath || [bundlePath length] == 0) return nil;
 NSString *last = [bundlePath lastPathComponent];
 if (!last || [last length] == 0) return nil;
@@ -3602,7 +3557,7 @@ return last;
 }
 // ChinaFly 1.0.1: 從一個 App 的 bundle 路徑讀顯示名：Info.plist
 // CFBundleDisplayName → CFBundleName → .app 資料夾名。
-static NSString *GHCFDisplayNameFromAppBundlePath(NSString *bundlePath) {
+static NSString *CFLYDisplayNameFromAppBundlePath(NSString *bundlePath) {
 if (!bundlePath || [bundlePath length] == 0) return nil;
 NSString *infoName = [NSString stringWithCString:"Info.plist" encoding:NSUTF8StringEncoding];
 NSString *infoPath = [bundlePath stringByAppendingPathComponent:infoName];
@@ -3614,10 +3569,10 @@ if (info) {
 name = [info objectForKey:displayKey];
 if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = [info objectForKey:nameKey];
 }
-if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = GHCFAppFolderDisplayName(bundlePath);
+if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = CFLYAppFolderDisplayName(bundlePath);
 return name;
 }
-static void GHCFRefreshInstalledAppListInBackground(void) {
+static void CFLYRefreshInstalledAppListInBackground(void) {
 dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 @try {
 NSMutableArray *apps = [NSMutableArray array];
@@ -3658,7 +3613,7 @@ if (bundleURLSel && [proxy respondsToSelector:bundleURLSel]) {
 NSURL *bundleURL = ((id (*)(id, SEL))objc_msgSend)(proxy, bundleURLSel);
 if (bundleURL && [bundleURL isKindOfClass:[NSURL class]]) bundlePath = [bundleURL path];
 }
-name = GHCFDisplayNameFromAppBundlePath(bundlePath);
+name = CFLYDisplayNameFromAppBundlePath(bundlePath);
 }
 if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) continue;
 if ([seenBids containsObject:bid]) continue;
@@ -3708,19 +3663,19 @@ if ([seenBids containsObject:bid]) continue;
 NSString *name = [info objectForKey:displayKey];
 if (!name || [name length] == 0) name = [info objectForKey:nameKey2];
 // ChinaFly 1.0.1: 資料夾名去 ".app" 後綴（跟主列舉路徑一致）。
-if (!name || [name length] == 0) name = GHCFAppFolderDisplayName(appPath);
+if (!name || [name length] == 0) name = CFLYAppFolderDisplayName(appPath);
 [seenBids addObject:bid];
 NSDictionary *item = [NSDictionary dictionaryWithObjectsAndKeys:bid, cacheBidKey, name, cacheNameKey, nil];
 [apps addObject:item];
 }
 }
-GHCFLogLine("v57 installed apps fallback to disk scan");
+CFLYLogLine("v57 installed apps fallback to disk scan");
 }
 [apps sortUsingComparator:^NSComparisonResult(id a, id b) {
 NSString *ba = [(NSDictionary *)a objectForKey:cacheBidKey];
 NSString *bb = [(NSDictionary *)b objectForKey:cacheBidKey];
-int ia = (ba) ? GHCFFixedSlotForBundleID([ba UTF8String]) : -1;
-int ib = (bb) ? GHCFFixedSlotForBundleID([bb UTF8String]) : -1;
+int ia = (ba) ? CFLYFixedSlotForBundleID([ba UTF8String]) : -1;
+int ib = (bb) ? CFLYFixedSlotForBundleID([bb UTF8String]) : -1;
 if (ia >= 0 && ib >= 0) return (ia < ib) ? NSOrderedAscending : ((ia > ib) ? NSOrderedDescending : NSOrderedSame);
 if (ia >= 0) return NSOrderedAscending;
 if (ib >= 0) return NSOrderedDescending;
@@ -3730,22 +3685,22 @@ if (!na) return NSOrderedAscending;
 if (!nb) return NSOrderedDescending;
 return [na localizedCaseInsensitiveCompare:nb];
 }];
-NSString *cachePath = GHCFAppListCachePath();
+NSString *cachePath = CFLYAppListCachePath();
 if (cachePath) [apps writeToFile:cachePath atomically:YES];
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 installed apps cached %lu", (unsigned long)[apps count]);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 installed apps scan failed");
+CFLYLogLine("v57 installed apps scan failed");
 }
 });
 }
 
 // v40：小窗显示位置是不是左侧（prefs 里的 windowPosition，
 // "left" 或 "right"，默认 "right"；不是 "left" 就当右側）。
-static BOOL GHCFIsWindowPositionLeft(void) {
-char *pos = GHCFReadPrefsCString("windowPosition");
+static BOOL CFLYIsWindowPositionLeft(void) {
+char *pos = CFLYReadPrefsCString("windowPosition");
 BOOL isLeft = (pos && strcmp(pos, "left") == 0);
 if (pos) free(pos);
 return isLeft;
@@ -3753,9 +3708,9 @@ return isLeft;
 
 // v54：浮窗滑出方向（floatingWindowSlideSide，Window.plist）：開窗從哪邊滑
 // 進來、peek 貼哪邊。預設右（現有行為）。小窗顯示位置（windowPosition，
-// 見 GHCFIsWindowPositionLeft）是另一個設定。
-static BOOL GHCFIsFloatingWindowSlideLeft(void) {
-char *side = GHCFReadPrefsCString("floatingWindowSlideSide");
+// 見 CFLYIsWindowPositionLeft）是另一個設定。
+static BOOL CFLYIsFloatingWindowSlideLeft(void) {
+char *side = CFLYReadPrefsCString("floatingWindowSlideSide");
 BOOL isLeft = (side && strcmp(side, "left") == 0);
 if (side) free(side);
 return isLeft;
@@ -3764,10 +3719,21 @@ return isLeft;
 // v41：貼邊 peek 的 x（右：屏寬 - peek 寬 - 邊距；左：邊距）。重排
 // 與收起都用它，跟浮窗滑出方向設定走。
 // v42.3：小窗寬度每 App 各記各的，x 跟著寬度走。
-static CGFloat GHCFDockPeekXForWidth(CGFloat peekW) {
+// 1.0.4：空掛檔位——露多少由檔位定（1 檔 40pt、2 檔 70pt、3 檔 100pt，
+// 0 或沒設就是整扇可見）。右邊掛：x 往右推，超出的部分出屏；
+// 左邊掛：x 往左推，超出的部分出屏。
+static CGFloat CFLYDockPeekXForIndex(int idx, CGFloat peekW) {
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-if (GHCFIsFloatingWindowSlideLeft()) return 2.0;
-return screenBounds.size.width - peekW - 2.0;
+CGFloat visible = peekW;
+if (idx >= 0 && idx < CFLYAppCount && CFLYPeekLevels) {
+int level = CFLYPeekLevels[idx];
+if (level == 1) visible = 40.0;
+else if (level == 2) visible = 70.0;
+else if (level == 3) visible = 100.0;
+if (visible > peekW) visible = peekW;
+}
+if (CFLYIsFloatingWindowSlideLeft()) return 2.0 - (peekW - visible);
+return screenBounds.size.width - visible - 2.0;
 }
 
 // v43.40（1.0.113）：清調試畫布的安全寫法——先拆子視圖（UIView 拆掉時
@@ -3778,10 +3744,10 @@ return screenBounds.size.width - peekW - 2.0;
 // backing layer 直接從圖層樹上摘掉（UIKit 不支援這麼幹），再調
 // removeFromSuperview 時視圖／圖層已經不同步——第一次真拆沒死、第二次真拆
 // 就把 SpringBoard 帶走（兩份日誌都死在第二次真拆）。
-static void GHCFClearDebugCanvas(void) {
-if (!GHCFDebugTriggerView) return;
-for (UIView *sv in [[GHCFDebugTriggerView subviews] copy]) [sv removeFromSuperview];
-CALayer *dbgLayer = GHCFDebugTriggerView.layer;
+static void CFLYClearDebugCanvas(void) {
+if (!CFLYDebugTriggerView) return;
+for (UIView *sv in [[CFLYDebugTriggerView subviews] copy]) [sv removeFromSuperview];
+CALayer *dbgLayer = CFLYDebugTriggerView.layer;
 if (!dbgLayer) return;
 for (CALayer *ly in [[dbgLayer sublayers] copy]) {
 if (ly && ![ly.delegate isKindOfClass:[UIView class]]) [ly removeFromSuperlayer];
@@ -3793,74 +3759,74 @@ if (ly && ![ly.delegate isKindOfClass:[UIView class]]) [ly removeFromSuperlayer]
 // 只画触发侧选中的边）、悬浮条画一条竖条（位置 Y%、大小是条长，边跟触发侧
 // 走，双侧画左边）。窗不接手势（userInteractionEnabled=NO），改设定就重画
 //（prefschanged／感应带重定位时都调）。关了／分屏关了就藏窗。
-static void GHCFUpdateTriggerDebugOverlay(void) {
-if (!GHCFDebugTriggerWindow || !GHCFDebugTriggerView) return;
+static void CFLYUpdateTriggerDebugOverlay(void) {
+if (!CFLYDebugTriggerWindow || !CFLYDebugTriggerView) return;
 @try {
 // v43.39：被挡闪框优先——调试开关关着时也画，只画被滑的那一侧
-// （重用调试画法的红框；闪完由 GHCFFlashTriggerZone 的收尾再调一次
+// （重用调试画法的红框；闪完由 CFLYFlashTriggerZone 的收尾再调一次
 // 本函数，恢复常态画法）。
-if (GHCFFlashZoneSide >= 0) {
+if (CFLYFlashZoneSide >= 0) {
 CGRect sb = [UIScreen mainScreen].bounds;
-GHCFDebugTriggerWindow.frame = sb;
-GHCFDebugTriggerView.frame = CGRectMake(0, 0, sb.size.width, sb.size.height);
-GHCFClearDebugCanvas();
+CFLYDebugTriggerWindow.frame = sb;
+CFLYDebugTriggerView.frame = CGRectMake(0, 0, sb.size.width, sb.size.height);
+CFLYClearDebugCanvas();
 BOOL landscape = sb.size.height < sb.size.width;
-CGRect z = GHCFReadTriggerZoneRect(GHCFFlashZoneSide == 0, landscape);
+CGRect z = CFLYReadTriggerZoneRect(CFLYFlashZoneSide == 0, landscape);
 UIView *box = [[UIView alloc] initWithFrame:z];
 box.backgroundColor = [[UIColor redColor] colorWithAlphaComponent:0.15];
 box.layer.borderColor = [UIColor redColor].CGColor;
 box.layer.borderWidth = 1.0;
-[GHCFDebugTriggerView addSubview:box];
-GHCFDebugTriggerWindow.hidden = NO;
+[CFLYDebugTriggerView addSubview:box];
+CFLYDebugTriggerWindow.hidden = NO;
 char dbuf[160];
-snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay flash side=%s frame=%.0f,%.0f,%.0f,%.0f", GHCFFlashZoneSide == 0 ? "left" : "right", z.origin.x, z.origin.y, z.size.width, z.size.height);
-GHCFLogLine(dbuf);
+snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay flash side=%s frame=%.0f,%.0f,%.0f,%.0f", CFLYFlashZoneSide == 0 ? "left" : "right", z.origin.x, z.origin.y, z.size.width, z.size.height);
+CFLYLogLine(dbuf);
 return;
 }
-if (!GHCFReadTriggerDebugMode() || !GHCFReadEnabled()) {
-GHCFDebugTriggerWindow.hidden = YES;
+if (!CFLYReadTriggerDebugMode() || !CFLYReadEnabled()) {
+CFLYDebugTriggerWindow.hidden = YES;
 return;
 }
 CGRect sb = [UIScreen mainScreen].bounds;
-GHCFDebugTriggerWindow.frame = sb;
-GHCFDebugTriggerView.frame = CGRectMake(0, 0, sb.size.width, sb.size.height);
-GHCFClearDebugCanvas();
+CFLYDebugTriggerWindow.frame = sb;
+CFLYDebugTriggerView.frame = CGRectMake(0, 0, sb.size.width, sb.size.height);
+CFLYClearDebugCanvas();
 UIColor *fill = [[UIColor redColor] colorWithAlphaComponent:0.15];
 UIColor *edge = [UIColor redColor];
-int mode = GHCFReadTriggerMode();
+int mode = CFLYReadTriggerMode();
 if (mode == 1) {
 // 边缘：每边一个矩形（竖屏／横屏按当前方向取组）。
 BOOL landscape = sb.size.height < sb.size.width;
-int side = GHCFReadTriggerSide();
+int side = CFLYReadTriggerSide();
 if (side == 0 || side == 2) {
-CGRect z = GHCFReadTriggerZoneRect(YES, landscape);
+CGRect z = CFLYReadTriggerZoneRect(YES, landscape);
 UIView *box = [[UIView alloc] initWithFrame:z];
 box.backgroundColor = fill;
 box.layer.borderColor = edge.CGColor;
 box.layer.borderWidth = 1.0;
-[GHCFDebugTriggerView addSubview:box];
+[CFLYDebugTriggerView addSubview:box];
 char dbuf[160];
 snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay edge left frame=%.0f,%.0f,%.0f,%.0f", z.origin.x, z.origin.y, z.size.width, z.size.height);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 }
 if (side == 1 || side == 2) {
-CGRect z = GHCFReadTriggerZoneRect(NO, landscape);
+CGRect z = CFLYReadTriggerZoneRect(NO, landscape);
 UIView *box = [[UIView alloc] initWithFrame:z];
 box.backgroundColor = fill;
 box.layer.borderColor = edge.CGColor;
 box.layer.borderWidth = 1.0;
-[GHCFDebugTriggerView addSubview:box];
+[CFLYDebugTriggerView addSubview:box];
 char dbuf[160];
 snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay edge right frame=%.0f,%.0f,%.0f,%.0f", z.origin.x, z.origin.y, z.size.width, z.size.height);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 }
 } else if (mode == 0) {
 // ARC：扇形（起始角从右侧基准逆时针算，扇角是整扇跨度，跟转盘同一套数）。
 CGPoint c = CGPointMake(sb.size.width / 2.0, sb.size.height / 2.0);
 CGFloat r = MIN(sb.size.width, sb.size.height) / 2.0 - 20.0;
 if (r < 40.0) r = 40.0;
-double start = -GHCFReadARCStartAngle() * M_PI / 180.0;
-double span = GHCFReadARCFanAngle() * M_PI / 180.0;
+double start = -CFLYReadARCStartAngle() * M_PI / 180.0;
+double span = CFLYReadARCFanAngle() * M_PI / 180.0;
 UIBezierPath *p = [UIBezierPath bezierPath];
 [p moveToPoint:c];
 [p addArcWithCenter:c radius:r startAngle:start endAngle:start - span clockwise:NO];
@@ -3870,16 +3836,16 @@ layer.path = p.CGPath;
 layer.fillColor = fill.CGColor;
 layer.strokeColor = edge.CGColor;
 layer.lineWidth = 1.0;
-[GHCFDebugTriggerView.layer addSublayer:layer];
+[CFLYDebugTriggerView.layer addSublayer:layer];
 char dbuf[160];
 snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay arc center=%.0f,%.0f r=%.0f", c.x, c.y, r);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 } else {
 // 悬浮条：一条竖条（宽 12，长度＝大小，中心 Y＝位置 Y%×屏高；
 // 边跟触发侧走，双侧画左边）。
-double y = GHCFReadFloatingBarY();
-double len = GHCFReadFloatingBarSize();
-int side = GHCFReadTriggerSide();
+double y = CFLYReadFloatingBarY();
+double len = CFLYReadFloatingBarSize();
+int side = CFLYReadTriggerSide();
 CGFloat bx = (side == 1) ? sb.size.width - 12.0 : 0;
 CGFloat by = (CGFloat)(y * (double)sb.size.height) - (CGFloat)len / 2.0;
 UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(bx, by, 12.0, (CGFloat)len)];
@@ -3887,33 +3853,33 @@ bar.backgroundColor = fill;
 bar.layer.borderColor = edge.CGColor;
 bar.layer.borderWidth = 1.0;
 bar.layer.cornerRadius = 6.0;
-[GHCFDebugTriggerView addSubview:bar];
+[CFLYDebugTriggerView addSubview:bar];
 char dbuf[160];
 snprintf(dbuf, sizeof(dbuf), "v43.39 debug overlay bar side=%s frame=%.0f,%.0f,%.0f,%.0f", side == 1 ? "right" : "left", bar.frame.origin.x, bar.frame.origin.y, bar.frame.size.width, bar.frame.size.height);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 }
-GHCFDebugTriggerWindow.hidden = NO;
+CFLYDebugTriggerWindow.hidden = NO;
 } @catch (NSException *e) {
 const char *r = e.reason ? [e.reason UTF8String] : "n/a";
 char ebuf[256];
 snprintf(ebuf, sizeof(ebuf), "v43.40 debug overlay error: %s", r ? r : "n/a");
-GHCFLogLine(ebuf);
-if (GHCFDebugTriggerWindow) GHCFDebugTriggerWindow.hidden = YES;
+CFLYLogLine(ebuf);
+if (CFLYDebugTriggerWindow) CFLYDebugTriggerWindow.hidden = YES;
 }
 }
 
 // v43.39：被挡闪框——边缘滑动起手 Y 落在触发区外面时，闪一下被滑那侧
 // 的触发区矩形（重用调试画法的红框，约 1.5 秒自收；调试开关关着时也闪，
 // 只闪被滑的那一侧）＋一下轻震（沿用 ARC 震动开关）。闪完调一次
-// GHCFUpdateTriggerDebugOverlay() 恢复常态（调试开着就画回调试框，
+// CFLYUpdateTriggerDebugOverlay() 恢复常态（调试开着就画回调试框，
 // 关着就藏窗）；1.5 秒内再被挡就重开一轮，旧的收尾凭世代号让路。
-static void GHCFFlashTriggerZone(BOOL fromLeft) {
-if (!GHCFDebugTriggerWindow || !GHCFDebugTriggerView) return;
-GHCFFlashZoneSide = fromLeft ? 0 : 1;
-GHCFFlashZoneGen++;
-int gen = GHCFFlashZoneGen;
-GHCFUpdateTriggerDebugOverlay();
-if (GHCFReadARCHaptics()) {
+static void CFLYFlashTriggerZone(BOOL fromLeft) {
+if (!CFLYDebugTriggerWindow || !CFLYDebugTriggerView) return;
+CFLYFlashZoneSide = fromLeft ? 0 : 1;
+CFLYFlashZoneGen++;
+int gen = CFLYFlashZoneGen;
+CFLYUpdateTriggerDebugOverlay();
+if (CFLYReadARCHaptics()) {
 @try {
 UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
 [haptic impactOccurred];
@@ -3923,12 +3889,12 @@ UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithS
 }
 char dbuf[160];
 snprintf(dbuf, sizeof(dbuf), "v43.39 trigger zone flash side=%s gen=%d", fromLeft ? "left" : "right", gen);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-if (gen != GHCFFlashZoneGen) return;
-GHCFFlashZoneSide = -1;
-GHCFUpdateTriggerDebugOverlay();
-GHCFLogLine("v43.39 trigger zone flash done");
+if (gen != CFLYFlashZoneGen) return;
+CFLYFlashZoneSide = -1;
+CFLYUpdateTriggerDebugOverlay();
+CFLYLogLine("v43.39 trigger zone flash done");
 });
 }
 
@@ -3938,39 +3904,39 @@ GHCFLogLine("v43.39 trigger zone flash done");
 // v43.32：触发侧三段（edgeSwipeSide，默认双侧）——左右各一条带子，
 // 各挂自己的边缘滑动手势（左带 edges=Left，右带 edges=Right）；
 // 只显示触发侧选中的边（左／右／双侧）。旧的单带＋改 edges 写法拿掉。
-static void GHCFUpdateStripPosition(void) {
+static void CFLYUpdateStripPosition(void) {
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 CGFloat stripWidth = 24.0;
-int side = GHCFReadTriggerSide();
+int side = CFLYReadTriggerSide();
 BOOL showLeft = (side == 0 || side == 2);
 BOOL showRight = (side == 1 || side == 2);
-if (GHCFStripWindow) {
-GHCFStripWindow.frame = CGRectMake(screenBounds.size.width - stripWidth, 0, stripWidth, screenBounds.size.height);
-GHCFStripWindow.hidden = !showRight;
+if (CFLYStripWindow) {
+CFLYStripWindow.frame = CGRectMake(screenBounds.size.width - stripWidth, 0, stripWidth, screenBounds.size.height);
+CFLYStripWindow.hidden = !showRight;
 }
-if (GHCFStripWindowLeft) {
-GHCFStripWindowLeft.frame = CGRectMake(0, 0, stripWidth, screenBounds.size.height);
-GHCFStripWindowLeft.hidden = !showLeft;
+if (CFLYStripWindowLeft) {
+CFLYStripWindowLeft.frame = CGRectMake(0, 0, stripWidth, screenBounds.size.height);
+CFLYStripWindowLeft.hidden = !showLeft;
 }
 // 调试画布也跟到新设定（改触发侧／改方式／改宽高位置都重画）。
 // v43.40：重画包一层防护——重画出錯只記日誌，不中斷開啓動器、不殺 SpringBoard。
 @try {
-GHCFUpdateTriggerDebugOverlay();
+CFLYUpdateTriggerDebugOverlay();
 } @catch (NSException *e) {
 const char *r = e.reason ? [e.reason UTF8String] : "n/a";
 char ebuf[256];
 snprintf(ebuf, sizeof(ebuf), "v43.40 strip update overlay error: %s", r ? r : "n/a");
-GHCFLogLine(ebuf);
+CFLYLogLine(ebuf);
 }
 }
 
 // v40：把活动量切到指定窗（手势/小卡/启动器点按时调——多窗时每个手势
 // 都先调它，再做事；已经是活动窗就直接回；窗不在缓存里也直接回）。
-static void GHCFSetActiveToWindow(UIWindow *window) {
-if (!window || window == GHCFHostedWindow) return;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] == window) {
-GHCFLoadCacheToActive(i);
+static void CFLYSetActiveToWindow(UIWindow *window) {
+if (!window || window == CFLYHostedWindow) return;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] == window) {
+CFLYLoadCacheToActive(i);
 return;
 }
 }
@@ -3978,7 +3944,7 @@ return;
 
 // v40：给一个 view 找它所在的窗（控制条按钮、滑杆、细条手势的
 // recognizer.view 都是窗里的子视图，沿 superview 一路往上找 UIWindow）。
-static UIWindow *GHCFWindowForView(UIView *view) {
+static UIWindow *CFLYWindowForView(UIView *view) {
 UIView *v = view;
 while (v) {
 if ([v isKindOfClass:[UIWindow class]]) return (UIWindow *)v;
@@ -3988,10 +3954,10 @@ return nil;
 }
 
 // v40：现在看得见的悬浮窗有几个（新窗错位放、阴影背景显示时用）。
-static int GHCFVisibleHostedWindowCount(void) {
+static int CFLYVisibleHostedWindowCount(void) {
 int n = 0;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i]) n++;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden && !CFLYCacheMinimized[i]) n++;
 }
 return n;
 }
@@ -4000,11 +3966,11 @@ return n;
 // v40：缓存第 idx 项还活不活（复用守卫同款判定：进程还是同一个 pid，
 // 且 presenter 的 view 或 layer host view 还在）。死进程的项不能恢复，
 // 要走 launchHostedApp 让复用守卫销毁重建。
-static BOOL GHCFCachedEntryIsAlive(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return NO;
-if (!GHCFCacheWindows[idx] || !GHCFCacheScenes[idx]) return NO;
-if (!((GHCFCachePresenters[idx] && GHCFCachePresenters[idx].presentationView) || GHCFCacheLayerHostViews[idx])) return NO;
-const char *bid = GHCFCacheBundleIDs[idx];
+static BOOL CFLYCachedEntryIsAlive(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return NO;
+if (!CFLYCacheWindows[idx] || !CFLYCacheScenes[idx]) return NO;
+if (!((CFLYCachePresenters[idx] && CFLYCachePresenters[idx].presentationView) || CFLYCacheLayerHostViews[idx])) return NO;
+const char *bid = CFLYCacheBundleIDs[idx];
 if (!bid || bid[0] == '\0') return NO;
 NSString *bidStr = [NSString stringWithCString:bid encoding:NSUTF8StringEncoding];
 if (!bidStr) return NO;
@@ -4013,16 +3979,16 @@ if (!identity) return NO;
 RBSProcessPredicate *predicate = [RBSProcessPredicate predicateMatchingIdentity:identity];
 RBSProcessHandle *handle = [RBSProcessHandle handleForPredicate:predicate error:nil];
 int pid = handle ? [handle pid] : 0;
-return (pid > 0 && pid == GHCFCachePids[idx]);
+return (pid > 0 && pid == CFLYCachePids[idx]);
 }
 
-// v66：GHCFBackgroundCachedSceneAtIndex 已刪（全程不黑屏——鎖屏不再把
+// v66：CFLYBackgroundCachedSceneAtIndex 已刪（全程不黑屏——鎖屏不再把
 // scene 推回後台，唯一呼叫處鎖屏回調已拿掉；-Werror 不許留著不用）。
 // v40：把缓存第 idx 项的 scene 推回前景（解锁时全窗循环用；
 // v39 的解锁推前景只管活动窗一个，v40 扩展到全部开着的窗）。
-static void GHCFPushForegroundCachedSceneAtIndex(int idx, const char *logLine) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-FBScene *scene = GHCFCacheScenes[idx];
+static void CFLYPushForegroundCachedSceneAtIndex(int idx, const char *logLine) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+FBScene *scene = CFLYCacheScenes[idx];
 if (!scene) return;
 @try {
 [scene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
@@ -4031,38 +3997,38 @@ if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
 settings.backgrounded = NO;
 }
 }];
-GHCFLogLine(logLine);
+CFLYLogLine(logLine);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push failed");
+CFLYLogLine("v57 foreground push failed");
 }
 }
 
 // v41：浮窗前後順序（主/副/副副）：最近帶到最前的在前。帶到最前/恢復/
 // 建新窗時更新；雙擊觸發鈕輪切、ARC 升主窗都按這張表走。
-static int GHCFAppIndexForWindow(UIWindow *window) {
+static int CFLYAppIndexForWindow(UIWindow *window) {
 if (!window) return -1;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] == window) return i;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] == window) return i;
 }
 return -1;
 }
-static void GHCFMarkWindowFront(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
+static void CFLYMarkWindowFront(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
 int pos = -1;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFFrontOrder[i] == idx) { pos = i; break; }
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYFrontOrder[i] == idx) { pos = i; break; }
 }
 // v43.18：表裡沒有就插到最前面（後面依次後移，最後一個丟掉），
 // 不要直接 return——不然 12 號以後的自選 App 永遠進不了表，
-// 收起時 GHCFLayoutDockPeeks 數不到它，窗縮不成小卡（33.log 定案）。
+// 收起時 CFLYLayoutDockPeeks 數不到它，窗縮不成小卡（33.log 定案）。
 if (pos < 0) {
-for (int i = GHCFAppCount - 1; i > 0; i--) GHCFFrontOrder[i] = GHCFFrontOrder[i - 1];
-GHCFFrontOrder[0] = idx;
+for (int i = CFLYAppCount - 1; i > 0; i--) CFLYFrontOrder[i] = CFLYFrontOrder[i - 1];
+CFLYFrontOrder[0] = idx;
 return;
 }
-for (int i = pos; i > 0; i--) GHCFFrontOrder[i] = GHCFFrontOrder[i - 1];
-GHCFFrontOrder[0] = idx;
+for (int i = pos; i > 0; i--) CFLYFrontOrder[i] = CFLYFrontOrder[i - 1];
+CFLYFrontOrder[0] = idx;
 }
 
 // v42.3：一次只有一個大浮窗（皇上 2026-11-14 18:19：主浮窗開著再點
@@ -4070,62 +4036,62 @@ GHCFFrontOrder[0] = idx;
 // 成小的浮窗，點小的換回來，可以來回切）。任何窗被帶到最前時，其他
 // 看得見的大浮窗自動縮成 v41 peek（112x242 活內容小窗、貼邊疊著、
 // scene 保活絕不銷毀；收起前先存位置/大小、scene 推回後台，跟手動最
-// 小化同一套）。收在帶到最前的中心路徑裡（下面 GHCFBringWindowToFront
+// 小化同一套）。收在帶到最前的中心路徑裡（下面 CFLYBringWindowToFront
 // 結尾調），所有切換路徑（ARC 點 App、任務欄、點 peek、雙擊觸發鈕輪切、
 // 重開緩存窗、開新窗、恢復、點窗頂細條）都走這裡，不用每條路各寫一份。
 // 不縮的：釘選的窗（釘＝鎖定）、已經收著的、藏著的。
-static void GHCFAutoPeekOtherWindows(UIWindow *exceptWindow) {
-int exceptIdx = GHCFAppIndexForWindow(exceptWindow);
-if (exceptIdx < 0 || exceptIdx >= GHCFAppCount) return;
-for (int i = 0; i < GHCFAppCount; i++) {
+static void CFLYAutoPeekOtherWindows(UIWindow *exceptWindow) {
+int exceptIdx = CFLYAppIndexForWindow(exceptWindow);
+if (exceptIdx < 0 || exceptIdx >= CFLYAppCount) return;
+for (int i = 0; i < CFLYAppCount; i++) {
 if (i == exceptIdx) continue;
-UIWindow *w = GHCFCacheWindows[i];
-if (!w || w.hidden || GHCFCacheMinimized[i]) continue;
-if (GHCFCacheBundleIDs[i][0] == '\0') continue;
-if (GHCFIsWindowPinned(GHCFCacheBundleIDs[i])) continue;
+UIWindow *w = CFLYCacheWindows[i];
+if (!w || w.hidden || CFLYCacheMinimized[i]) continue;
+if (CFLYCacheBundleIDs[i][0] == '\0') continue;
+if (CFLYIsWindowPinned(CFLYCacheBundleIDs[i])) continue;
 // 收起前先存位置/大小（跟手動最小化一樣，縮窗之後再存會存成 peek 尺寸）。
-GHCFSaveGeometryForIndex(i);
+CFLYSaveGeometryForIndex(i);
 // v49：scene 不推回後台——peek 要露活內容，後台化的 scene 停止合成
 // 就全黑（跟手動最小化同一根因）；恢復時本來就推前景，不用在這裡先推後台。
-GHCFShowDockPeekForIndex(i);
+CFLYShowDockPeekForIndex(i);
 char buf[128];
-snprintf(buf, sizeof(buf), "v57 auto peeked %s", GHCFCacheBundleIDs[i]);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 auto peeked %s", CFLYCacheBundleIDs[i]);
+CFLYLogLine(buf);
 }
 }
 
 // v40：把指定窗带到最前——别的宿主窗回基础层级（Alert - 2），这个窗
 // 升到最前层级（Alert - 1.75）。启动器（Alert - 1）与锁屏（2000）
 // 仍在它之上；贴边小卡（Alert - 1.5）也在它之上（卡要一直看得见）。
-static void GHCFBringWindowToFront(UIWindow *window) {
+static void CFLYBringWindowToFront(UIWindow *window) {
 if (!window) return;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && GHCFCacheWindows[i] != window && !GHCFCacheMinimized[i]) {
-GHCFCacheWindows[i].windowLevel = GHCF_HOSTED_BASE_LEVEL;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && CFLYCacheWindows[i] != window && !CFLYCacheMinimized[i]) {
+CFLYCacheWindows[i].windowLevel = CFLY_HOSTED_BASE_LEVEL;
 }
 }
-window.windowLevel = GHCF_HOSTED_FRONT_LEVEL;
+window.windowLevel = CFLY_HOSTED_FRONT_LEVEL;
 // v42：釘選的窗提到最上層（比帶到最前的窗還高、別的窗蓋不住；
 // 收起的 peek 不提——peek 本來就在邊緣層級）。
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && GHCFCacheWindows[i] != window && !GHCFCacheMinimized[i] && !GHCFCacheWindows[i].hidden && GHCFCacheBundleIDs[i][0] != '\0' && GHCFIsWindowPinned(GHCFCacheBundleIDs[i])) {
-GHCFCacheWindows[i].windowLevel = GHCF_PINNED_LEVEL;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && CFLYCacheWindows[i] != window && !CFLYCacheMinimized[i] && !CFLYCacheWindows[i].hidden && CFLYCacheBundleIDs[i][0] != '\0' && CFLYIsWindowPinned(CFLYCacheBundleIDs[i])) {
+CFLYCacheWindows[i].windowLevel = CFLY_PINNED_LEVEL;
 }
 }
-GHCFSetActiveToWindow(window);
+CFLYSetActiveToWindow(window);
 // v70：帶到最前的窗如果掛著，先恢復（掛著的窗是半截出屏的，帶到最前就要回來）。
 {
-int fidx = GHCFAppIndexForWindow(window);
-if (fidx >= 0 && fidx < GHCFAppCount && GHCFCacheHung[fidx]) {
-GHCFRestoreHungWindowForIndex(fidx);
+int fidx = CFLYAppIndexForWindow(window);
+if (fidx >= 0 && fidx < CFLYAppCount && CFLYCacheHung[fidx]) {
+CFLYRestoreHungWindowForIndex(fidx);
 }
 }
-GHCFMarkWindowFront(GHCFAppIndexForWindow(window));
+CFLYMarkWindowFront(CFLYAppIndexForWindow(window));
 // v42.3：一次一個大窗——其他大窗自動縮成 peek（見上面）。
-GHCFAutoPeekOtherWindows(window);
+CFLYAutoPeekOtherWindows(window);
 // v43.3：上限——活窗数超了就把最久没动的收成小卡。
 GHLSEnforceWindowCap(window);
-GHCFLogLine("v57 window brought to front");
+CFLYLogLine("v57 window brought to front");
 }
 
 
@@ -4135,27 +4101,27 @@ GHCFLogLine("v57 window brought to front");
 // 单窗模式下自动收起本来就只留一扇，上限只在钉选
 // 把活窗数顶上去时才咬得住；全是钉选就谁也不收，只停下。
 static void GHLSEnforceWindowCap(UIWindow *window) {
-int cap = GHCFReadWindowCap();
-int exceptIdx = GHCFAppIndexForWindow(window);
-while (GHCFVisibleHostedWindowCount() > cap) {
+int cap = CFLYReadWindowCap();
+int exceptIdx = CFLYAppIndexForWindow(window);
+while (CFLYVisibleHostedWindowCount() > cap) {
 int victim = -1;
-for (int k = GHCFAppCount - 1; k >= 0; k--) {
-int i = GHCFFrontOrder[k];
+for (int k = CFLYAppCount - 1; k >= 0; k--) {
+int i = CFLYFrontOrder[k];
 if (i == exceptIdx) continue;
-if (i < 0 || i >= GHCFAppCount) continue;
-UIWindow *w = GHCFCacheWindows[i];
-if (!w || w.hidden || GHCFCacheMinimized[i]) continue;
-if (GHCFCacheBundleIDs[i][0] == '\0') continue;
-if (GHCFIsWindowPinned(GHCFCacheBundleIDs[i])) continue;
+if (i < 0 || i >= CFLYAppCount) continue;
+UIWindow *w = CFLYCacheWindows[i];
+if (!w || w.hidden || CFLYCacheMinimized[i]) continue;
+if (CFLYCacheBundleIDs[i][0] == '\0') continue;
+if (CFLYIsWindowPinned(CFLYCacheBundleIDs[i])) continue;
 victim = i;
 break;
 }
 if (victim < 0) break;
-GHCFSaveGeometryForIndex(victim);
-GHCFShowDockPeekForIndex(victim);
+CFLYSaveGeometryForIndex(victim);
+CFLYShowDockPeekForIndex(victim);
 char buf[128];
-snprintf(buf, sizeof(buf), "v43.3 window cap peeked %s", GHCFCacheBundleIDs[victim]);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v43.3 window cap peeked %s", CFLYCacheBundleIDs[victim]);
+CFLYLogLine(buf);
 }
 }
 
@@ -4163,8 +4129,8 @@ GHCFLogLine(buf);
 
 
 // v54：狀態列高度（夾 startY 用）：取第一個連接場景的 statusBar 高度，拿不到就 44。
-static CGFloat GHCFScreenSafeTopInset(void) {
-UIWindowScene *scene = GHCFActiveWindowScene();
+static CGFloat CFLYScreenSafeTopInset(void) {
+UIWindowScene *scene = CFLYActiveWindowScene();
 if (scene && scene.statusBarManager) {
 CGFloat h = scene.statusBarManager.statusBarFrame.size.height;
 if (h > 0) return h;
@@ -4184,36 +4150,36 @@ return 44.0;
 // (4) 記一行 n／startY／縮放比。注意：縮顯示高度時 scene 還是原 peek 尺寸，
 // 底部可能切掉一點（超屏才發生，4 扇以上才縮）。
 // v55：觸發鈕被排布挪開過（peek 收完要回記住的位置）。
-static BOOL GHCFPeekNudgedFlyTriggerButton = NO;
+static BOOL CFLYPeekNudgedFlyTriggerButton = NO;
 
 // v55：觸發鈕回記住的位置（只在排布挪開過時動；沒挪過不動，
 // 免得每輪排布都重設、打斷用戶拖動）。位置語義跟啟動時一樣：
 // flyTriggerButtonX/Y 存的是鈕中心，沒拖過就走邊緣預設。
-static void GHCFRestoreFlyTriggerButtonPosition(void) {
-if (!GHCFPeekNudgedFlyTriggerButton) return;
-if (!GHCFFlyTriggerButtonWindow) return;
-CGFloat size = GHCFReadFlyTriggerIconSize();
+static void CFLYRestoreFlyTriggerButtonPosition(void) {
+if (!CFLYPeekNudgedFlyTriggerButton) return;
+if (!CFLYFlyTriggerButtonWindow) return;
+CGFloat size = CFLYReadFlyTriggerIconSize();
 CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
 CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
-double savedX = GHCFReadFlyTriggerButtonX();
-double savedY = GHCFReadFlyTriggerButtonY();
-CGFloat centerX = (savedX >= 0) ? (CGFloat)savedX : (GHCFIsFlyTriggerSideLeft() ? size / 2.0 : (screenW - size / 2.0));
+double savedX = CFLYReadFlyTriggerButtonX();
+double savedY = CFLYReadFlyTriggerButtonY();
+CGFloat centerX = (savedX >= 0) ? (CGFloat)savedX : (CFLYIsFlyTriggerSideLeft() ? size / 2.0 : (screenW - size / 2.0));
 CGFloat centerY = (savedY >= 0) ? (CGFloat)savedY : (screenH / 2.0);
 if (centerX < size / 2.0) centerX = size / 2.0;
 if (centerX > screenW - size / 2.0) centerX = screenW - size / 2.0;
 if (centerY < 100.0) centerY = 100.0;
 if (centerY > screenH - 100.0) centerY = screenH - 100.0;
-GHCFFlyTriggerButtonWindow.frame = CGRectMake(centerX - size / 2.0, centerY - size / 2.0, size, size);
-GHCFPeekNudgedFlyTriggerButton = NO;
-GHCFLogLine("v57 flyTrigger button restored after peeks cleared");
+CFLYFlyTriggerButtonWindow.frame = CGRectMake(centerX - size / 2.0, centerY - size / 2.0, size, size);
+CFLYPeekNudgedFlyTriggerButton = NO;
+CFLYLogLine("v57 flyTrigger button restored after peeks cleared");
 }
 
 // v55：排布後觸發鈕別壓住任何一扇 peek——鈕框跟任一扇相交就挪開
 //（先試堆疊上方、再試下方、都沒空就換到對邊同高度；不寫 prefs，
-// peek 收完回原位——見 GHCFRestoreFlyTriggerButtonPosition）。
-static void GHCFNudgeFlyTriggerButtonAwayFromPeeks(CGRect *frames, int n) {
-if (!GHCFFlyTriggerButtonWindow || n <= 0) return;
-CGRect btnFrame = GHCFFlyTriggerButtonWindow.frame;
+// peek 收完回原位——見 CFLYRestoreFlyTriggerButtonPosition）。
+static void CFLYNudgeFlyTriggerButtonAwayFromPeeks(CGRect *frames, int n) {
+if (!CFLYFlyTriggerButtonWindow || n <= 0) return;
+CGRect btnFrame = CFLYFlyTriggerButtonWindow.frame;
 BOOL overlap = NO;
 for (int k = 0; k < n; k++) {
 if (CGRectIntersectsRect(btnFrame, frames[k])) { overlap = YES; break; }
@@ -4221,7 +4187,7 @@ if (CGRectIntersectsRect(btnFrame, frames[k])) { overlap = YES; break; }
 if (!overlap) return;
 CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
 CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
-CGFloat topInset = GHCFScreenSafeTopInset();
+CGFloat topInset = CFLYScreenSafeTopInset();
 CGFloat btnW = btnFrame.size.width;
 CGFloat btnH = btnFrame.size.height;
 CGFloat stackTop = frames[0].origin.y;
@@ -4238,26 +4204,26 @@ newY = btnFrame.origin.y;
 if (newY < topInset) newY = topInset;
 if (newY + btnH > screenH - 34.0) newY = screenH - 34.0 - btnH;
 }
-GHCFFlyTriggerButtonWindow.frame = CGRectMake(newX, newY, btnW, btnH);
-GHCFPeekNudgedFlyTriggerButton = YES;
-GHCFLogLine("v57 flyTrigger button nudged away from peeks");
+CFLYFlyTriggerButtonWindow.frame = CGRectMake(newX, newY, btnW, btnH);
+CFLYPeekNudgedFlyTriggerButton = YES;
+CFLYLogLine("v57 flyTrigger button nudged away from peeks");
 }
 
 
-static void GHCFLayoutDockPeeks(void) {
+static void CFLYLayoutDockPeeks(void) {
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-int *docked = (int *)calloc((size_t)(GHCFAppCount > 0 ? GHCFAppCount : 1), sizeof(int));
+int *docked = (int *)calloc((size_t)(CFLYAppCount > 0 ? CFLYAppCount : 1), sizeof(int));
 if (!docked) return;
 int n = 0;
-for (int k = 0; k < GHCFAppCount; k++) {
-int i = GHCFFrontOrder[k];
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && GHCFCacheMinimized[i]) {
+for (int k = 0; k < CFLYAppCount; k++) {
+int i = CFLYFrontOrder[k];
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden && CFLYCacheMinimized[i]) {
 docked[n++] = i;
 }
 }
 if (n == 0) {
 // v55：peek 都收完了，觸發鈕回記住的位置（排布時被挪開過才動）。
-GHCFRestoreFlyTriggerButtonPosition();
+CFLYRestoreFlyTriggerButtonPosition();
 free(docked);
 return;
 }
@@ -4266,11 +4232,11 @@ return;
 CGFloat totalH = 0;
 for (int k = 0; k < n; k++) {
 CGFloat pw, ph;
-GHCFPeekSizeForIndex(docked[k], &pw, &ph);
+CFLYPeekSizeForIndex(docked[k], &pw, &ph);
 totalH += ph;
 }
-totalH += (n - 1) * GHCF_DOCK_PEEK_GAP;
-CGFloat topInset = GHCFScreenSafeTopInset();
+totalH += (n - 1) * CFLY_DOCK_PEEK_GAP;
+CGFloat topInset = CFLYScreenSafeTopInset();
 CGFloat bottomInset = 34.0;
 CGFloat availH = screenBounds.size.height - topInset - bottomInset;
 CGFloat shrink = 1.0;
@@ -4278,14 +4244,14 @@ if (totalH > availH && totalH > 0) shrink = availH / totalH;
 CGFloat startY = (screenBounds.size.height - totalH * shrink) / 2.0;
 if (startY < topInset) startY = topInset;
 CGFloat y = startY;
-CGRect *peekFrames = (CGRect *)calloc((size_t)(GHCFAppCount > 0 ? GHCFAppCount : 1), sizeof(CGRect));
+CGRect *peekFrames = (CGRect *)calloc((size_t)(CFLYAppCount > 0 ? CFLYAppCount : 1), sizeof(CGRect));
 if (!peekFrames) { free(docked); return; }
 for (int k = 0; k < n; k++) {
 CGFloat pw, ph;
-GHCFPeekSizeForIndex(docked[k], &pw, &ph);
+CFLYPeekSizeForIndex(docked[k], &pw, &ph);
 ph *= shrink;
-CGFloat x = GHCFDockPeekXForWidth(pw);
-UIWindow *peekWin = GHCFCacheWindows[docked[k]];
+CGFloat x = CFLYDockPeekXForIndex(docked[k], pw);
+UIWindow *peekWin = CFLYCacheWindows[docked[k]];
 CGRect targetFrame = CGRectMake(x, y, pw, ph);
 peekFrames[k] = targetFrame;
 // v54：peek 重排走彈簧（damping 0.7）——最小化／恢復／關窗時各扇 peek
@@ -4296,13 +4262,13 @@ NSTimeInterval peekAnimDur = 0.6;
 [UIView animateWithDuration:peekAnimDur delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
 peekWin.frame = targetFrame;
 } completion:nil];
-y += ph + GHCF_DOCK_PEEK_GAP * shrink;
+y += ph + CFLY_DOCK_PEEK_GAP * shrink;
 }
 // v55：觸發鈕別壓 peek（排布完再看，鈕框跟任一扇相交就挪開）。
-GHCFNudgeFlyTriggerButtonAwayFromPeeks(peekFrames, n);
+CFLYNudgeFlyTriggerButtonAwayFromPeeks(peekFrames, n);
 char buf[160];
 snprintf(buf, sizeof(buf), "v57 dock layout n=%d startY=%d shrink=%d%%", n, (int)startY, (int)(shrink * 100.0));
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 free(docked);
 free(peekFrames);
 }
@@ -4311,7 +4277,7 @@ free(peekFrames);
 // 活內容，上下疊著排；圖 1 的樣子），不是另外建小卡窗。窗上蓋一層透明
 // 點按層（點整截恢復窗；往下滑取消，v64）。scene 活著
 // （只縮窗 + 推後台，不銷毀；v35 規則）。收起前的位置/大小由
-// minimizeHostedWindow 在縮窗之前存過（GHCFSaveGeometryForIndex）。
+// minimizeHostedWindow 在縮窗之前存過（CFLYSaveGeometryForIndex）。
 // v42.3：小窗尺寸每 App 各記各的（預設 112x242，拖調尺寸後記住的尺寸）。
 // v53：把第 idx 個窗的 scene 推到 peek 尺寸（收成 peek 時調）：容器／
 // 內容區先縮到 peek 尺寸（它們沒有 autoresizing、不跟著窗縮，以前只縮
@@ -4319,12 +4285,12 @@ free(peekFrames);
 // bounds＋scene frame 推到 peek 尺寸（App 按小窗重排版），layer-host 路
 // 按 peek 寬重算 displayScale（整屏縮進小窗）。只推這一個窗的 scene，
 // 不動活動量；恢復時 restoreHostedWindow 會再推回滿窗尺寸。
-static void GHCFPushPeekScaleForIndex(int idx, CGFloat peekW, CGFloat peekH) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-UIWindow *w = GHCFCacheWindows[idx];
-UIView *container = GHCFCacheContainers[idx];
-UIView *contentView = GHCFCacheContentViews[idx];
-FBScene *scene = GHCFCacheScenes[idx];
+static void CFLYPushPeekScaleForIndex(int idx, CGFloat peekW, CGFloat peekH) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+UIWindow *w = CFLYCacheWindows[idx];
+UIView *container = CFLYCacheContainers[idx];
+UIView *contentView = CFLYCacheContentViews[idx];
+FBScene *scene = CFLYCacheScenes[idx];
 if (!w || !container || !contentView || !scene) return;
 // v55：peek 內容裁進窗框——內容就算算大了也不許畫出框外（窗框對了、
 // 內容溢出，一樣會被屏幕緣切掉；恢復成大窗時 HideDockPeek 還原）。
@@ -4334,13 +4300,13 @@ container.frame = CGRectMake(0, 0, peekW, peekH);
 contentView.frame = CGRectMake(0, 0, peekW, peekH);
 contentView.layer.anchorPoint = CGPointMake(0, 0);
 contentView.layer.position = CGPointMake(0, 0);
-const char *bid = GHCFCacheBundleIDs[idx];
-BOOL isFixed = GHCFIsFixedLayoutBundleID(bid);
+const char *bid = CFLYCacheBundleIDs[idx];
+BOOL isFixed = CFLYIsFixedLayoutBundleID(bid);
 const char *peekPath = "none";
 CGFloat peekScale = 1.0;
 CGSize peekFrame = CGSizeMake(peekW, peekH);
-if (GHCFCacheLayerHostViews[idx] && !GHCFCachePresenters[idx]) {
-UIView *layerHostView = GHCFCacheLayerHostViews[idx];
+if (CFLYCacheLayerHostViews[idx] && !CFLYCachePresenters[idx]) {
+UIView *layerHostView = CFLYCacheLayerHostViews[idx];
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
 layerHostView.bounds = CGRectMake(0, 0, screenSize.width, screenSize.height);
 layerHostView.layer.anchorPoint = CGPointMake(0, 0);
@@ -4359,8 +4325,8 @@ peekPath = isFixed ? "fixed-layerhost" : "layerhost";
 peekScale = displayScale;
 peekFrame = screenSize;
 contentView.layer.sublayerTransform = CATransform3DMakeScale(displayScale, displayScale, 1.0);
-} else if (GHCFCachePresenters[idx] && GHCFCachePresenters[idx].presentationView) {
-UIView *presenterView = GHCFCachePresenters[idx].presentationView;
+} else if (CFLYCachePresenters[idx] && CFLYCachePresenters[idx].presentationView) {
+UIView *presenterView = CFLYCachePresenters[idx].presentationView;
 CGSize frameSize;
 // v54 B：固定佈局 App 的 presenter 路走整體縮放——scene 保持自然佈局
 // 尺寸（計算器 320x693、文件 320x480），不推 peek 小 frame
@@ -4368,7 +4334,7 @@ CGSize frameSize;
 // 並置中。置中算法：sublayerTransform 會把 sublayer 的 position 也縮
 // 掉，所以 position 要先除以縮放比，落點才剛好是置中偏移。
 if (isFixed) {
-CGSize natural = GHCFHostedContentSizeForBundleID(bid);
+CGSize natural = CFLYHostedContentSizeForBundleID(bid);
 CGFloat fitW = (natural.width > 0) ? peekW / natural.width : 1.0;
 CGFloat fitH = (natural.height > 0) ? peekH / natural.height : 1.0;
 CGFloat fitScale = (fitW < fitH) ? fitW : fitH;
@@ -4422,89 +4388,89 @@ settings.backgrounded = NO;
 }];
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v58 peek scene frame push failed");
+CFLYLogLine("v58 peek scene frame push failed");
 }
-if (scene == GHCFHostedScene) { // v73：只有活動窗的 scene 尺寸才追蹤（別窗收小卡不要動它）。
-GHCFHostedSceneFrameSize = frameSize;
-GHCFHostedSceneFrameSizeValid = YES;
+if (scene == CFLYHostedScene) { // v73：只有活動窗的 scene 尺寸才追蹤（別窗收小卡不要動它）。
+CFLYHostedSceneFrameSize = frameSize;
+CFLYHostedSceneFrameSizeValid = YES;
 }
 }
 char buf[256];
 snprintf(buf, sizeof(buf), "v58 peek scaled %s %s %dx%d scale=%.3f frame=%dx%d", bid ? bid : "?", peekPath, (int)peekW, (int)peekH, peekScale, (int)peekFrame.width, (int)peekFrame.height);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 
-static void GHCFShowDockPeekForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-UIWindow *w = GHCFCacheWindows[idx];
-if (!w || !GHCFCacheContainers[idx]) return;
-GHCFCacheMinimized[idx] = YES;
-w.windowLevel = GHCF_DOCK_LEVEL;
-UIView *container = GHCFCacheContainers[idx];
+static void CFLYShowDockPeekForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+UIWindow *w = CFLYCacheWindows[idx];
+if (!w || !CFLYCacheContainers[idx]) return;
+CFLYCacheMinimized[idx] = YES;
+w.windowLevel = CFLY_DOCK_LEVEL;
+UIView *container = CFLYCacheContainers[idx];
 CGFloat peekW, peekH;
-GHCFPeekSizeForIndex(idx, &peekW, &peekH);
-if (!GHCFPeekTapOverlays[idx]) {
+CFLYPeekSizeForIndex(idx, &peekW, &peekH);
+if (!CFLYPeekTapOverlays[idx]) {
 UIButton *tapOverlay = [UIButton buttonWithType:UIButtonTypeCustom];
 tapOverlay.tag = idx;
-[tapOverlay addTarget:GHCFLauncherShared action:@selector(handleDockPeekTap:) forControlEvents:UIControlEventTouchUpInside];
+[tapOverlay addTarget:CFLYLauncherShared action:@selector(handleDockPeekTap:) forControlEvents:UIControlEventTouchUpInside];
 [container addSubview:tapOverlay];
-GHCFPeekTapOverlays[idx] = tapOverlay;
+CFLYPeekTapOverlays[idx] = tapOverlay;
 // v65：小浮窗往下滑取消改拖動跟手（皇上 15:39：下滑手感不好）——
 // UISwipeGestureRecognizer 只認成形快滑、沒有跟手，改 UIPanGestureRecognizer：
 // 手指往下拖，小窗跟著往下走＋漸淡；放手時下滑 ≥60pt 或向下滑動速度
 // ≥700pt/s 就關掉，否則彈回原位。點按層蓋滿整個小窗，小窗任意位置往
 // 下拖都認；右下角 36×36 調尺寸手柄在點按層之上，手指落在手柄上還是
 // 走拖調尺寸，不誤關。點小浮窗本身恢復主窗不變（handleDockPeekTap）。
-UIPanGestureRecognizer *peekPanDown = [[UIPanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleDockPeekPan:)];
+UIPanGestureRecognizer *peekPanDown = [[UIPanGestureRecognizer alloc] initWithTarget:CFLYLauncherShared action:@selector(handleDockPeekPan:)];
 [tapOverlay addGestureRecognizer:peekPanDown];
 }
-GHCFPeekTapOverlays[idx].hidden = NO;
+CFLYPeekTapOverlays[idx].hidden = NO;
 // v42.3：調尺寸手柄放到小窗右下角、提到點按層之上（點按層蓋滿整個小窗，
 // 手柄不提到上面，拖動會被點按層吃掉）。手柄的自動排版先關掉（不然容器
-// 一改尺寸它會按大窗的邊距亂跑）；恢復成大窗時 GHCFHideDockPeekForIndex
+// 一改尺寸它會按大窗的邊距亂跑）；恢復成大窗時 CFLYHideDockPeekForIndex
 // 再把排版與位置還原。
-if (GHCFCacheResizeHandles[idx]) {
-UIView *handle = GHCFCacheResizeHandles[idx];
+if (CFLYCacheResizeHandles[idx]) {
+UIView *handle = CFLYCacheResizeHandles[idx];
 handle.autoresizingMask = UIViewAutoresizingNone;
 handle.hidden = NO;
 [container bringSubviewToFront:handle];
 }
-GHCFLayoutDockPeeks();
+CFLYLayoutDockPeeks();
 // v55：排布後才定顯示尺寸——窗框可能被 shrink 縮過（總高超屏時），
 // 點按層／手柄／內容縮放一律按顯示尺寸（窗的實際 frame），
 // 不要按記住的未縮放尺寸，不然內容比窗大、溢出框外跑出屏幕。
 CGFloat dispW = w.frame.size.width;
 CGFloat dispH = w.frame.size.height;
-if (dispW < GHCF_DOCK_PEEK_W) dispW = GHCF_DOCK_PEEK_W;
-if (dispH < GHCF_DOCK_PEEK_H) dispH = GHCF_DOCK_PEEK_H;
-GHCFPeekTapOverlays[idx].frame = CGRectMake(0, 0, dispW, dispH);
-if (GHCFCacheResizeHandles[idx]) {
-GHCFCacheResizeHandles[idx].frame = CGRectMake(dispW - 36, dispH - 36, 36, 36);
+if (dispW < CFLY_DOCK_PEEK_W) dispW = CFLY_DOCK_PEEK_W;
+if (dispH < CFLY_DOCK_PEEK_H) dispH = CFLY_DOCK_PEEK_H;
+CFLYPeekTapOverlays[idx].frame = CGRectMake(0, 0, dispW, dispH);
+if (CFLYCacheResizeHandles[idx]) {
+CFLYCacheResizeHandles[idx].frame = CGRectMake(dispW - 36, dispH - 36, 36, 36);
 }
 // v53：收成 peek 時把 scene 推到 peek 尺寸（App 按小窗重排版，不再是左上切片）。
-GHCFPushPeekScaleForIndex(idx, dispW, dispH);
+CFLYPushPeekScaleForIndex(idx, dispW, dispH);
 // v43.23：第 7 件——黑小卡 dock 快照：dock 當下抓一張活快照，存進 dock 快照槽位
-//（GHCFPeekDockSnaps；97 的 C 凍結幀只在主窗恢復門控裡，小卡沒有；也不能共用
+//（CFLYPeekDockSnaps；97 的 C 凍結幀只在主窗恢復門控裡，小卡沒有；也不能共用
 // 那個槽位——看門狗每 2 秒清一次凍結幀，dock 快照放那裡活不過一輪）。
-// scene 之後掉到 contentState==0 時，看門狗走 GHCFShowPlaceholderForIndex——
+// scene 之後掉到 contentState==0 時，看門狗走 CFLYShowPlaceholderForIndex——
 // 那裡優先顯示 dock 快照而不是深灰佔位，所以小卡顯示最後一幀而不是黑的；
-// scene 恢復活了（cs==2），看門狗走 GHCFHidePlaceholderForIndex 把快照藏回去，
+// scene 恢復活了（cs==2），看門狗走 CFLYHidePlaceholderForIndex 把快照藏回去，
 // 換回 live。快照平時藏著（hidden=YES），不蓋活內容；97 的 A（熔斷 2 秒）＋
 // C（主窗凍結幀）不動。
 {
 // v43.24：第 2 件——scene 掉到 0 時不抓快照（抓到的是黑的，會蓋掉舊的活快照；
 // 沒有舊快照就什麼都不抓，小卡走佔位）。
 NSUInteger dockCS = 2;
-FBScene *dockScene = GHCFCacheScenes[idx];
+FBScene *dockScene = CFLYCacheScenes[idx];
 @try { if (dockScene) dockCS = [dockScene contentState]; } @catch (NSException *e) { (void)e; dockCS = 2; }
 if (dockCS == 0) {
 char dbuf[192];
-snprintf(dbuf, sizeof(dbuf), "v43.24 dock snapshot skipped, scene 0 %s", GHCFCacheBundleIDs[idx]);
-GHCFLogLine(dbuf);
+snprintf(dbuf, sizeof(dbuf), "v43.24 dock snapshot skipped, scene 0 %s", CFLYCacheBundleIDs[idx]);
+CFLYLogLine(dbuf);
 } else {
-UIView *oldDockSnap = GHCFPeekDockSnaps[idx];
+UIView *oldDockSnap = CFLYPeekDockSnaps[idx];
 if (oldDockSnap && oldDockSnap.superview == container) [oldDockSnap removeFromSuperview];
-GHCFPeekDockSnaps[idx] = nil;
+CFLYPeekDockSnaps[idx] = nil;
 UIView *dockSnap = nil;
 @try { dockSnap = [container snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; dockSnap = nil; }
 if (dockSnap) {
@@ -4513,12 +4479,12 @@ dockSnap.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizing
 dockSnap.userInteractionEnabled = NO;
 dockSnap.hidden = YES;
 [container addSubview:dockSnap];
-if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
-if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
-GHCFPeekDockSnaps[idx] = dockSnap;
+if (CFLYPeekTapOverlays[idx]) [container bringSubviewToFront:CFLYPeekTapOverlays[idx]];
+if (CFLYCacheResizeHandles[idx]) [container bringSubviewToFront:CFLYCacheResizeHandles[idx]];
+CFLYPeekDockSnaps[idx] = dockSnap;
 char dbuf[192];
-snprintf(dbuf, sizeof(dbuf), "v43.23 dock snapshot captured %s", GHCFCacheBundleIDs[idx]);
-GHCFLogLine(dbuf);
+snprintf(dbuf, sizeof(dbuf), "v43.23 dock snapshot captured %s", CFLYCacheBundleIDs[idx]);
+CFLYLogLine(dbuf);
 }
 }
 }
@@ -4528,7 +4494,7 @@ GHCFLogLine(dbuf);
 //（v30／v26 已證明能用的推法；不銷毀、不重建 scene；鎖屏推後台邏輯不動）。
 // 喚醒被掛起的進程要一點時間，peek 剛出來可能先黑一下再亮，是正常延遲。
 {
-FBScene *peekScene = GHCFCacheScenes[idx];
+FBScene *peekScene = CFLYCacheScenes[idx];
 if (peekScene) {
 @try {
 [peekScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
@@ -4538,17 +4504,17 @@ settings.backgrounded = NO;
 }
 }];
 char pbuf[256];
-snprintf(pbuf, sizeof(pbuf), "v68 peek foreground pushed %s", GHCFCacheBundleIDs[idx]);
-GHCFLogLine(pbuf);
+snprintf(pbuf, sizeof(pbuf), "v68 peek foreground pushed %s", CFLYCacheBundleIDs[idx]);
+CFLYLogLine(pbuf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v68 peek foreground push failed");
+CFLYLogLine("v68 peek foreground push failed");
 }
 }
 }
 char buf[160];
-snprintf(buf, sizeof(buf), "v57 window docked to peek %s %dx%d", GHCFCacheBundleIDs[idx], (int)dispW, (int)dispH);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 window docked to peek %s %dx%d", CFLYCacheBundleIDs[idx], (int)dispW, (int)dispH);
+CFLYLogLine(buf);
 }
 
 // v41：收掉第 idx 個 App 的貼邊 peek（恢復/關窗時調）：點按層藏起來
@@ -4557,19 +4523,19 @@ GHCFLogLine(buf);
 // v42.3：調尺寸手柄還原到大窗右下角（自動排版也還原——恢復時容器改回
 // 大窗尺寸，排版會按右/下邊距 0 把它帶回大窗右下角；若容器當下還是小
 // 窗尺寸，手柄先回到小窗右下角、容器一放大就跟著過去）。
-static void GHCFHideDockPeekForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-GHCFCacheMinimized[idx] = NO;
+static void CFLYHideDockPeekForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+CFLYCacheMinimized[idx] = NO;
 // v43.23：第 7 件——小卡恢復／關掉時 dock 快照一起清掉（下次收起再抓新的）。
-UIView *dockSnap = GHCFPeekDockSnaps[idx];
+UIView *dockSnap = CFLYPeekDockSnaps[idx];
 if (dockSnap) {
 [dockSnap removeFromSuperview];
-GHCFPeekDockSnaps[idx] = nil;
+CFLYPeekDockSnaps[idx] = nil;
 }
-if (GHCFPeekTapOverlays[idx]) GHCFPeekTapOverlays[idx].hidden = YES;
-if (GHCFCacheResizeHandles[idx] && GHCFCacheContainers[idx]) {
-UIView *handle = GHCFCacheResizeHandles[idx];
-UIView *container = GHCFCacheContainers[idx];
+if (CFLYPeekTapOverlays[idx]) CFLYPeekTapOverlays[idx].hidden = YES;
+if (CFLYCacheResizeHandles[idx] && CFLYCacheContainers[idx]) {
+UIView *handle = CFLYCacheResizeHandles[idx];
+UIView *container = CFLYCacheContainers[idx];
 handle.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin;
 handle.frame = CGRectMake(container.bounds.size.width - 36, container.bounds.size.height - 36, 36, 36);
 // v63：尺寸固定——恢復成大窗，手柄藏回去（大窗拖角落縮放停用）。
@@ -4577,9 +4543,9 @@ handle.hidden = YES;
 }
 // v59：恢復成大窗，裁切保持開（容器＋內容區的圓角靠裁切才看得見；
 // v55 以前關掉它，四角就變直角——見 13:22 照片。peek 路本來就開著裁切）。
-if (GHCFCacheContainers[idx]) GHCFCacheContainers[idx].clipsToBounds = YES;
-if (GHCFCacheContentViews[idx]) GHCFCacheContentViews[idx].clipsToBounds = YES;
-GHCFLayoutDockPeeks();
+if (CFLYCacheContainers[idx]) CFLYCacheContainers[idx].clipsToBounds = YES;
+if (CFLYCacheContentViews[idx]) CFLYCacheContentViews[idx].clipsToBounds = YES;
+CFLYLayoutDockPeeks();
 }
 
 // v40：阴影背景（点窗外事件）的显示/隐藏——开关开着、且至少有一个
@@ -4590,93 +4556,93 @@ GHCFLayoutDockPeeks();
 // 也不受影响（它们在 overlay 之上），只有点浮窗外的空白才落到
 // overlay 上。启动器（1997/1999）在 overlay 之上，打开时不受影响。
 // 浮窗可见性有变时调（建窗、最小化、恢复、关窗、锁屏回调）。
-static void GHCFUpdateDimOverlay(void) {
+static void CFLYUpdateDimOverlay(void) {
 BOOL shouldShow = NO;
-if (GHCFReadTapOutsideEnabled()) {
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i] && !GHCFCacheHung[i]) {
+if (CFLYReadTapOutsideEnabled()) {
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden && !CFLYCacheMinimized[i] && !CFLYCacheHung[i]) {
 shouldShow = YES;
 break;
 }
 }
 }
 if (!shouldShow) {
-if (GHCFDimOverlayWindow) GHCFDimOverlayWindow.hidden = YES;
+if (CFLYDimOverlayWindow) CFLYDimOverlayWindow.hidden = YES;
 return;
 }
-if (!GHCFLauncherShared) return;
-if (!GHCFDimOverlayWindow) {
+if (!CFLYLauncherShared) return;
+if (!CFLYDimOverlayWindow) {
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-GHCFDimOverlayWindow = [[UIWindow alloc] initWithFrame:screenBounds];
-GHCFDimOverlayWindow.windowLevel = GHCF_DIM_OVERLAY_LEVEL;
-GHCFDimOverlayWindow.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.45];
-UIWindowScene *overlayScene = GHCFActiveWindowScene();
-if (overlayScene) GHCFDimOverlayWindow.windowScene = overlayScene;
+CFLYDimOverlayWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+CFLYDimOverlayWindow.windowLevel = CFLY_DIM_OVERLAY_LEVEL;
+CFLYDimOverlayWindow.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.45];
+UIWindowScene *overlayScene = CFLYActiveWindowScene();
+if (overlayScene) CFLYDimOverlayWindow.windowScene = overlayScene;
 UIViewController *overlayVC = [[UIViewController alloc] init];
 UIView *overlayView = [[UIView alloc] initWithFrame:screenBounds];
 overlayView.backgroundColor = [UIColor clearColor];
-UITapGestureRecognizer *overlayTap = [[UITapGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleDimOverlayTap:)];
+UITapGestureRecognizer *overlayTap = [[UITapGestureRecognizer alloc] initWithTarget:CFLYLauncherShared action:@selector(handleDimOverlayTap:)];
 [overlayView addGestureRecognizer:overlayTap];
 overlayVC.view = overlayView;
-GHCFDimOverlayWindow.rootViewController = overlayVC;
-GHCFLogLine("v57 dim overlay created");
+CFLYDimOverlayWindow.rootViewController = overlayVC;
+CFLYLogLine("v57 dim overlay created");
 }
-GHCFDimOverlayWindow.hidden = NO;
+CFLYDimOverlayWindow.hidden = NO;
 }
 
 // v70：懸掛——把第 idx 個窗掛到最近的邊、只露 30pt，點那截恢復。
 // 做法：記住掛起前的 frame，窗移到邊外（只露 30pt），蓋一層透明點按層
 // （跟 peek 點按層同一套：UIButton 蓋滿容器，點了恢復；scene 不動，
 // 內容還活著，不推後台）。陰影背景重算（掛著的窗不算，陰影藏起來）。
-static void GHCFHangWindowForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-UIWindow *w = GHCFCacheWindows[idx];
-if (!w || !GHCFCacheContainers[idx] || GHCFCacheHung[idx]) return;
-GHCFHangSavedFrames[idx] = w.frame;
+static void CFLYHangWindowForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+UIWindow *w = CFLYCacheWindows[idx];
+if (!w || !CFLYCacheContainers[idx] || CFLYCacheHung[idx]) return;
+CFLYHangSavedFrames[idx] = w.frame;
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 CGFloat sliver = 30.0;
 CGFloat x = (w.center.x < screenBounds.size.width / 2.0) ? (-w.frame.size.width + sliver) : (screenBounds.size.width - sliver);
 w.frame = CGRectMake(x, w.frame.origin.y, w.frame.size.width, w.frame.size.height);
-if (!GHCFHangTapOverlays[idx]) {
+if (!CFLYHangTapOverlays[idx]) {
 UIButton *tapOverlay = [UIButton buttonWithType:UIButtonTypeCustom];
 tapOverlay.tag = idx;
-[tapOverlay addTarget:GHCFLauncherShared action:@selector(handleHangTap:) forControlEvents:UIControlEventTouchUpInside];
-[GHCFCacheContainers[idx] addSubview:tapOverlay];
-GHCFHangTapOverlays[idx] = tapOverlay;
+[tapOverlay addTarget:CFLYLauncherShared action:@selector(handleHangTap:) forControlEvents:UIControlEventTouchUpInside];
+[CFLYCacheContainers[idx] addSubview:tapOverlay];
+CFLYHangTapOverlays[idx] = tapOverlay;
 }
-GHCFHangTapOverlays[idx].frame = GHCFCacheContainers[idx].bounds;
-[GHCFCacheContainers[idx] bringSubviewToFront:GHCFHangTapOverlays[idx]];
-GHCFHangTapOverlays[idx].hidden = NO;
-GHCFCacheHung[idx] = YES;
-GHCFLogLine("v70 window hung");
-GHCFUpdateDimOverlay();
+CFLYHangTapOverlays[idx].frame = CFLYCacheContainers[idx].bounds;
+[CFLYCacheContainers[idx] bringSubviewToFront:CFLYHangTapOverlays[idx]];
+CFLYHangTapOverlays[idx].hidden = NO;
+CFLYCacheHung[idx] = YES;
+CFLYLogLine("v70 window hung");
+CFLYUpdateDimOverlay();
 }
 
 // v70：把掛著的第 idx 個窗恢復回來（frame 還原、點按層藏起來）。
-static void GHCFRestoreHungWindowForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheHung[idx]) return;
-UIWindow *w = GHCFCacheWindows[idx];
-if (w) w.frame = GHCFHangSavedFrames[idx];
-if (GHCFHangTapOverlays[idx]) GHCFHangTapOverlays[idx].hidden = YES;
-GHCFCacheHung[idx] = NO;
-GHCFLogLine("v70 hung window restored");
-GHCFUpdateDimOverlay();
+static void CFLYRestoreHungWindowForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheHung[idx]) return;
+UIWindow *w = CFLYCacheWindows[idx];
+if (w) w.frame = CFLYHangSavedFrames[idx];
+if (CFLYHangTapOverlays[idx]) CFLYHangTapOverlays[idx].hidden = YES;
+CFLYCacheHung[idx] = NO;
+CFLYLogLine("v70 hung window restored");
+CFLYUpdateDimOverlay();
 }
 
 // v70：只清懸掛狀態（點按層藏起來、旗標清掉），不動 frame——最小化／
 // 關窗前調（它們接著就自己改 frame／藏窗，不用先還原）。
-static void GHCFClearHungStateForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (GHCFHangTapOverlays[idx]) GHCFHangTapOverlays[idx].hidden = YES;
-GHCFCacheHung[idx] = NO;
+static void CFLYClearHungStateForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (CFLYHangTapOverlays[idx]) CFLYHangTapOverlays[idx].hidden = YES;
+CFLYCacheHung[idx] = NO;
 }
 
 // ── v41：置頂 / 最近 / 遊戲模式 ──
 // 置頂與最近都存在 prefs 裡一個逗號分隔的字串鍵（pinnedAppIDs、
 // recentAppIDs），讀寫走上面現成的字串 helper；順序就是字串裡的順序。
-static NSArray *GHCFReadIDList(const char *key) {
-char *raw = GHCFReadPrefsCString(key);
+static NSArray *CFLYReadIDList(const char *key) {
+char *raw = CFLYReadPrefsCString(key);
 if (!raw) return [NSArray array];
 NSString *rawStr = [NSString stringWithCString:raw encoding:NSUTF8StringEncoding];
 free(raw);
@@ -4684,13 +4650,13 @@ if (!rawStr || [rawStr length] == 0) return [NSArray array];
 NSString *sep = [NSString stringWithCString:"," encoding:NSUTF8StringEncoding];
 return [rawStr componentsSeparatedByString:sep];
 }
-static void GHCFWriteIDList(const char *key, NSArray *ids) {
+static void CFLYWriteIDList(const char *key, NSArray *ids) {
 NSString *sep = [NSString stringWithCString:"," encoding:NSUTF8StringEncoding];
 NSString *joined = [ids componentsJoinedByString:sep];
 const char *utf8 = joined ? [joined UTF8String] : "";
-GHCFWritePrefsCString(key, utf8 ? utf8 : "");
+CFLYWritePrefsCString(key, utf8 ? utf8 : "");
 }
-static BOOL GHCFListContainsBid(NSArray *ids, const char *bundleID) {
+static BOOL CFLYListContainsBid(NSArray *ids, const char *bundleID) {
 if (!bundleID) return NO;
 NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
 for (id item in ids) {
@@ -4699,9 +4665,9 @@ if ([item isKindOfClass:[NSString class]] && [(NSString *)item isEqualToString:b
 return NO;
 }
 
-// v60：标题栏整个拿掉——toolbarOrder 排序、GHCFReadToolbarOrder、
-// GHCFToolbarButtonForID、GHCFRelayoutActiveTitleBar、毛玻璃圆钮
-// （GHCFMakeFrostedControlButton／GHCFSetFrostedButtonPinned）全删；
+// v60：标题栏整个拿掉——toolbarOrder 排序、CFLYReadToolbarOrder、
+// CFLYToolbarButtonForID、CFLYRelayoutActiveTitleBar、毛玻璃圆钮
+// （CFLYMakeFrostedControlButton／CFLYSetFrostedButtonPinned）全删；
 // 釘選只剩手勢動作 "pin"，不再有按钮可排、可点。
 // v46：觸發鈕大小／左右邊改完 2 秒內生效（不用 respring）：
 // tick 裡比對設定值跟上次套用的值，變了才重排。拖動中不碰——
@@ -4710,154 +4676,154 @@ return NO;
 // 拖到的位置留著）；左右邊不再決定位置——有拖過（存了 X）時改邊
 // 不動鈕，沒拖過時才落到新邊。顯示不用這裡管
 // （鈕永遠顯示，不再跟全屏狀態走——v53 全屏自動藏已取消）。
-static CGFloat GHCFAppliedFlyTriggerSize = -1;
-static BOOL GHCFAppliedFlyTriggerLeft = NO;
-static void GHCFApplyFlyTriggerSettings(void) {
-if (!GHCFFlyTriggerButtonWindow || !GHCFFlyTriggerButton) return;
-CGFloat size = GHCFReadFlyTriggerIconSize();
-BOOL left = GHCFIsFlyTriggerSideLeft();
-if (size == GHCFAppliedFlyTriggerSize && left == GHCFAppliedFlyTriggerLeft) return;
+static CGFloat CFLYAppliedFlyTriggerSize = -1;
+static BOOL CFLYAppliedFlyTriggerLeft = NO;
+static void CFLYApplyFlyTriggerSettings(void) {
+if (!CFLYFlyTriggerButtonWindow || !CFLYFlyTriggerButton) return;
+CGFloat size = CFLYReadFlyTriggerIconSize();
+BOOL left = CFLYIsFlyTriggerSideLeft();
+if (size == CFLYAppliedFlyTriggerSize && left == CFLYAppliedFlyTriggerLeft) return;
 CGFloat screenW = [UIScreen mainScreen].bounds.size.width;
 CGFloat screenH = [UIScreen mainScreen].bounds.size.height;
-CGFloat centerX = GHCFFlyTriggerButtonWindow.frame.origin.x + GHCFFlyTriggerButtonWindow.frame.size.width / 2.0;
-CGFloat centerY = GHCFFlyTriggerButtonWindow.frame.origin.y + GHCFFlyTriggerButtonWindow.frame.size.height / 2.0;
+CGFloat centerX = CFLYFlyTriggerButtonWindow.frame.origin.x + CFLYFlyTriggerButtonWindow.frame.size.width / 2.0;
+CGFloat centerY = CFLYFlyTriggerButtonWindow.frame.origin.y + CFLYFlyTriggerButtonWindow.frame.size.height / 2.0;
 // v51：沒拖過（沒存 X）時左右邊設定才作預設落點；拖過的鈕位置不動。
-if (GHCFReadFlyTriggerButtonX() < 0) {
+if (CFLYReadFlyTriggerButtonX() < 0) {
 centerX = left ? size / 2.0 : (screenW - size / 2.0);
 }
 if (centerX < size / 2.0) centerX = size / 2.0;
 if (centerX > screenW - size / 2.0) centerX = screenW - size / 2.0;
 if (centerY < 100.0) centerY = 100.0;
 if (centerY > screenH - 100.0) centerY = screenH - 100.0;
-GHCFFlyTriggerButtonWindow.frame = CGRectMake(centerX - size / 2.0, centerY - size / 2.0, size, size);
-UIView *root = GHCFFlyTriggerButtonWindow.rootViewController.view;
+CFLYFlyTriggerButtonWindow.frame = CGRectMake(centerX - size / 2.0, centerY - size / 2.0, size, size);
+UIView *root = CFLYFlyTriggerButtonWindow.rootViewController.view;
 if (root) root.frame = CGRectMake(0, 0, size, size);
-GHCFFlyTriggerButton.frame = CGRectMake(0, 0, size, size);
-GHCFFlyTriggerButton.layer.cornerRadius = size / 2.0;
-GHCFAppliedFlyTriggerSize = size;
-GHCFAppliedFlyTriggerLeft = left;
+CFLYFlyTriggerButton.frame = CGRectMake(0, 0, size, size);
+CFLYFlyTriggerButton.layer.cornerRadius = size / 2.0;
+CFLYAppliedFlyTriggerSize = size;
+CFLYAppliedFlyTriggerLeft = left;
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 flyTrigger settings applied size=%d side=%s", (int)size, left ? "left" : "right");
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 // v53：悬浮图标換了才重讀（設定頁換圖後 2 秒內生效，不用 respring；
 // 用自訂檔的修改時間判斷，沒換不重讀——tick 每 2 秒跑，不讀圖不花錢；
 // 恢復默認時（custom 關掉）重讀 bundle 預設圖）。
-static double GHCFAppliedFlyTriggerImageMtime = -1;
-static void GHCFRefreshFlyTriggerButtonImageIfNeeded(void) {
-if (!GHCFFlyTriggerButton) return;
-if (!GHCFReadFlyTriggerIconCustom()) {
-if (GHCFAppliedFlyTriggerImageMtime >= 0) {
-GHCFAppliedFlyTriggerImageMtime = -1;
-UIImage *defImage = GHCFLoadFlyTriggerImage();
-if (defImage) [GHCFFlyTriggerButton setImage:defImage forState:UIControlStateNormal];
+static double CFLYAppliedFlyTriggerImageMtime = -1;
+static void CFLYRefreshFlyTriggerButtonImageIfNeeded(void) {
+if (!CFLYFlyTriggerButton) return;
+if (!CFLYReadFlyTriggerIconCustom()) {
+if (CFLYAppliedFlyTriggerImageMtime >= 0) {
+CFLYAppliedFlyTriggerImageMtime = -1;
+UIImage *defImage = CFLYLoadFlyTriggerImage();
+if (defImage) [CFLYFlyTriggerButton setImage:defImage forState:UIControlStateNormal];
 }
 return;
 }
-NSString *path = GHCFCustomFlyTriggerImagePath();
+NSString *path = CFLYCustomFlyTriggerImagePath();
 NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
 NSDate *mtime = attrs ? [attrs objectForKey:NSFileModificationDate] : nil;
 double t = mtime ? [mtime timeIntervalSince1970] : -1;
-if (t < 0 || t == GHCFAppliedFlyTriggerImageMtime) return;
-GHCFAppliedFlyTriggerImageMtime = t;
-UIImage *image = GHCFLoadFlyTriggerImage();
-if (image) [GHCFFlyTriggerButton setImage:image forState:UIControlStateNormal];
+if (t < 0 || t == CFLYAppliedFlyTriggerImageMtime) return;
+CFLYAppliedFlyTriggerImageMtime = t;
+UIImage *image = CFLYLoadFlyTriggerImage();
+if (image) [CFLYFlyTriggerButton setImage:image forState:UIControlStateNormal];
 }
 // v53：啟用分屏開關跟進（tick 每 2 秒跑一次＋%ctor 建完 UI 後跑一次）。
 // 關→收啟動器、藏觸發鈕＋感應帶＋全部未藏的快取窗（含 peek，記
-// GHCFCacheHiddenByDisable）；開→取消隱藏被記的窗＋推前景、顯示鈕＋
+// CFLYCacheHiddenByDisable）；開→取消隱藏被記的窗＋推前景、顯示鈕＋
 // 感應帶。開關狀態變了才動手，沒變直接回（tick 便宜）。
-static BOOL GHCFAppliedEnabledState = NO;
-static BOOL GHCFAppliedEnabledValue = NO;
-// ChinaFly 1.0.0：激活码锁（定义在这里，GHCFApplyEnabledState 和下面
+static BOOL CFLYAppliedEnabledState = NO;
+static BOOL CFLYAppliedEnabledValue = NO;
+// ChinaFly 1.0.0：激活码锁（定义在这里，CFLYApplyEnabledState 和下面
 // %ctor 后的激活模块共用）——锁住时分屏开关就当关着。机制跟旧分屏 1.0.103
 // 那套一样；码表是 China Fly 自己的（1.0.2 起不再跟旧分屏共用），
 // 拉线上的 codes-fly.json；实现、键、通知名全用自己的。
-static BOOL GHCFActivationLocked = NO;
+static BOOL CFLYActivationLocked = NO;
 // v43.43（1.0.115，觸發鈕開關）：顯示開關跟進（tick 每 2 秒跑一次＋
 // prefschanged 立刻跑一次）。關→藏鈕；開→只在分屏開著、表盤沒藏
 // 著鈕時顯示回來。開關狀態變了才動手，沒變直接回（tick 便宜）。
-static BOOL GHCFAppliedFlyTriggerButtonEnabled = NO;
-static BOOL GHCFAppliedFlyTriggerButtonEnabledValue = YES;
-static void GHCFApplyFlyTriggerButtonEnabled(void) {
-BOOL want = GHCFReadFlyTriggerButtonEnabled();
-if (GHCFAppliedFlyTriggerButtonEnabled && want == GHCFAppliedFlyTriggerButtonEnabledValue) return;
-GHCFAppliedFlyTriggerButtonEnabled = YES;
-GHCFAppliedFlyTriggerButtonEnabledValue = want;
-if (!GHCFFlyTriggerButtonWindow) return;
+static BOOL CFLYAppliedFlyTriggerButtonEnabled = NO;
+static BOOL CFLYAppliedFlyTriggerButtonEnabledValue = YES;
+static void CFLYApplyFlyTriggerButtonEnabled(void) {
+BOOL want = CFLYReadFlyTriggerButtonEnabled();
+if (CFLYAppliedFlyTriggerButtonEnabled && want == CFLYAppliedFlyTriggerButtonEnabledValue) return;
+CFLYAppliedFlyTriggerButtonEnabled = YES;
+CFLYAppliedFlyTriggerButtonEnabledValue = want;
+if (!CFLYFlyTriggerButtonWindow) return;
 if (!want) {
-GHCFFlyTriggerButtonWindow.hidden = YES;
-GHCFLogLine("v43.43 flyTrigger button disabled");
+CFLYFlyTriggerButtonWindow.hidden = YES;
+CFLYLogLine("v43.43 flyTrigger button disabled");
 return;
 }
 // 開：表盤正藏著鈕時不搶回來（dismissLauncher 會放回）；分屏關著／
-// 激活鎖住時也不顯示（GHCFApplyEnabledState 管那邊）。
-if (GHCFDialHidFlyTriggerButton) return;
-if (!GHCFReadEnabled() || GHCFActivationLocked) return;
-GHCFFlyTriggerButtonWindow.hidden = NO;
-GHCFLogLine("v43.43 flyTrigger button enabled");
+// 激活鎖住時也不顯示（CFLYApplyEnabledState 管那邊）。
+if (CFLYDialHidFlyTriggerButton) return;
+if (!CFLYReadEnabled() || CFLYActivationLocked) return;
+CFLYFlyTriggerButtonWindow.hidden = NO;
+CFLYLogLine("v43.43 flyTrigger button enabled");
 }
-static void GHCFApplyEnabledState(void) {
-BOOL enabled = GHCFReadEnabled() && !GHCFActivationLocked;
-if (GHCFAppliedEnabledState && enabled == GHCFAppliedEnabledValue) return;
-GHCFAppliedEnabledState = YES;
-GHCFAppliedEnabledValue = enabled;
+static void CFLYApplyEnabledState(void) {
+BOOL enabled = CFLYReadEnabled() && !CFLYActivationLocked;
+if (CFLYAppliedEnabledState && enabled == CFLYAppliedEnabledValue) return;
+CFLYAppliedEnabledState = YES;
+CFLYAppliedEnabledValue = enabled;
 if (!enabled) {
-if (GHCFLauncherShared) [GHCFLauncherShared dismissLauncher];
-if (GHCFFlyTriggerButtonWindow) GHCFFlyTriggerButtonWindow.hidden = YES;
-if (GHCFStripWindow) GHCFStripWindow.hidden = YES;
-if (GHCFStripWindowLeft) GHCFStripWindowLeft.hidden = YES;
-if (GHCFDebugTriggerWindow) GHCFDebugTriggerWindow.hidden = YES;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden) {
-GHCFCacheWindows[i].hidden = YES;
-GHCFCacheHiddenByDisable[i] = YES;
+if (CFLYLauncherShared) [CFLYLauncherShared dismissLauncher];
+if (CFLYFlyTriggerButtonWindow) CFLYFlyTriggerButtonWindow.hidden = YES;
+if (CFLYStripWindow) CFLYStripWindow.hidden = YES;
+if (CFLYStripWindowLeft) CFLYStripWindowLeft.hidden = YES;
+if (CFLYDebugTriggerWindow) CFLYDebugTriggerWindow.hidden = YES;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden) {
+CFLYCacheWindows[i].hidden = YES;
+CFLYCacheHiddenByDisable[i] = YES;
 }
 }
-GHCFUpdateTaskbar();
-GHCFLogLine("v57 splitscreen disabled");
+CFLYUpdateTaskbar();
+CFLYLogLine("v57 splitscreen disabled");
 return;
 }
-if (GHCFFlyTriggerButtonWindow && GHCFReadFlyTriggerButtonEnabled()) GHCFFlyTriggerButtonWindow.hidden = NO;
+if (CFLYFlyTriggerButtonWindow && CFLYReadFlyTriggerButtonEnabled()) CFLYFlyTriggerButtonWindow.hidden = NO;
 // v43.32：感应带按触发侧重放（左／右／双侧各显各的边；调试画布也一起重画）。
-GHCFUpdateStripPosition();
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheHiddenByDisable[i] && GHCFCacheWindows[i]) {
-GHCFCacheWindows[i].hidden = NO;
-GHCFCacheHiddenByDisable[i] = NO;
-if (GHCFCacheScenes[i]) {
+CFLYUpdateStripPosition();
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheHiddenByDisable[i] && CFLYCacheWindows[i]) {
+CFLYCacheWindows[i].hidden = NO;
+CFLYCacheHiddenByDisable[i] = NO;
+if (CFLYCacheScenes[i]) {
 char fbuf[160];
-snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on re-enable %s", GHCFCacheBundleIDs[i]);
-GHCFPushForegroundCachedSceneAtIndex(i, fbuf);
+snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on re-enable %s", CFLYCacheBundleIDs[i]);
+CFLYPushForegroundCachedSceneAtIndex(i, fbuf);
 }
 }
 }
-GHCFUpdateTaskbar();
-GHCFLogLine("v57 splitscreen enabled");
+CFLYUpdateTaskbar();
+CFLYLogLine("v57 splitscreen enabled");
 }
-static BOOL GHCFIsAppPinned(const char *bundleID) {
-return GHCFListContainsBid(GHCFReadIDList("pinnedAppIDs"), bundleID);
+static BOOL CFLYIsAppPinned(const char *bundleID) {
+return CFLYListContainsBid(CFLYReadIDList("pinnedAppIDs"), bundleID);
 }
-static void GHCFSetAppPinned(const char *bundleID, BOOL pinned) {
+static void CFLYSetAppPinned(const char *bundleID, BOOL pinned) {
 if (!bundleID || bundleID[0] == '\0') return;
-NSMutableArray *ids = [NSMutableArray arrayWithArray:GHCFReadIDList("pinnedAppIDs")];
+NSMutableArray *ids = [NSMutableArray arrayWithArray:CFLYReadIDList("pinnedAppIDs")];
 NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
 [ids removeObject:bidStr];
 if (pinned) [ids insertObject:bidStr atIndex:0];
-GHCFWriteIDList("pinnedAppIDs", ids);
+CFLYWriteIDList("pinnedAppIDs", ids);
 char buf[256];
 snprintf(buf, sizeof(buf), "v57 app %s %s", bundleID, pinned ? "pinned" : "unpinned");
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 // 最近開過的浮窗 App（上限 5 個，最近的在前；開窗時調）。
-static void GHCFPushRecentApp(const char *bundleID) {
+static void CFLYPushRecentApp(const char *bundleID) {
 if (!bundleID || bundleID[0] == '\0') return;
-NSMutableArray *ids = [NSMutableArray arrayWithArray:GHCFReadIDList("recentAppIDs")];
+NSMutableArray *ids = [NSMutableArray arrayWithArray:CFLYReadIDList("recentAppIDs")];
 NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
 [ids removeObject:bidStr];
 [ids insertObject:bidStr atIndex:0];
 while ([ids count] > 5) [ids removeLastObject];
-GHCFWriteIDList("recentAppIDs", ids);
+CFLYWriteIDList("recentAppIDs", ids);
 }
 // ── v42 輔助函數（配對／恢復清單／任務欄／
 // 低電量／卡片圖片／定時 tick；全部在 %ctor 延後塊之前定義，
@@ -4865,17 +4831,17 @@ GHCFWriteIDList("recentAppIDs", ids);
 
 // v53：觸發鈕自訂圖路徑（設定頁換圖存的固定檔；跟卡片頭像／背景同一
 // 個設定目錄，檔名分開）。
-static NSString *GHCFCustomFlyTriggerImagePath(void) {
+static NSString *CFLYCustomFlyTriggerImagePath(void) {
 return [NSString stringWithCString:"/var/mobile/Library/Preferences/ChinaFly-flyTrigger.jpg" encoding:NSUTF8StringEncoding];
 }
-static BOOL GHCFReadFlyTriggerIconCustom(void) {
-return GHCFReadPrefsBool("flyTriggerIconCustom", NO);
+static BOOL CFLYReadFlyTriggerIconCustom(void) {
+return CFLYReadPrefsBool("flyTriggerIconCustom", NO);
 }
 // ChinaFly（1.0.0）：觸發鈕預設圖由代碼畫——紙飛機形，藍底白圖，
 // 跟新 icon 一套（底是 icon.png 同一套豎漸變：上 #125AB4 → 下 #3A96EB；
 // 飛機兩片折面照設定頁同一套畫法，機頭朝右上）；不用任何圖片素材。
 // 自訂圖（設定頁換圖，flyTriggerIconCustom）仍優先。
-static UIImage *GHCFDrawFlyTriggerImage(CGFloat size) {
+static UIImage *CFLYDrawFlyTriggerImage(CGFloat size) {
 if (size <= 0) size = 56.0;
 CGFloat scale = [UIScreen mainScreen].scale;
 if (scale <= 0) scale = 2.0;
@@ -4926,14 +4892,14 @@ return image;
 // ChinaFly（1.0.0）：讀觸發鈕圖——先試自訂圖（設定頁換圖存的固定檔），
 // 沒有就用上面代碼畫的紙飛機；畫不出來才回 nil
 //（呼叫處退回金色圓鈕＋「分」字，不空白、不崩）。
-static UIImage *GHCFLoadFlyTriggerImage(void) {
+static UIImage *CFLYLoadFlyTriggerImage(void) {
 UIImage *image = nil;
 @try {
-if (GHCFReadFlyTriggerIconCustom()) {
-NSString *customPath = GHCFCustomFlyTriggerImagePath();
+if (CFLYReadFlyTriggerIconCustom()) {
+NSString *customPath = CFLYCustomFlyTriggerImagePath();
 if (customPath) image = [UIImage imageWithContentsOfFile:customPath];
 }
-if (!image) image = GHCFDrawFlyTriggerImage(GHCFReadFlyTriggerIconSize());
+if (!image) image = CFLYDrawFlyTriggerImage(CFLYReadFlyTriggerIconSize());
 if (image && image.CGImage) {
 CGFloat screenScale = [UIScreen mainScreen].scale;
 if (screenScale > 0) image = [UIImage imageWithCGImage:image.CGImage scale:screenScale orientation:image.imageOrientation];
@@ -4947,33 +4913,33 @@ return image;
 // v42：把「a|b」拆成兩份（回 YES 才拆開；a/b 緩衝區由呼叫處給）。
 // v42：存重啟後要恢復的浮窗清單（看得見的窗：浮窗本身 + 貼邊 peek；
 // X 關掉的窗 hidden=YES，不算；開/關/收/恢復時都重存一次）。
-static void GHCFSaveRestoreList(void) {
+static void CFLYSaveRestoreList(void) {
 NSMutableArray *ids = [NSMutableArray array];
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && GHCFCacheBundleIDs[i][0] != '\0') {
-NSString *bidStr = [NSString stringWithCString:GHCFCacheBundleIDs[i] encoding:NSUTF8StringEncoding];
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden && CFLYCacheBundleIDs[i][0] != '\0') {
+NSString *bidStr = [NSString stringWithCString:CFLYCacheBundleIDs[i] encoding:NSUTF8StringEncoding];
 if (bidStr) [ids addObject:bidStr];
 }
 }
-GHCFWriteIDList("restoreWindows", ids);
+CFLYWriteIDList("restoreWindows", ids);
 }
 // v53：全屏觸發鈕自動藏已取消（函數整個拿掉；鈕永遠顯示）。
 // v50：全部收窗共用迴圈（低電量自動收窗 + 任務欄「全部收起」同一套：
 // 對每個看得見的浮窗調現成的收窗路徑，不另寫收窗邏輯）。
 // recordLowBattery＝YES 時記下這次收的是哪些窗（電量恢復提醒用）。
-static int GHCFLowBatteryDockedCount = 0;
-static int GHCFDockAllVisibleWindows(BOOL recordLowBattery) {
-if (recordLowBattery) GHCFLowBatteryDockedCount = 0;
+static int CFLYLowBatteryDockedCount = 0;
+static int CFLYDockAllVisibleWindows(BOOL recordLowBattery) {
+if (recordLowBattery) CFLYLowBatteryDockedCount = 0;
 int docked = 0;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i]) {
-if (recordLowBattery && GHCFCacheBundleIDs[i][0] != '\0' && GHCFLowBatteryDockedCount < GHCFAppCount) {
-strncpy(GHCFLowBatteryDockedBids[GHCFLowBatteryDockedCount], GHCFCacheBundleIDs[i], 127);
-GHCFLowBatteryDockedBids[GHCFLowBatteryDockedCount][127] = '\0';
-GHCFLowBatteryDockedCount++;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden && !CFLYCacheMinimized[i]) {
+if (recordLowBattery && CFLYCacheBundleIDs[i][0] != '\0' && CFLYLowBatteryDockedCount < CFLYAppCount) {
+strncpy(CFLYLowBatteryDockedBids[CFLYLowBatteryDockedCount], CFLYCacheBundleIDs[i], 127);
+CFLYLowBatteryDockedBids[CFLYLowBatteryDockedCount][127] = '\0';
+CFLYLowBatteryDockedCount++;
 }
-GHCFLoadCacheToActive(i);
-if (GHCFLauncherShared) [GHCFLauncherShared minimizeHostedWindow];
+CFLYLoadCacheToActive(i);
+if (CFLYLauncherShared) [CFLYLauncherShared minimizeHostedWindow];
 docked++;
 }
 }
@@ -4982,10 +4948,10 @@ return docked;
 // v42：低電量自動收窗（UIDevice batteryLevel；batteryMonitoringEnabled
 // 在 %ctor 開）。低於閾值：看得見的浮窗全收成貼邊小卡 + 橫幅提示；
 // 回到閾值+5% 以上才重新武裝（遲滯，免得在閾值邊緣反覆收放）。
-static void GHCFCheckLowBattery(void) {
-if (!GHCFReadLowBatteryAutoDock()) {
-GHCFLowBatteryDocked = NO;
-GHCFLowBatteryDockedCount = 0;
+static void CFLYCheckLowBattery(void) {
+if (!CFLYReadLowBatteryAutoDock()) {
+CFLYLowBatteryDocked = NO;
+CFLYLowBatteryDockedCount = 0;
 return;
 }
 CGFloat level = -1.0;
@@ -4997,84 +4963,84 @@ level = -1.0;
 }
 if (level < 0) return;
 double pct = (double)level * 100.0;
-double threshold = GHCFReadLowBatteryThreshold();
-if (pct < threshold && !GHCFLowBatteryDocked) {
-GHCFLowBatteryDocked = YES;
-int docked = GHCFDockAllVisibleWindows(YES);
+double threshold = CFLYReadLowBatteryThreshold();
+if (pct < threshold && !CFLYLowBatteryDocked) {
+CFLYLowBatteryDocked = YES;
+int docked = CFLYDockAllVisibleWindows(YES);
 char buf[192];
 snprintf(buf, sizeof(buf), "v57 low battery %d%% docked %d windows", (int)pct, docked);
-GHCFLogLine(buf);
-if (GHCFLauncherShared && docked > 0) {
+CFLYLogLine(buf);
+if (CFLYLauncherShared && docked > 0) {
 char msg[192];
 snprintf(msg, sizeof(msg), "电量低于 %d%%，浮窗已收成贴边小卡", (int)threshold);
-[GHCFLauncherShared showNotificationBannerWithText:msg];
+[CFLYLauncherShared showNotificationBannerWithText:msg];
 }
 } else if (pct >= threshold + 5.0) {
 // v50：電量恢復提醒——回升超過閾值+5% 且確實有窗是被低電量收起的，
 // 才彈橫幅提示。橫幅本身不支援點按（只是顯示幾秒的提示條），所以不做
 // 點橫幅彈回——文字直接寫點貼邊小卡恢復，窗照樣點小卡叫回來。
-if (GHCFLowBatteryDocked && GHCFLowBatteryDockedCount > 0) {
-if (GHCFLauncherShared) [GHCFLauncherShared showNotificationBannerWithText:"电量恢复，点贴边小卡弹回浮窗"];
+if (CFLYLowBatteryDocked && CFLYLowBatteryDockedCount > 0) {
+if (CFLYLauncherShared) [CFLYLauncherShared showNotificationBannerWithText:"电量恢复，点贴边小卡弹回浮窗"];
 char buf[192];
-snprintf(buf, sizeof(buf), "v57 low battery recovered %d%%, %d windows were docked", (int)pct, GHCFLowBatteryDockedCount);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 low battery recovered %d%%, %d windows were docked", (int)pct, CFLYLowBatteryDockedCount);
+CFLYLogLine(buf);
 }
-GHCFLowBatteryDocked = NO;
-GHCFLowBatteryDockedCount = 0;
+CFLYLowBatteryDocked = NO;
+CFLYLowBatteryDockedCount = 0;
 }
 }
 // v42：底部任務欄（開了要 respring 才建欄；內容每次重建：開著的窗
 // 的圖標 + 綠點，點一下切到那個窗；沒窗時藏起來）。
-static void GHCFBuildTaskbarIfNeeded(void) {
-if (GHCFSettingsTaskbarWindow) return;
+static void CFLYBuildTaskbarIfNeeded(void) {
+if (CFLYSettingsTaskbarWindow) return;
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-GHCFSettingsTaskbarWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, screenBounds.size.height - 60, screenBounds.size.width, 52)];
-GHCFSettingsTaskbarWindow.windowLevel = GHCF_DOCK_LEVEL;
-GHCFSettingsTaskbarWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *taskScene = GHCFActiveWindowScene();
-if (taskScene) GHCFSettingsTaskbarWindow.windowScene = taskScene;
+CFLYSettingsTaskbarWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, screenBounds.size.height - 60, screenBounds.size.width, 52)];
+CFLYSettingsTaskbarWindow.windowLevel = CFLY_DOCK_LEVEL;
+CFLYSettingsTaskbarWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *taskScene = CFLYActiveWindowScene();
+if (taskScene) CFLYSettingsTaskbarWindow.windowScene = taskScene;
 UIViewController *vc = [[UIViewController alloc] init];
 UIView *root = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenBounds.size.width, 52)];
 root.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
-root.layer.cornerRadius = 16.0;
+root.layer.cornerRadius = 20.0;
 root.tag = 55;
 vc.view = root;
-GHCFSettingsTaskbarWindow.rootViewController = vc;
-GHCFSettingsTaskbarWindow.hidden = YES;
-GHCFLogLine("v57 taskbar built");
+CFLYSettingsTaskbarWindow.rootViewController = vc;
+CFLYSettingsTaskbarWindow.hidden = YES;
+CFLYLogLine("v57 taskbar built");
 }
-static void GHCFUpdateTaskbar(void) {
-if (!GHCFSettingsTaskbarWindow) return;
-if (!GHCFReadTaskbarEnabled()) {
-GHCFSettingsTaskbarWindow.hidden = YES;
+static void CFLYUpdateTaskbar(void) {
+if (!CFLYSettingsTaskbarWindow) return;
+if (!CFLYReadTaskbarEnabled()) {
+CFLYSettingsTaskbarWindow.hidden = YES;
 return;
 }
-UIView *root = GHCFSettingsTaskbarWindow.rootViewController.view;
+UIView *root = CFLYSettingsTaskbarWindow.rootViewController.view;
 // v43.16 C：位置／透明度／大小每次刷新都重套（設定一改 prefschanged
-// 就調 GHCFUpdateTaskbar，立刻生效；2 秒輪詢也會重套，最多 2 秒）。
-CGFloat tbScale = GHCFReadTaskbarScale();
+// 就調 CFLYUpdateTaskbar，立刻生效；2 秒輪詢也會重套，最多 2 秒）。
+CGFloat tbScale = CFLYReadTaskbarScale();
 CGFloat tbBarH = 52.0 * tbScale;
 CGRect tbScreen = [UIScreen mainScreen].bounds;
-CGFloat tbY = GHCFReadTaskbarIsTop() ? 8.0 : tbScreen.size.height - 8.0 - tbBarH;
+CGFloat tbY = CFLYReadTaskbarIsTop() ? 8.0 : tbScreen.size.height - 8.0 - tbBarH;
 // v43.21：先數有幾顆芯片，兩種樣式都讓窗貼著芯片排、居中放（無底條時
 // 透明窗不吃多餘觸摸，點窗外空白處才不會被透明窗擋住）。
 int tbCount = 0;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (!GHCFCacheWindows[i]) continue;
-const char *b = GHCFCacheBundleIDs[i];
+for (int i = 0; i < CFLYAppCount; i++) {
+if (!CFLYCacheWindows[i]) continue;
+const char *b = CFLYCacheBundleIDs[i];
 if (!b || b[0] == '\0') continue;
 tbCount++;
 }
-int tbStyle = GHCFReadTaskbarStyle(); // 0＝nobar 無底條（預設），1＝gold 金邊膠囊
+int tbStyle = CFLYReadTaskbarStyle(); // 0＝nobar 無底條（預設），1＝gold 金邊膠囊
 CGFloat tbRowW = tbCount > 0 ? ((tbCount - 1) * 44.0 + 36.0) * tbScale : 0;
 CGFloat tbBarW = tbRowW + 16.0 * tbScale;
 CGFloat tbX = (tbScreen.size.width - tbBarW) / 2.0;
-GHCFSettingsTaskbarWindow.frame = CGRectMake(tbX, tbY, tbBarW, tbBarH);
+CFLYSettingsTaskbarWindow.frame = CGRectMake(tbX, tbY, tbBarW, tbBarH);
 root.frame = CGRectMake(0, 0, tbBarW, tbBarH);
 if (tbStyle == 1) {
 // gold：黑底膠囊＋細金邊。
-root.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85 * GHCFReadTaskbarOpacity()];
-root.layer.cornerRadius = 16.0 * tbScale;
+root.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85 * CFLYReadTaskbarOpacity()];
+root.layer.cornerRadius = 20.0 * tbScale;
 root.layer.borderWidth = 1.0;
 root.layer.borderColor = [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0].CGColor;
 } else {
@@ -5085,16 +5051,16 @@ root.layer.borderWidth = 0;
 }
 for (UIView *sub in [root.subviews copy]) [sub removeFromSuperview];
 int count = 0;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (!GHCFCacheWindows[i]) continue;
-const char *bid = GHCFCacheBundleIDs[i];
+for (int i = 0; i < CFLYAppCount; i++) {
+if (!CFLYCacheWindows[i]) continue;
+const char *bid = CFLYCacheBundleIDs[i];
 if (!bid || bid[0] == '\0') continue;
 CGFloat x = 8.0 * tbScale + count * 44.0 * tbScale;
 UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
 btn.frame = CGRectMake(x, 8.0 * tbScale, 36.0 * tbScale, 36.0 * tbScale);
 btn.tag = i;
 // v43.21：芯片只顯示 App 圖標（跟啟動器圖標一樣），不再抓宿主窗快照。
-UIImage *icon = GHCFAppIcon(bid);
+UIImage *icon = CFLYAppIcon(bid);
 if (icon) {
 [btn setImage:icon forState:UIControlStateNormal];
 } else {
@@ -5109,15 +5075,15 @@ btn.layer.shadowOffset = CGSizeMake(0, 2.0 * tbScale);
 }
 btn.imageView.layer.cornerRadius = 8.0 * tbScale;
 btn.imageView.layer.masksToBounds = YES;
-[btn addTarget:GHCFLauncherShared action:@selector(handleTaskbarButton:) forControlEvents:UIControlEventTouchUpInside];
+[btn addTarget:CFLYLauncherShared action:@selector(handleTaskbarButton:) forControlEvents:UIControlEventTouchUpInside];
 // v43.20：芯片長按直接關窗（不彈菜單）。長按認出時會取消按鈕的觸摸，
 // 所以長按不會誤觸點按切主窗；快點則在長按認出前就觸發切主窗。
-UILongPressGestureRecognizer *tbLP = [[UILongPressGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleTaskbarChipLongPress:)];
+UILongPressGestureRecognizer *tbLP = [[UILongPressGestureRecognizer alloc] initWithTarget:CFLYLauncherShared action:@selector(handleTaskbarChipLongPress:)];
 [btn addGestureRecognizer:tbLP];
 [root addSubview:btn];
-BOOL isOpen = !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i];
-BOOL isMain = (i == GHCFActiveAppIndex);
-if (isOpen || GHCFCacheMinimized[i]) {
+BOOL isOpen = !CFLYCacheWindows[i].hidden && !CFLYCacheMinimized[i];
+BOOL isMain = (i == CFLYActiveAppIndex);
+if (isOpen || CFLYCacheMinimized[i]) {
 // v43.16 B：狀態點在芯片右下角（v43.22：紅 × 已拿掉，點的位置不動）。
 // 顏色不變：金點主窗、綠點已開。
 UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(x + 26.0 * tbScale, 8.0 * tbScale + 36.0 * tbScale - 10.0 * tbScale, 10.0 * tbScale, 10.0 * tbScale)];
@@ -5130,7 +5096,7 @@ dot.layer.borderColor = [UIColor whiteColor].CGColor;
 count++;
 }
 // v43.20：「全部收起」鈕拿掉（任務欄只留芯片；收窗走點窗外／拖小卡）。
-GHCFSettingsTaskbarWindow.hidden = (count == 0);
+CFLYSettingsTaskbarWindow.hidden = (count == 0);
 }
 // v53：懸浮球已整個拿掉（建球函數刪除；只留一個觸發鈕按鈕）。
 // v42：圖片居中裁成方形再縮到指定邊長（卡片頭像用，512；
@@ -5148,11 +5114,11 @@ GHCFSettingsTaskbarWindow.hidden = (count == 0);
 // （21.log：計算器 peek 收起時 contentState=2，連鎖 4 次後點開恢復
 // 時 contentState=0，之前沒有任何一次解鎖推前景）。進程本身死了的
 // scene 推了也沒用（要關掉重開才會重建），看門狗只記日誌、不重建。
-static void GHCFPeekWatchdogTick(void) {
-if (GHCFScreenLocked) return;
-for (int i = 0; i < GHCFAppCount; i++) {
-FBScene *scene = GHCFCacheScenes[i];
-UIWindow *w = GHCFCacheWindows[i];
+static void CFLYPeekWatchdogTick(void) {
+if (CFLYScreenLocked) return;
+for (int i = 0; i < CFLYAppCount; i++) {
+FBScene *scene = CFLYCacheScenes[i];
+UIWindow *w = CFLYCacheWindows[i];
 if (!scene || !w || w.hidden) continue;
 @try {
 NSUInteger cs = [scene contentState];
@@ -5160,58 +5126,58 @@ if (cs == 2) {
 // 就绪——把占位拿掉（之前盖过的）。
 // v73：尺寸門控進行中時不拿活動窗的佔位——門控 tick 會在尺寸對上＋就緒後自己淡出佔位；
 // 看門狗在這裡拿掉會讓黑半邊露出來。
-if (!(GHCFRestoreGateActive && i == GHCFActiveAppIndex)) {
-GHCFHidePlaceholderForIndex(i);
+if (!(CFLYRestoreGateActive && i == CFLYActiveAppIndex)) {
+CFLYHidePlaceholderForIndex(i);
 }
 } else if (cs == 0) {
 // v72：小卡 scene 卡在 0——盖占位，绝不让小卡露黑；不推前景
 //（24.log 证明推 0 没用：时针／计算器／电池小卡各推过一次，一直是 0）。
 // 卡 0 的救法是恢复／切到它时走门控重建，不是看门狗反复推。
-GHCFShowPlaceholderForIndex(i);
+CFLYShowPlaceholderForIndex(i);
 } else {
 // 准备中（1）——推前景帮它一把。
 char wbuf[256];
-snprintf(wbuf, sizeof(wbuf), "v68 peek watchdog foreground pushed %s contentState=%lu", GHCFCacheBundleIDs[i], (unsigned long)cs);
-GHCFPushForegroundCachedSceneAtIndex(i, wbuf);
+snprintf(wbuf, sizeof(wbuf), "v68 peek watchdog foreground pushed %s contentState=%lu", CFLYCacheBundleIDs[i], (unsigned long)cs);
+CFLYPushForegroundCachedSceneAtIndex(i, wbuf);
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v68 peek watchdog check failed");
+CFLYLogLine("v68 peek watchdog check failed");
 }
 }
 }
 
-static void GHCFSchedulePeriodicTick(void) {
+static void CFLYSchedulePeriodicTick(void) {
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-GHCFApplyFlyTriggerSettings();
-GHCFRefreshFlyTriggerButtonImageIfNeeded();
-GHCFApplyEnabledState();
+CFLYApplyFlyTriggerSettings();
+CFLYRefreshFlyTriggerButtonImageIfNeeded();
+CFLYApplyEnabledState();
 // v43.43：觸發鈕開關兜底（prefschanged 沒收到時 2 秒內也跟上）。
-GHCFApplyFlyTriggerButtonEnabled();
+CFLYApplyFlyTriggerButtonEnabled();
 // v42：任務欄開了就建（2 秒內生效，不用 respring；v53：懸浮球已拿掉）。
-if (GHCFReadTaskbarEnabled()) GHCFBuildTaskbarIfNeeded();
-GHCFUpdateTaskbar();
-// v54 (b)：系統橫幅探針（2 秒一輪；開關關著不探，見 GHCFCheckSystemBanner）。
-GHCFCheckSystemBanner();
-// v64：小浮窗黑屏看門狗（見上面 GHCFPeekWatchdogTick）。
-GHCFPeekWatchdogTick();
+if (CFLYReadTaskbarEnabled()) CFLYBuildTaskbarIfNeeded();
+CFLYUpdateTaskbar();
+// v54 (b)：系統橫幅探針（2 秒一輪；開關關著不探，見 CFLYCheckSystemBanner）。
+CFLYCheckSystemBanner();
+// v64：小浮窗黑屏看門狗（見上面 CFLYPeekWatchdogTick）。
+CFLYPeekWatchdogTick();
 // 重建（設定頁拖完寫 prefs，dylib 這邊 2 秒內接手；沒變不動，
 // 不擾正在用的窗；第一輪只記基準、不記 log）。
 // v60：標題欄拿掉，工具欄排序沒了，這裡只剩 App 排序。
-GHCFPeriodicTickCount++;
-if (GHCFPeriodicTickCount % 30 == 0) GHCFCheckLowBattery();
+CFLYPeriodicTickCount++;
+if (CFLYPeriodicTickCount % 30 == 0) CFLYCheckLowBattery();
 // v50：選擇器「重新掃描」請求（設定頁寫 rescanAppsRequested 鍵，
 // 這裡 2 秒內接手重建緩存；掃描本身在後台跑，失敗留舊表）。
-if (GHCFReadPrefsBool("rescanAppsRequested", NO)) {
-GHCFWritePrefsBool("rescanAppsRequested", NO);
-GHCFRefreshInstalledAppListInBackground();
-GHCFLogLine("v57 rescan apps requested from settings");
+if (CFLYReadPrefsBool("rescanAppsRequested", NO)) {
+CFLYWritePrefsBool("rescanAppsRequested", NO);
+CFLYRefreshInstalledAppListInBackground();
+CFLYLogLine("v57 rescan apps requested from settings");
 }
-GHCFSchedulePeriodicTick();
+CFLYSchedulePeriodicTick();
 });
 }
 
-@implementation GHCFLauncher
+@implementation CFLYLauncher
 
 // 允许我们的手势与系统手势同时识别（不抢系统手势）。
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
@@ -5230,7 +5196,7 @@ return YES;
 // 手勢掛在觸發鈕上就回 YES；其他手勢碰到 UIButton 才回 NO。
 // v52：懸浮球同理——（v53：球已整個拿掉，這行只留歷史）。
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
-if (gestureRecognizer.view == GHCFFlyTriggerButton) return YES;
+if (gestureRecognizer.view == CFLYFlyTriggerButton) return YES;
 if ([touch.view isKindOfClass:[UIButton class]]) return NO;
 // v43.19：新樣式的面板（9101 側邊欄／9102 抽屜／9103 輪盤 scroll view／
 // 9104 磁貼卡）裡面的空白處點下去不收起啟動器（面板自己接手勢；點面板
@@ -5251,65 +5217,65 @@ return YES;
 // v43.3：记下起手 Y——触发区判定用起手位置，不是松手位置。
 if (recognizer.state == UIGestureRecognizerStateBegan) {
 CGPoint p = [recognizer locationInView:nil];
-GHCFLastSwipeStartY = p.y;
+CFLYLastSwipeStartY = p.y;
 return;
 }
 if (recognizer.state == UIGestureRecognizerStateCancelled || recognizer.state == UIGestureRecognizerStateFailed) {
-GHCFLastSwipeStartY = -1;
+CFLYLastSwipeStartY = -1;
 return;
 }
 if (recognizer.state != UIGestureRecognizerStateEnded) return;
 // v43.14：改边立刻生效（其一）——每次边缘滑动先按现值重算感应带位置
 //（设定改了、还没开过启动器时，带子先跟到新边；新边滑动本身见 3b）。
-GHCFUpdateStripPosition();
+CFLYUpdateStripPosition();
 // v43.32：触发区——每边一个矩形（Trigger.plist 边缘那套）：起手 Y 必须落在
 // 这次滑动那边的矩形里（宽＝距边宽度，高＝高度，竖直中心＝位置 Y%×屏高；
 // 竖屏用竖屏那组、横屏用横屏那组），不然这次滑动不开启动器，也不计入
 // 1x/2x 计数。感应带窗本身保持全高（拖动手势拿它当固定参考坐标，
 // 改 frame 会量错手指位置），只在这里按起手 Y 拦。起手 Y 没记到就退回松手 Y。
-CGFloat swipeStartY = GHCFLastSwipeStartY;
-GHCFLastSwipeStartY = -1;
+CGFloat swipeStartY = CFLYLastSwipeStartY;
+CFLYLastSwipeStartY = -1;
 if (swipeStartY < 0) swipeStartY = [recognizer locationInView:nil].y;
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 BOOL fromLeft = (recognizer.edges == UIRectEdgeLeft);
 BOOL landscape = screenBounds.size.height < screenBounds.size.width;
-CGRect zone = GHCFReadTriggerZoneRect(fromLeft, landscape);
+CGRect zone = CFLYReadTriggerZoneRect(fromLeft, landscape);
 if (swipeStartY < zone.origin.y || swipeStartY > zone.origin.y + zone.size.height) {
 char dbuf[160];
 snprintf(dbuf, sizeof(dbuf), "v43.32 edge swipe outside trigger zone y=%.0f side=%s zone y=%.0f..%.0f", swipeStartY, fromLeft ? "left" : "right", zone.origin.y, zone.origin.y + zone.size.height);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 // v43.39：被挡时闪一下被滑那侧的区间框＋轻震（调试关着也闪），让皇上
 // 知道滑到了、只是位置不对；不计入 1x/2x 计数、不开启动器。
-GHCFFlashTriggerZone(fromLeft);
+CFLYFlashTriggerZone(fromLeft);
 return;
 }
 // v53：分屏關著時邊緣滑動不觸發（開關關了就真的停用）。
-if (!GHCFReadEnabled()) return;
+if (!CFLYReadEnabled()) return;
 // v55：記下手指在邊緣的 Y——ARC 弧心錨在這裡（下次開 ARC 會重記；
 // 感應帶窗是全屏高，窗座標 Y 就是屏幕 Y）。
 CGPoint swipeLoc = [recognizer locationInView:nil];
-GHCFLauncherAnchorY = swipeLoc.y;
-GHCFLauncherAnchorX = swipeLoc.x;
-if (GHCFReadEdgeSwipeCount() <= 1) {
-GHCFLogLine("v57 edge swipe 1x, opening ARC");
+CFLYLauncherAnchorY = swipeLoc.y;
+CFLYLauncherAnchorX = swipeLoc.x;
+if (CFLYReadEdgeSwipeCount() <= 1) {
+CFLYLogLine("v57 edge swipe 1x, opening ARC");
 [self showLauncher];
 return;
 }
 double now = CFAbsoluteTimeGetCurrent();
-if (now - GHCFLastSwipeTime < 2.0) {
-GHCFLastSwipeTime = 0;
-GHCFLogLine("v43.24 edge swipe 2nd, opening ARC");
+if (now - CFLYLastSwipeTime < 2.0) {
+CFLYLastSwipeTime = 0;
+CFLYLogLine("v43.24 edge swipe 2nd, opening ARC");
 [self dismissLauncher];
 [self showLauncher];
 } else {
-GHCFLastSwipeTime = now;
-GHCFLogLine("v57 edge swipe 1st, armed");
+CFLYLastSwipeTime = now;
+CFLYLogLine("v57 edge swipe 1st, armed");
 // v43.15：第 1 下待命给轻震回饋（Lee 2026-11-21 定「肯定给反应」），沿用 ARC 震动开关。
-if (GHCFReadARCHaptics()) {
+if (CFLYReadARCHaptics()) {
 @try {
 UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
 [haptic impactOccurred];
-GHCFLogLine("v57 edge swipe 1st haptic");
+CFLYLogLine("v57 edge swipe 1st haptic");
 } @catch (NSException *e) {
 (void)e;
 }
@@ -5322,61 +5288,61 @@ GHCFLogLine("v57 edge swipe 1st haptic");
 // 單擊不開 ARC（長按鬆手不觸發）；旗標清掉，下次單擊恢復正常。
 - (void)handleFlyTriggerButtonSingleTap:(UITapGestureRecognizer *)recognizer {
 (void)recognizer;
-if (GHCFFlyTriggerLongPressed) {
-GHCFFlyTriggerLongPressed = NO;
-GHCFLogLine("v57 handle button tap suppressed after long press");
+if (CFLYFlyTriggerLongPressed) {
+CFLYFlyTriggerLongPressed = NO;
+CFLYLogLine("v57 handle button tap suppressed after long press");
 return;
 }
 // v55：啟動器開著就收起（再點鈕切換）；錨點取鈕中心 Y。
-if (GHCFLauncherVisible) {
+if (CFLYLauncherVisible) {
 [self dismissLauncher];
 return;
 }
-if (GHCFFlyTriggerButtonWindow) {
-GHCFLauncherAnchorY = GHCFFlyTriggerButtonWindow.frame.origin.y + GHCFFlyTriggerButtonWindow.frame.size.height / 2.0;
-GHCFLauncherAnchorX = GHCFFlyTriggerButtonWindow.frame.origin.x + GHCFFlyTriggerButtonWindow.frame.size.width / 2.0;
+if (CFLYFlyTriggerButtonWindow) {
+CFLYLauncherAnchorY = CFLYFlyTriggerButtonWindow.frame.origin.y + CFLYFlyTriggerButtonWindow.frame.size.height / 2.0;
+CFLYLauncherAnchorX = CFLYFlyTriggerButtonWindow.frame.origin.x + CFLYFlyTriggerButtonWindow.frame.size.width / 2.0;
 }
-GHCFLogLine("v57 handle button tapped, opening ARC");
+CFLYLogLine("v57 handle button tapped, opening ARC");
 [self showLauncher];
 }
 // v41：觸發鈕雙擊——輪切主窗（按順序表找下一個看得見的窗升為主窗）。
 - (void)handleFlyTriggerButtonDoubleTap:(UITapGestureRecognizer *)recognizer {
 (void)recognizer;
-GHCFLogLine("v57 flyTrigger double tapped");
+CFLYLogLine("v57 flyTrigger double tapped");
 [self cycleMainWindow];
 }
 // v41：把第 idx 個窗升為主窗（ARC 點已開的 App / 點 peek / 雙擊輪切）。
 // 收著的從 peek 恢復（帶到最前、推前景）；看得見的帶到最前 + 推前景；
 // 進程死了就走正常開窗流程（復用守衛銷毀重建）。
 - (void)promoteWindowToMainIndex:(int)idx {
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheWindows[idx]) return;
-if (GHCFCacheMinimized[idx]) {
-if (GHCFCachedEntryIsAlive(idx)) {
-GHCFLoadCacheToActive(idx);
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheWindows[idx]) return;
+if (CFLYCacheMinimized[idx]) {
+if (CFLYCachedEntryIsAlive(idx)) {
+CFLYLoadCacheToActive(idx);
 [self restoreHostedWindow];
 } else {
-GHCFLogLine("v57 promote entry stale, relaunching");
-const char *bid = GHCFCacheBundleIDs[idx];
+CFLYLogLine("v57 promote entry stale, relaunching");
+const char *bid = CFLYCacheBundleIDs[idx];
 if (bid && bid[0] != '\0') {
-[self launchHostedApp:bid name:GHCFAppNames[idx]];
+[self launchHostedApp:bid name:CFLYAppNames[idx]];
 }
 }
 return;
 }
-GHCFLoadCacheToActive(idx);
-GHCFBringWindowToFront(GHCFHostedWindow);
+CFLYLoadCacheToActive(idx);
+CFLYBringWindowToFront(CFLYHostedWindow);
 // v72：切到看得見的窗也要門控——scene 沒就緒就蓋占位等它（不要有任何 App 閃黑邊）。
 // 就緒（2）照舊直接推前景；準備中（1）推一次再門控；卡在 0 不推（推 0 沒用，
 // 24.log 為證），直接門控、5 秒還 0 就重建。
 NSUInteger promoteCS = 2;
-if (GHCFHostedScene) {
-@try { promoteCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; promoteCS = 2; }
+if (CFLYHostedScene) {
+@try { promoteCS = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; promoteCS = 2; }
 }
 if (promoteCS != 2) {
 if (promoteCS == 1) {
 @try {
-[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+[CFLYHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
 settings.backgrounded = NO;
@@ -5384,33 +5350,33 @@ settings.backgrounded = NO;
 }];
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push on promote failed");
+CFLYLogLine("v57 foreground push on promote failed");
 }
 }
-GHCFShowPlaceholderForIndex(idx);
-GHCFRestoreGateActive = YES;
-GHCFRestoreGateScene = GHCFHostedScene;
-GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
-GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
-GHCFRestoreGateRebuilt = NO;
-GHCFRestoreGateStuckLogged = NO;
-GHCFRestoreGateTimeoutDeferredLogged = NO;
-GHCFRestoreGateTimeoutDeferCount = 0;
-if (idx >= 0 && idx < GHCFAppCount) GHCFRestoreGaveUp[idx] = NO; // v43.7：切窗是新的尝试，清掉停手旗标。
-GHCFRestoreGateMode = 1; // 窗本来就看得见，只盖占位、就绪淡出占位。
-GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
-if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
-GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：promote 也要過尺寸門。
-GHCFSizeGateMatchedOnce = NO;
-GHCFSizeGateWaitingLogged = NO;
-GHCFLogLine("v72 promote gated until ready");
+CFLYShowPlaceholderForIndex(idx);
+CFLYRestoreGateActive = YES;
+CFLYRestoreGateScene = CFLYHostedScene;
+CFLYRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+CFLYRestoreGateDeadline = CFLYRestoreGateStart + 5.0;
+CFLYRestoreGateRebuilt = NO;
+CFLYRestoreGateStuckLogged = NO;
+CFLYRestoreGateTimeoutDeferredLogged = NO;
+CFLYRestoreGateTimeoutDeferCount = 0;
+if (idx >= 0 && idx < CFLYAppCount) CFLYRestoreGaveUp[idx] = NO; // v43.7：切窗是新的尝试，清掉停手旗标。
+CFLYRestoreGateMode = 1; // 窗本来就看得见，只盖占位、就绪淡出占位。
+CFLYRestoreGateTargetAlpha = CFLYHostedWindow.alpha;
+if (CFLYRestoreGateTargetAlpha <= 0.01) CFLYRestoreGateTargetAlpha = 1.0;
+CFLYSizeGatePreMatched = CFLYHostedSceneSizeMatchesWindow(); // v73：promote 也要過尺寸門。
+CFLYSizeGateMatchedOnce = NO;
+CFLYSizeGateWaitingLogged = NO;
+CFLYLogLine("v72 promote gated until ready");
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 [self showGatedRestoredWindowTick];
 });
 } else {
 @try {
-if (GHCFHostedScene) {
-[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+if (CFLYHostedScene) {
+[CFLYHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
 settings.backgrounded = NO;
@@ -5419,36 +5385,36 @@ settings.backgrounded = NO;
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push on promote failed");
+CFLYLogLine("v57 foreground push on promote failed");
 }
 }
 char buf[256];
-snprintf(buf, sizeof(buf), "v57 window promoted to main %s", GHCFCacheBundleIDs[idx]);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 window promoted to main %s", CFLYCacheBundleIDs[idx]);
+CFLYLogLine(buf);
 }
 // v41：雙擊觸發鈕輪切主窗——按順序表找下一個看得見的窗升為主窗。
 // 雙擊開關關了就不切；少於 2 個可見窗也沒得切。
 - (void)cycleMainWindow {
-if (!GHCFReadFlyTriggerDoubleTapEnabled()) {
-GHCFLogLine("v57 window cycle disabled");
+if (!CFLYReadFlyTriggerDoubleTapEnabled()) {
+CFLYLogLine("v57 window cycle disabled");
 return;
 }
 // v53：可見窗＋收著的 peek 都能輪切（以前只列看得見的窗，收著的永遠
 // 輪不到；主↔副↔小窗雙向自由切，點一下就換過去）。
 CFAbsoluteTime cycleStart = CFAbsoluteTimeGetCurrent();
-int *cands = (int *)calloc((size_t)(GHCFAppCount > 0 ? GHCFAppCount : 1), sizeof(int));
+int *cands = (int *)calloc((size_t)(CFLYAppCount > 0 ? CFLYAppCount : 1), sizeof(int));
 if (!cands) return;
 int n = 0;
-for (int k = 0; k < GHCFAppCount; k++) {
-int idx = GHCFFrontOrder[k];
-if (GHCFCacheWindows[idx] && !GHCFCacheWindows[idx].hidden) cands[n++] = idx;
+for (int k = 0; k < CFLYAppCount; k++) {
+int idx = CFLYFrontOrder[k];
+if (CFLYCacheWindows[idx] && !CFLYCacheWindows[idx].hidden) cands[n++] = idx;
 }
 if (n <= 1) {
-GHCFLogLine("v57 window cycle nothing to cycle");
+CFLYLogLine("v57 window cycle nothing to cycle");
 free(cands);
 return;
 }
-int current = GHCFActiveAppIndex;
+int current = CFLYActiveAppIndex;
 int pos = -1;
 for (int i = 0; i < n; i++) {
 if (cands[i] == current) { pos = i; break; }
@@ -5457,8 +5423,8 @@ int next = cands[(pos + 1) % n];
 [self promoteWindowToMainIndex:next];
 CFAbsoluteTime cycleEnd = CFAbsoluteTimeGetCurrent();
 char buf[256];
-snprintf(buf, sizeof(buf), "v57 window cycled main %s %dms", GHCFCacheBundleIDs[next], (int)((cycleEnd - cycleStart) * 1000.0));
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 window cycled main %s %dms", CFLYCacheBundleIDs[next], (int)((cycleEnd - cycleStart) * 1000.0));
+CFLYLogLine(buf);
 free(cands);
 }
 
@@ -5472,15 +5438,15 @@ free(cands);
 //（点按）与 handleFlyTriggerButtonDrag（拖动）清。
 - (void)handleFlyTriggerButtonLongPress:(UILongPressGestureRecognizer *)recognizer {
 if (recognizer.state != UIGestureRecognizerStateBegan) return;
-GHCFFlyTriggerLongPressed = YES;
-GHCFLogLine("v57 close all windows");
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i]) {
-GHCFLoadCacheToActive(i);
+CFLYFlyTriggerLongPressed = YES;
+CFLYLogLine("v57 close all windows");
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i]) {
+CFLYLoadCacheToActive(i);
 [self closeHostedWindow];
 }
 }
-GHCFUpdateDimOverlay();
+CFLYUpdateDimOverlay();
 }
 
 // v51：觸發鈕全屏任意拖動（皇上 21:26：不要只沿邊緣上下移，要全局
@@ -5494,38 +5460,38 @@ GHCFUpdateDimOverlay();
 // 拖動了 pan 認出來（cancelsTouchesInView 預設 YES，會取消鈕的點按
 // 追蹤），才算移動鈕的位置。
 - (void)handleFlyTriggerButtonDrag:(UIPanGestureRecognizer *)recognizer {
-if (!GHCFFlyTriggerButtonWindow) return;
+if (!CFLYFlyTriggerButtonWindow) return;
 // v40：拖动钮时清掉长按旗标——长按后拖出按钮外、TouchUpInside 不触发
 // 时的兜底（不然旗标一直留着，下次点按会被误 suppress）。
-GHCFFlyTriggerLongPressed = NO;
+CFLYFlyTriggerLongPressed = NO;
 // v68：跟手修法——translation 不能量在會動的鈕窗上（同款毛病）。
 // 改拿固定不動的邊條窗當參考座標，只換這兩行，其餘夾取邏輯不動。
-UIView *fixedRefView = GHCFStripWindow ? (UIView *)GHCFStripWindow : (UIView *)GHCFFlyTriggerButtonWindow;
+UIView *fixedRefView = CFLYStripWindow ? (UIView *)CFLYStripWindow : (UIView *)CFLYFlyTriggerButtonWindow;
 CGPoint point = [recognizer translationInView:fixedRefView];
 [recognizer setTranslation:CGPointZero inView:fixedRefView];
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-CGFloat flyTriggerW = GHCFFlyTriggerButtonWindow.frame.size.width;
+CGFloat flyTriggerW = CFLYFlyTriggerButtonWindow.frame.size.width;
 CGFloat halfW = flyTriggerW / 2.0;
 CGFloat minX = halfW;
 CGFloat maxX = screenBounds.size.width - halfW;
 CGFloat minY = 100.0;
 CGFloat maxY = screenBounds.size.height - 100.0;
-CGPoint center = GHCFFlyTriggerButtonWindow.center;
+CGPoint center = CFLYFlyTriggerButtonWindow.center;
 CGFloat newX = center.x + point.x;
 CGFloat newY = center.y + point.y;
 if (newX < minX) newX = minX;
 if (newX > maxX) newX = maxX;
 if (newY < minY) newY = minY;
 if (newY > maxY) newY = maxY;
-GHCFFlyTriggerButtonWindow.center = CGPointMake(newX, newY);
+CFLYFlyTriggerButtonWindow.center = CGPointMake(newX, newY);
 if (recognizer.state == UIGestureRecognizerStateEnded) {
 // v51：放手記住 x、y（prefs 鍵 flyTriggerButtonX／flyTriggerButtonY），
 // 下次啟動恢復到同一位置。
-GHCFWritePrefsDouble("flyTriggerButtonX", (double)newX);
-GHCFWritePrefsDouble("flyTriggerButtonY", (double)newY);
+CFLYWritePrefsDouble("flyTriggerButtonX", (double)newX);
+CFLYWritePrefsDouble("flyTriggerButtonY", (double)newY);
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 flyTrigger button moved to x=%f y=%f", (double)newX, (double)newY);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 }
 
@@ -5534,28 +5500,28 @@ GHCFLogLine(buf);
 //（promoteWindowToMainIndex 裡面分叉處理）。
 - (void)handleDockPeekTap:(UIButton *)sender {
 NSInteger idx = sender.tag;
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheWindows[idx]) return;
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheWindows[idx]) return;
 // v43.17：收起后 0.8 秒内点小卡不恢复——小卡正好贴在刚点的边上，
 // 手一抬或再点一下就误触恢复（§347 定案）。
-if (GHCFMinimizeTime > 0 && ([NSDate timeIntervalSinceReferenceDate] - GHCFMinimizeTime) < 0.8) {
-GHCFLogLine("v43.17 peek tap ignored, just minimized");
+if (CFLYMinimizeTime > 0 && ([NSDate timeIntervalSinceReferenceDate] - CFLYMinimizeTime) < 0.8) {
+CFLYLogLine("v43.17 peek tap ignored, just minimized");
 return;
 }
-GHCFLogLine("v57 docked peek tapped");
+CFLYLogLine("v57 docked peek tapped");
 [self promoteWindowToMainIndex:(int)idx];
 }
 
 // v70：點掛著的窗露出的那截——把這個 App 的窗恢復回來（先叫回主窗，
-// promoteWindowToMainIndex 裡面會走 GHCFBringWindowToFront，那裡已經
+// promoteWindowToMainIndex 裡面會走 CFLYBringWindowToFront，那裡已經
 // 會先恢復懸掛；這裡再補一次恢復是 no-op，雙保險）。
 - (void)handleHangTap:(UIButton *)sender {
 NSInteger idx = sender.tag;
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheWindows[idx]) return;
-GHCFLogLine("v70 hung window tapped");
-GHCFLoadCacheToActive((int)idx);
-GHCFRestoreHungWindowForIndex((int)idx);
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheWindows[idx]) return;
+CFLYLogLine("v70 hung window tapped");
+CFLYLoadCacheToActive((int)idx);
+CFLYRestoreHungWindowForIndex((int)idx);
 [self promoteWindowToMainIndex:(int)idx];
 }
 
@@ -5568,72 +5534,72 @@ GHCFRestoreHungWindowForIndex((int)idx);
 // v66 修 1.0.65 的跟手 bug：原來用 translationInView:w 量位移，w 是小窗
 // 自己（跟著手指走），量出來的位移會被窗的移動吃掉，拖了不跟手、只有
 // 快甩才關得了（皇上：要貼著邊才可以關）。改拿固定不動的邊條窗
-// （GHCFStripWindow，390,0,24,896）當參考座標，手指位置每輪都量在它
+// （CFLYStripWindow，390,0,24,896）當參考座標，手指位置每輪都量在它
 // 上面，窗跟著手指走才準。
-static CGPoint GHCFPeekPanStartCenter = {0, 0};
-static CGPoint GHCFPeekPanStartPoint = {0, 0};
-static CGFloat GHCFPeekPanTotalDy = 0;
-static CGFloat GHCFPeekPanTotalDx = 0;
-static int GHCFPeekPanIdx = -1;
+static CGPoint CFLYPeekPanStartCenter = {0, 0};
+static CGPoint CFLYPeekPanStartPoint = {0, 0};
+static CGFloat CFLYPeekPanTotalDy = 0;
+static CGFloat CFLYPeekPanTotalDx = 0;
+static int CFLYPeekPanIdx = -1;
 - (void)handleDockPeekPan:(UIPanGestureRecognizer *)recognizer {
 UIView *v = recognizer.view;
 if (!v) return;
 NSInteger idx = v.tag;
-if (idx < 0 || idx >= GHCFAppCount) return;
-UIWindow *w = GHCFCacheWindows[idx];
+if (idx < 0 || idx >= CFLYAppCount) return;
+UIWindow *w = CFLYCacheWindows[idx];
 if (!w) return;
-UIView *refView = GHCFStripWindow ? (UIView *)GHCFStripWindow : w;
+UIView *refView = CFLYStripWindow ? (UIView *)CFLYStripWindow : w;
 if (recognizer.state == UIGestureRecognizerStateBegan) {
-GHCFPeekPanIdx = (int)idx;
-GHCFPeekPanStartCenter = w.center;
-GHCFPeekPanTotalDy = 0;
-GHCFPeekPanTotalDx = 0;
+CFLYPeekPanIdx = (int)idx;
+CFLYPeekPanStartCenter = w.center;
+CFLYPeekPanTotalDy = 0;
+CFLYPeekPanTotalDx = 0;
 if (recognizer.numberOfTouches > 0) {
-GHCFPeekPanStartPoint = [recognizer locationOfTouch:0 inView:refView];
+CFLYPeekPanStartPoint = [recognizer locationOfTouch:0 inView:refView];
 }
 } else if (recognizer.state == UIGestureRecognizerStateChanged) {
-if (GHCFPeekPanIdx != (int)idx) return;
+if (CFLYPeekPanIdx != (int)idx) return;
 if (recognizer.numberOfTouches == 0) return;
 CGPoint p = [recognizer locationOfTouch:0 inView:refView];
-CGFloat dy = p.y - GHCFPeekPanStartPoint.y;
+CGFloat dy = p.y - CFLYPeekPanStartPoint.y;
 if (dy < 0) dy = 0;
-GHCFPeekPanTotalDy = dy;
+CFLYPeekPanTotalDy = dy;
 // v43.14：侧滑小窗——横向也跟手（移边判定用总位移＋速度，见 Ended）。
-CGFloat dx = p.x - GHCFPeekPanStartPoint.x;
-GHCFPeekPanTotalDx = dx;
-w.center = CGPointMake(GHCFPeekPanStartCenter.x + dx, GHCFPeekPanStartCenter.y + dy);
+CGFloat dx = p.x - CFLYPeekPanStartPoint.x;
+CFLYPeekPanTotalDx = dx;
+w.center = CGPointMake(CFLYPeekPanStartCenter.x + dx, CFLYPeekPanStartCenter.y + dy);
 CGFloat alpha = 1.0 - dy / 300.0;
 if (alpha < 0.3) alpha = 0.3;
 w.alpha = alpha;
 } else if (recognizer.state == UIGestureRecognizerStateEnded || recognizer.state == UIGestureRecognizerStateCancelled) {
-if (GHCFPeekPanIdx != (int)idx) return;
-GHCFPeekPanIdx = -1;
+if (CFLYPeekPanIdx != (int)idx) return;
+CFLYPeekPanIdx = -1;
 CGPoint vel = [recognizer velocityInView:refView];
 // v43.14：侧滑小窗——横向位移占主导且够大（≥60pt 或横向速度 ≥700pt/s）
 // 就移到另一边（翻浮窗滑出方向设定，全部 peek 一起过去、位置与每 App
 // 尺寸照旧）；垂直下滑仍关掉；不够格就弹回原位。
-if (recognizer.state == UIGestureRecognizerStateEnded && fabs(GHCFPeekPanTotalDx) > fabs(GHCFPeekPanTotalDy) && (fabs(GHCFPeekPanTotalDx) >= 60.0 || fabs(vel.x) >= 700.0)) {
-BOOL toLeft = !GHCFIsFloatingWindowSlideLeft();
-GHCFWritePrefsCString("floatingWindowSlideSide", toLeft ? "left" : "right");
+if (recognizer.state == UIGestureRecognizerStateEnded && fabs(CFLYPeekPanTotalDx) > fabs(CFLYPeekPanTotalDy) && (fabs(CFLYPeekPanTotalDx) >= 60.0 || fabs(vel.x) >= 700.0)) {
+BOOL toLeft = !CFLYIsFloatingWindowSlideLeft();
+CFLYWritePrefsCString("floatingWindowSlideSide", toLeft ? "left" : "right");
 w.alpha = 1.0;
-GHCFLayoutDockPeeks();
+CFLYLayoutDockPeeks();
 char sbuf[96];
 snprintf(sbuf, sizeof(sbuf), "v43.14 peek side swipe moved to %s", toLeft ? "left" : "right");
-GHCFLogLine(sbuf);
-} else if (recognizer.state == UIGestureRecognizerStateEnded && (GHCFPeekPanTotalDy >= 60 || vel.y >= 700)) {
-GHCFLogLine("v68 docked peek dragged down closed");
+CFLYLogLine(sbuf);
+} else if (recognizer.state == UIGestureRecognizerStateEnded && (CFLYPeekPanTotalDy >= 60 || vel.y >= 700)) {
+CFLYLogLine("v68 docked peek dragged down closed");
 [UIView animateWithDuration:0.2 animations:^{
-w.center = CGPointMake(GHCFPeekPanStartCenter.x, GHCFPeekPanStartCenter.y + 220);
+w.center = CGPointMake(CFLYPeekPanStartCenter.x, CFLYPeekPanStartCenter.y + 220);
 w.alpha = 0.0;
 } completion:^(BOOL finished) {
 (void)finished;
 w.alpha = 1.0;
-GHCFLoadCacheToActive((int)idx);
+CFLYLoadCacheToActive((int)idx);
 [self closeHostedWindow];
 }];
 } else {
 [UIView animateWithDuration:0.25 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-w.center = GHCFPeekPanStartCenter;
+w.center = CFLYPeekPanStartCenter;
 w.alpha = 1.0;
 } completion:nil];
 }
@@ -5645,22 +5611,22 @@ w.alpha = 1.0;
 // 找第一个看得见的缓存窗。开着「側邊」就贴边成小卡，选「關閉」就关掉。
 - (void)handleDimOverlayTap:(UITapGestureRecognizer *)recognizer {
 (void)recognizer;
-int idx = GHCFActiveAppIndex;
-if (idx < 0 || idx >= GHCFAppCount || !GHCFCacheWindows[idx] || GHCFCacheWindows[idx].hidden || GHCFCacheMinimized[idx]) {
+int idx = CFLYActiveAppIndex;
+if (idx < 0 || idx >= CFLYAppCount || !CFLYCacheWindows[idx] || CFLYCacheWindows[idx].hidden || CFLYCacheMinimized[idx]) {
 idx = -1;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden && !GHCFCacheMinimized[i]) {
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden && !CFLYCacheMinimized[i]) {
 idx = i;
 break;
 }
 }
 }
 if (idx < 0) {
-GHCFUpdateDimOverlay();
+CFLYUpdateDimOverlay();
 return;
 }
-GHCFLoadCacheToActive(idx);
-char *action = GHCFReadPrefsCString("tapOutsideAction");
+CFLYLoadCacheToActive(idx);
+char *action = CFLYReadPrefsCString("tapOutsideAction");
 int tapMode = 1; // v70：0 關閉、1 側邊（預設）、2 懸掛
 if (action) {
 if (strcmp(action, "close") == 0) tapMode = 0;
@@ -5668,13 +5634,13 @@ else if (strcmp(action, "hang") == 0) tapMode = 2;
 free(action);
 }
 if (tapMode == 0) {
-GHCFLogLine("v57 tap outside closed");
+CFLYLogLine("v57 tap outside closed");
 [self closeHostedWindow];
 } else if (tapMode == 2) {
-GHCFLogLine("v70 tap outside hung");
-GHCFHangWindowForIndex(idx);
+CFLYLogLine("v70 tap outside hung");
+CFLYHangWindowForIndex(idx);
 } else {
-GHCFLogLine("v57 tap outside docked");
+CFLYLogLine("v57 tap outside docked");
 [self minimizeHostedWindow];
 }
 }
@@ -5686,16 +5652,16 @@ GHCFLogLine("v57 tap outside docked");
 // FB 事务是异步的：begin 立刻返回，场景创建走回调；主线程不被堵。
 - (void)handleAppButton:(UIButton *)sender {
 NSInteger idx = sender.tag;
-if (idx < 0 || idx >= GHCFAppCount) return;
-const char *bid = GHCFAppBundleIDs[idx];
-const char *name = GHCFAppNames[idx];
+if (idx < 0 || idx >= CFLYAppCount) return;
+const char *bid = CFLYAppBundleIDs[idx];
+const char *name = CFLYAppNames[idx];
 char buf[256];
 snprintf(buf, sizeof(buf), "v57 app tapped %s", bid);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 // v43.24：第 5 件——點按回饋（輕震＋點按音）已在 TouchDown 時給過
 //（handleLauncherIconTouchDown／handleCarouselCardTouchDown），這裡不再重複給，
 // 不然一次點按震兩次、響兩聲。最近使用記錄（點過就算，置頂/最近都用這份記錄）。
-GHCFPushRecentApp(bid);
+CFLYPushRecentApp(bid);
 // v40：多窗（5.3）——「window busy」删掉，点启动器里的 App 不再被挡：
 // ① 点的 App 已开着（窗看得见）→ 带到最前（层级升到 Alert - 1.75，
 // 活动量切到它）；② 点的 App 收着（最小化/贴边小卡）→ 从小卡恢复
@@ -5704,29 +5670,29 @@ GHCFPushRecentApp(bid);
 // 旧项重建（见 createHostedScene；销毁时连贴边小卡一起收掉）。
 // scene 永遠不銷毀（v35 规则）：关窗/最小化都只藏窗（不推后台），
 // 切回来直接复用缓存里的旧 scene。
-UIWindow *cachedWindow = GHCFCacheWindows[idx];
-if (cachedWindow && !GHCFCacheMinimized[idx] && !cachedWindow.hidden) {
+UIWindow *cachedWindow = CFLYCacheWindows[idx];
+if (cachedWindow && !CFLYCacheMinimized[idx] && !cachedWindow.hidden) {
 // 已开着：带到最前。
-GHCFLogLine("v57 window already open, bringing to front");
+CFLYLogLine("v57 window already open, bringing to front");
 [self dismissLauncher];
-GHCFBringWindowToFront(cachedWindow);
-GHCFUpdateDimOverlay();
+CFLYBringWindowToFront(cachedWindow);
+CFLYUpdateDimOverlay();
 return;
 }
-if (cachedWindow && GHCFCacheMinimized[idx]) {
+if (cachedWindow && CFLYCacheMinimized[idx]) {
 // 收着：从小卡恢复（先确认进程还活着；死了就走正常开窗流程，
 // 复用守卫会销毁旧项重建）。
-if (GHCFCachedEntryIsAlive(idx)) {
-GHCFLogLine("v57 window minimized, restoring from dock");
-GHCFLoadCacheToActive(idx);
+if (CFLYCachedEntryIsAlive(idx)) {
+CFLYLogLine("v57 window minimized, restoring from dock");
+CFLYLoadCacheToActive(idx);
 [self restoreHostedWindow];
 [self dismissLauncher];
 return;
 }
-GHCFLogLine("v57 docked entry stale, relaunching");
+CFLYLogLine("v57 docked entry stale, relaunching");
 }
-if (GHCFHostedLaunching) {
-GHCFLogLine("v57 launch in progress, ignoring tap");
+if (CFLYHostedLaunching) {
+CFLYLogLine("v57 launch in progress, ignoring tap");
 return;
 }
 // v41：ARC 打開方式（預設浮窗）：全屏打開走 SB 啟動探針（失敗退回浮窗）、
@@ -5734,9 +5700,9 @@ return;
 // 模式顯示）。
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 BOOL isLandscape = screenBounds.size.width > screenBounds.size.height;
-int openMode = GHCFReadARCMenuOpenMode();
+int openMode = CFLYReadARCMenuOpenMode();
 if (isLandscape && openMode != 1) {
-GHCFLogLine("v57 landscape forces floating");
+CFLYLogLine("v57 landscape forces floating");
 openMode = 1;
 }
 // 先收启动器（v23 卡死的教训：收窗是便宜操作，先做；
@@ -5790,13 +5756,13 @@ opened = NO;
 if (opened) {
 char buf[256];
 snprintf(buf, sizeof(buf), "v57 fullscreen open %s", bundleID);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 // v43.23：第 6 件——全屏開了，同 App 的浮窗副本自己退出（見下面）。
 [self closeDockedPeekForFullscreenBid:bundleID];
 } else {
-GHCFLogLine("v57 fullscreen open unavailable, falling back to floating");
-int fidx = GHCFAppIndexForBundleID(bundleID);
-const char *fname = (fidx >= 0) ? GHCFAppNames[fidx] : bundleID;
+CFLYLogLine("v57 fullscreen open unavailable, falling back to floating");
+int fidx = CFLYAppIndexForBundleID(bundleID);
+const char *fname = (fidx >= 0) ? CFLYAppNames[fidx] : bundleID;
 [self launchHostedApp:bundleID name:fname];
 }
 }
@@ -5809,22 +5775,22 @@ const char *fname = (fidx >= 0) ? GHCFAppNames[fidx] : bundleID;
 // 只關全屏開那個 App 自己的浮窗副本，主窗不動。
 - (void)closeDockedPeekForFullscreenBid:(const char *)bundleID {
 if (!bundleID || bundleID[0] == '\0') return;
-int idx = GHCFAppIndexForBundleID(bundleID);
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheWindows[idx]) return;
-BOOL wasMinimized = GHCFCacheMinimized[idx];
-if (!GHCFCacheWindows[idx]) return;
+int idx = CFLYAppIndexForBundleID(bundleID);
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheWindows[idx]) return;
+BOOL wasMinimized = CFLYCacheMinimized[idx];
+if (!CFLYCacheWindows[idx]) return;
 [self closeCachedEntryAtIndex:idx];
 const char *kind = wasMinimized ? "docked peek" : "floating window";
 char buf[256];
 snprintf(buf, sizeof(buf), "v43.23 fullscreen open closed %s %s", kind, bundleID);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 
 // v25：启动必须在主线程做——v24 把它放后台队列，BSTransaction 的 begin
 // 在里面断言当前队列是主队列（BSDispatchQueueAssert），直接把 SpringBoard
 // 杀进安全模式（.ips：EXC_BREAKPOINT，-[BSTransaction begin]，后台队列）。
-// 参考实现 FrontBoardAppLauncher 就是在主线程点按回调里做这一模一样的
+// 参考实现 參考實現 就是在主线程点按回调里做这一模一样的
 // 调用。FB 事务本身是异步的：begin 立刻返回、完成走回调，主线程不会被堵
 //（v23 那种 5 秒卡死是同步打开调用造成的，那条路已经删了，不会重演）。
 // 每一步都记日志，下次再崩直接定位到具体调用。
@@ -5834,33 +5800,33 @@ char *nameCopy = strdup(name);
 if (!bidCopy || !nameCopy) {
 if (bidCopy) free(bidCopy);
 if (nameCopy) free(nameCopy);
-GHCFLogLine("v57 launch failed no memory");
+CFLYLogLine("v57 launch failed no memory");
 return;
 }
-GHCFHostedLaunching = YES;
+CFLYHostedLaunching = YES;
 char buf[256];
 snprintf(buf, sizeof(buf), "v57 launch start %s", bundleID);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 // v41：最近使用記錄（開窗就算用過一次）。
-GHCFPushRecentApp(bundleID);
+CFLYPushRecentApp(bundleID);
 @try {
 NSString *bidStr = [NSString stringWithCString:bidCopy encoding:NSUTF8StringEncoding];
 if (!bidStr) {
-GHCFLogLine("v57 launch failed bad bundle id");
-GHCFHostedLaunching = NO;
+CFLYLogLine("v57 launch failed bad bundle id");
+CFLYHostedLaunching = NO;
 free(bidCopy);
 free(nameCopy);
 return;
 }
 RBSProcessIdentity *identity = [RBSProcessIdentity identityForEmbeddedApplicationIdentifier:bidStr];
 if (!identity) {
-GHCFLogLine("v57 launch failed no identity");
-GHCFHostedLaunching = NO;
+CFLYLogLine("v57 launch failed no identity");
+CFLYHostedLaunching = NO;
 free(bidCopy);
 free(nameCopy);
 return;
 }
-GHCFLogLine("v57 identity ok");
+CFLYLogLine("v57 identity ok");
 // 先看 App 是不是已经在跑（单场景 App 已有全屏版时，再建
 // 第二个 scene 可能只剩白窗——测前要先把目标 App 彻底关掉）。
 RBSProcessPredicate *predicate = [RBSProcessPredicate predicateMatchingIdentity:identity];
@@ -5869,7 +5835,7 @@ int pid = handle ? [handle pid] : 0;
 if (pid > 0) {
 char pbuf[128];
 snprintf(pbuf, sizeof(pbuf), "v57 app already running pid=%d", pid);
-GHCFLogLine(pbuf);
+CFLYLogLine(pbuf);
 // 已经在跑：不走事务，直接去建 scene（和参考实现同一做法）。
 dispatch_async(dispatch_get_main_queue(), ^{
 [self createHostedSceneForBundleID:bidCopy name:nameCopy];
@@ -5878,18 +5844,18 @@ free(nameCopy);
 });
 return;
 }
-GHCFLogLine("v57 handle pid=0");
+CFLYLogLine("v57 handle pid=0");
 FBProcessManager *manager = [FBProcessManager sharedInstance];
 if (!manager) {
-GHCFLogLine("v57 manager failed nil");
-GHCFHostedLaunching = NO;
+CFLYLogLine("v57 manager failed nil");
+CFLYHostedLaunching = NO;
 free(bidCopy);
 free(nameCopy);
 return;
 }
-GHCFLogLine("v57 manager ok");
+CFLYLogLine("v57 manager ok");
 FBApplicationProcessLaunchTransaction *transaction = [[FBApplicationProcessLaunchTransaction alloc] initWithProcessIdentity:identity executionContextProvider:^id(void) {
-GHCFLogLine("v57 launch provider called");
+CFLYLogLine("v57 launch provider called");
 FBMutableProcessExecutionContext *context = [FBMutableProcessExecutionContext new];
 context.identity = identity;
 context.environment = [NSDictionary dictionary];
@@ -5897,13 +5863,13 @@ context.launchIntent = 4;
 return [manager launchProcessWithContext:context];
 }];
 if (!transaction) {
-GHCFLogLine("v57 transaction failed nil");
-GHCFHostedLaunching = NO;
+CFLYLogLine("v57 transaction failed nil");
+CFLYHostedLaunching = NO;
 free(bidCopy);
 free(nameCopy);
 return;
 }
-GHCFLogLine("v57 transaction created");
+CFLYLogLine("v57 transaction created");
 [transaction setCompletionBlock:^{
 // 事务完成可能跑在任意队列——场景创建回主线程做。
 dispatch_async(dispatch_get_main_queue(), ^{
@@ -5913,12 +5879,12 @@ free(nameCopy);
 });
 }];
 [transaction begin];
-GHCFLogLine("v57 begin called");
-GHCFLogLine("v57 launch transaction begun");
+CFLYLogLine("v57 begin called");
+CFLYLogLine("v57 launch transaction begun");
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 launch failed exception");
-GHCFHostedLaunching = NO;
+CFLYLogLine("v57 launch failed exception");
+CFLYHostedLaunching = NO;
 free(bidCopy);
 free(nameCopy);
 }
@@ -5931,10 +5897,10 @@ free(nameCopy);
 @try {
 char buf[256];
 snprintf(buf, sizeof(buf), "v57 scene start %s", bundleID);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 NSString *bidStr = [NSString stringWithCString:bundleID encoding:NSUTF8StringEncoding];
 if (!bidStr) {
-GHCFLogLine("v57 scene failed no bid");
+CFLYLogLine("v57 scene failed no bid");
 return;
 }
 RBSProcessIdentity *identity = [RBSProcessIdentity identityForEmbeddedApplicationIdentifier:bidStr];
@@ -5942,11 +5908,11 @@ RBSProcessPredicate *predicate = [RBSProcessPredicate predicateMatchingIdentity:
 RBSProcessHandle *handle = [RBSProcessHandle handleForPredicate:predicate error:nil];
 int pid = handle ? [handle pid] : 0;
 if (pid <= 0) {
-GHCFLogLine("v57 scene failed no process");
+CFLYLogLine("v57 scene failed no process");
 return;
 }
 snprintf(buf, sizeof(buf), "v57 process launched pid=%d", pid);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 // v35 复用守卫：缓存里已有这个 App 的 scene（关窗或切走时没销毁）
 // 且进程还是同一个 pid、presenter 与它的 view 还活着——直接复用，
 // 不建新 scene。固定 ID 一个会话里只建一次，残留撞不到。scene 旧
@@ -5954,39 +5920,39 @@ GHCFLogLine(buf);
 //（掉下去之前先清掉旧 scene，见下面；只调销毁缓存那一项，不碰
 // 活动量）。查缓存不查活动量：切走后活动量是空的，旧 scene 只在
 // 缓存里。
-int cacheIdx = GHCFAppIndexForBundleID(bundleID);
-if (cacheIdx >= 0 && GHCFCacheScenes[cacheIdx]) {
+int cacheIdx = CFLYAppIndexForBundleID(bundleID);
+if (cacheIdx >= 0 && CFLYCacheScenes[cacheIdx]) {
 // v38：复用守卫分叉——presenter 的项看 presenter 与 view 活着，
 // layer-host 的项（presenter 是 nil）看 layerHostView 活着；
 // 只要一边活着就复用，不建新 scene。
-if (pid == GHCFCachePids[cacheIdx] && ((GHCFCachePresenters[cacheIdx] && GHCFCachePresenters[cacheIdx].presentationView) || GHCFCacheLayerHostViews[cacheIdx])) {
-if (GHCFCacheSceneIDs[cacheIdx]) {
+if (pid == CFLYCachePids[cacheIdx] && ((CFLYCachePresenters[cacheIdx] && CFLYCachePresenters[cacheIdx].presentationView) || CFLYCacheLayerHostViews[cacheIdx])) {
+if (CFLYCacheSceneIDs[cacheIdx]) {
 char rbuf[256];
-snprintf(rbuf, sizeof(rbuf), "v57 reusing cached scene %s", [GHCFCacheSceneIDs[cacheIdx] UTF8String]);
-GHCFLogLine(rbuf);
+snprintf(rbuf, sizeof(rbuf), "v57 reusing cached scene %s", [CFLYCacheSceneIDs[cacheIdx] UTF8String]);
+CFLYLogLine(rbuf);
 } else {
-GHCFLogLine("v57 reusing cached scene");
+CFLYLogLine("v57 reusing cached scene");
 }
-GHCFLoadCacheToActive(cacheIdx);
-if (GHCFHostedMinimized) {
+CFLYLoadCacheToActive(cacheIdx);
+if (CFLYHostedMinimized) {
 [self restoreHostedWindow];
-} else if (GHCFHostedWindow) {
-GHCFHostedWindow.hidden = NO;
+} else if (CFLYHostedWindow) {
+CFLYHostedWindow.hidden = NO;
 // v40：复用的窗已开着——带到最前（别的窗回基础层级，这个窗升到
 // 最前层级、活动量切到它），再推前景。
-GHCFBringWindowToFront(GHCFHostedWindow);
+CFLYBringWindowToFront(CFLYHostedWindow);
 // v43.25：複用門控——44.log L401–403：複用只推前景、不讀 contentState；
 // scene 是 0 時推了也沒用，大窗一直黑著蓋佔位（到日誌結尾一次都沒回來過）。
 // 複用後讀一次 contentState，是 0 就按 promote 那套設門控（2 秒熔斷重建）。
 // 準備中（1）先推一次再門控；卡 0 不推（推 0 沒用）；就緒（2）保持原行為。
 NSUInteger reuseCS = 2;
-if (GHCFHostedScene) {
-@try { reuseCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; reuseCS = 2; }
+if (CFLYHostedScene) {
+@try { reuseCS = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; reuseCS = 2; }
 }
 if (reuseCS != 2) {
 if (reuseCS == 1) {
 @try {
-[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+[CFLYHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
 settings.backgrounded = NO;
@@ -5994,52 +5960,52 @@ settings.backgrounded = NO;
 }];
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push on reuse failed");
+CFLYLogLine("v57 foreground push on reuse failed");
 }
 }
-GHCFShowPlaceholderForIndex(cacheIdx);
-GHCFRestoreGateActive = YES;
-GHCFRestoreGateScene = GHCFHostedScene;
-GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
-GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
-GHCFRestoreGateRebuilt = NO;
-GHCFRestoreGateStuckLogged = NO;
-GHCFRestoreGateTimeoutDeferredLogged = NO;
-GHCFRestoreGateTimeoutDeferCount = 0;
-if (cacheIdx >= 0 && cacheIdx < GHCFAppCount) GHCFRestoreGaveUp[cacheIdx] = NO;
-GHCFRestoreGateMode = 1;
-GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
-if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
-GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow();
-GHCFSizeGateMatchedOnce = NO;
-GHCFSizeGateWaitingLogged = NO;
+CFLYShowPlaceholderForIndex(cacheIdx);
+CFLYRestoreGateActive = YES;
+CFLYRestoreGateScene = CFLYHostedScene;
+CFLYRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+CFLYRestoreGateDeadline = CFLYRestoreGateStart + 5.0;
+CFLYRestoreGateRebuilt = NO;
+CFLYRestoreGateStuckLogged = NO;
+CFLYRestoreGateTimeoutDeferredLogged = NO;
+CFLYRestoreGateTimeoutDeferCount = 0;
+if (cacheIdx >= 0 && cacheIdx < CFLYAppCount) CFLYRestoreGaveUp[cacheIdx] = NO;
+CFLYRestoreGateMode = 1;
+CFLYRestoreGateTargetAlpha = CFLYHostedWindow.alpha;
+if (CFLYRestoreGateTargetAlpha <= 0.01) CFLYRestoreGateTargetAlpha = 1.0;
+CFLYSizeGatePreMatched = CFLYHostedSceneSizeMatchesWindow();
+CFLYSizeGateMatchedOnce = NO;
+CFLYSizeGateWaitingLogged = NO;
 if (reuseCS == 0) {
-GHCFLogLine("v43.25 reuse scene stuck 0, gating");
+CFLYLogLine("v43.25 reuse scene stuck 0, gating");
 } else {
-GHCFLogLine("v43.25 reuse scene gating cs=1");
+CFLYLogLine("v43.25 reuse scene gating cs=1");
 }
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 [self showGatedRestoredWindowTick];
 });
 } else {
 @try {
-[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+[CFLYHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
 settings.backgrounded = NO;
 }
 }];
-GHCFLogLine("v57 foreground pushed on reuse");
+CFLYLogLine("v57 foreground pushed on reuse");
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push on reuse failed");
+CFLYLogLine("v57 foreground push on reuse failed");
 }
 }
 }
 return;
 }
-GHCFLogLine("v57 stored scene stale, destroying");
-GHCFDestroyCachedEntryAtIndex(cacheIdx);
+CFLYLogLine("v57 stored scene stale, destroying");
+CFLYDestroyCachedEntryAtIndex(cacheIdx);
 }
 // v35：sceneID 仍是固定格式 `sceneID:<bundleID>-default`（v28 的
 // 格式）——v33 的每次新 UUID 让计算器黑屏：已在跑着的单 scene App
@@ -6056,12 +6022,12 @@ NSString *sceneID = [NSString stringWithFormat:fmt, bundleID];
 // 头 v38 节第 1 项）。找到就走新路（托管已有主 scene，不 createScene、
 // 不撞固定 ID）；找不到、或新路任何一步失败，就走老路（下面
 // registerProcessForAuditToken + createScene），不崩、不拦、不跳过。
-FBScene *existingScene = GHCFExistingMainSceneForBundleID(bundleID);
+FBScene *existingScene = CFLYExistingMainSceneForBundleID(bundleID);
 BOOL hostedExisting = NO;
 if (existingScene) {
 char ebuf[256];
 snprintf(ebuf, sizeof(ebuf), "v57 hosting existing scene %s", bundleID);
-GHCFLogLine(ebuf);
+CFLYLogLine(ebuf);
 @try {
 Class layerHostClass = objc_getClass("_UISceneLayerHostContainerView");
 UIView *layerHostView = nil;
@@ -6083,30 +6049,30 @@ if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
 settings.backgrounded = NO;
 }
 }];
-GHCFLogLine("v57 foreground pushed on existing scene");
+CFLYLogLine("v57 foreground pushed on existing scene");
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push on existing scene failed");
+CFLYLogLine("v57 foreground push on existing scene failed");
 }
-GHCFLogLine("v57 layer host ready");
+CFLYLogLine("v57 layer host ready");
 [self buildHostedWindowForBundleID:bundleID name:name scene:existingScene presenter:nil layerHostView:layerHostView sceneID:sceneID pid:pid];
 hostedExisting = YES;
 } else {
-GHCFLogLine("v57 layer host view nil, creating new");
+CFLYLogLine("v57 layer host view nil, creating new");
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 layer host failed, creating new");
+CFLYLogLine("v57 layer host failed, creating new");
 }
 }
 if (hostedExisting) return;
-GHCFLogLine("v57 no existing scene, creating new");
+CFLYLogLine("v57 no existing scene, creating new");
 FBProcessManager *manager = [FBProcessManager sharedInstance];
 [manager registerProcessForAuditToken:[handle auditToken]];
-GHCFLogLine("v57 creating new scene");
+CFLYLogLine("v57 creating new scene");
 char idbuf[256];
 snprintf(idbuf, sizeof(idbuf), "v57 sceneID %s", [sceneID UTF8String]);
-GHCFLogLine(idbuf);
+CFLYLogLine(idbuf);
 FBSMutableSceneDefinition *definition = [FBSMutableSceneDefinition definition];
 definition.identity = [FBSSceneIdentity identityForIdentifier:sceneID];
 definition.clientIdentity = [FBSSceneClientIdentity identityForProcessIdentity:[handle identity]];
@@ -6114,20 +6080,20 @@ definition.specification = [UIApplicationSceneSpecification specification];
 FBSMutableSceneParameters *parameters = [FBSMutableSceneParameters parametersForSpecification:definition.specification];
 UIMutableApplicationSceneSettings *settings = [UIMutableApplicationSceneSettings new];
 settings.canShowAlerts = YES;
-settings.cornerRadiusConfiguration = [[BSCornerRadiusConfiguration alloc] initWithTopLeft:GHCFReadCornerRadius() bottomLeft:GHCFReadCornerRadius() bottomRight:GHCFReadCornerRadius() topRight:GHCFReadCornerRadius()];
+settings.cornerRadiusConfiguration = [[BSCornerRadiusConfiguration alloc] initWithTopLeft:CFLYReadCornerRadius() bottomLeft:CFLYReadCornerRadius() bottomRight:CFLYReadCornerRadius() topRight:CFLYReadCornerRadius()];
 settings.displayConfiguration = [[UIScreen mainScreen] displayConfiguration];
 settings.foreground = YES;
 settings.deviceOrientation = UIDeviceOrientationPortrait;
 settings.interfaceOrientation = UIInterfaceOrientationPortrait;
 // v38：frame = 内容尺寸 ÷ 默认 scale（反向耦合，见
-// GHCFSceneFrameSizeForBundleID）：计算器 320x693 ÷ 0.77 ≈ 414x896
+// CFLYSceneFrameSizeForBundleID）：计算器 320x693 ÷ 0.77 ≈ 414x896
 //（屏幕尺寸，它的远端图层得是整张全屏画面），别的 App 320x480 ÷
 // 1.0 = 320x480。presentationView 的尺寸就是 frame 的尺寸（日志里那行
 // presentationView w=... 会印证：计算器应是 414x896）。
-CGSize sceneFrameSize = GHCFSceneFrameSizeForBundleID(bundleID);
+CGSize sceneFrameSize = CFLYSceneFrameSizeForBundleID(bundleID);
 settings.frame = CGRectMake(0, 0, sceneFrameSize.width, sceneFrameSize.height);
-GHCFHostedSceneFrameSize = sceneFrameSize; // v73：追蹤推給 scene 的 frame 尺寸（尺寸門用）。
-GHCFHostedSceneFrameSizeValid = YES;
+CFLYHostedSceneFrameSize = sceneFrameSize; // v73：追蹤推給 scene 的 frame 尺寸（尺寸門用）。
+CFLYHostedSceneFrameSizeValid = YES;
 settings.level = 1;
 settings.persistenceIdentifier = sceneID;
 settings.peripheryInsets = UIEdgeInsetsZero;
@@ -6140,18 +6106,18 @@ clientSettings.statusBarStyle = 0;
 parameters.clientSettings = clientSettings;
 FBScene *scene = [[FBSceneManager sharedInstance] createSceneWithDefinition:definition initialParameters:parameters];
 if (!scene) {
-GHCFLogLine("v57 scene failed nil scene");
+CFLYLogLine("v57 scene failed nil scene");
 return;
 }
-GHCFLogLine("v57 scene created");
+CFLYLogLine("v57 scene created");
 id presenterManager = [scene uiPresentationManager];
 if (!presenterManager) {
-GHCFLogLine("v57 presenter failed no manager");
+CFLYLogLine("v57 presenter failed no manager");
 return;
 }
 _UIScenePresenter *presenter = [presenterManager createPresenterWithIdentifier:sceneID];
 if (!presenter) {
-GHCFLogLine("v57 presenter failed nil");
+CFLYLogLine("v57 presenter failed nil");
 return;
 }
 [presenter modifyPresentationContext:^(UIMutableScenePresentationContext *context) {
@@ -6159,7 +6125,7 @@ context.appearanceStyle = 2;
 }];
 [presenter activate];
 if (!presenter.presentationView) {
-GHCFLogLine("v57 presenter failed no view");
+CFLYLogLine("v57 presenter failed no view");
 return;
 }
 // v28：记 presenterView 的尺寸与有没有 layer——计算器在 v26 还是黑的
@@ -6169,10 +6135,10 @@ return;
 char pbuf[128];
 UIView *pv = presenter.presentationView;
 snprintf(pbuf, sizeof(pbuf), "v57 presentationView w=%d h=%d layer=%d", (int)pv.bounds.size.width, (int)pv.bounds.size.height, pv.layer ? 1 : 0);
-GHCFLogLine(pbuf);
+CFLYLogLine(pbuf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 presentationView failed");
+CFLYLogLine("v57 presentationView failed");
 }
 // v28：scene 建好了、presenter 也 activate 了，但 v25 的窗是黑的——
 // 计算器进程没往 scene 里画。KonbanXV 的做法是建完 scene 就把
@@ -6184,16 +6150,16 @@ GHCFLogLine("v57 presentationView failed");
 @try {
 char cbuf[128];
 snprintf(cbuf, sizeof(cbuf), "v57 scene contentState=%lu", (unsigned long)[scene contentState]);
-GHCFLogLine(cbuf);
+CFLYLogLine(cbuf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 scene contentState failed");
+CFLYLogLine("v57 scene contentState failed");
 }
 // v72：锁着时不推 foreground——锁着建的 scene 推了也会掉回 0（24.log 时钟案：
 // 建时 state=1，推完读 0，之后再也没起来）。锁着就等解锁再推（解锁回调
 // 会给全部缓存 scene 推前景，新 scene 那时已进缓存）。
-if (GHCFScreenLocked) {
-GHCFLogLine("v72 foreground push deferred, screen locked");
+if (CFLYScreenLocked) {
+CFLYLogLine("v72 foreground push deferred, screen locked");
 } else {
 @try {
 [scene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
@@ -6201,19 +6167,19 @@ settings.foreground = YES;
 }];
 char fbuf[128];
 snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed contentState=%lu", (unsigned long)[scene contentState]);
-GHCFLogLine(fbuf);
+CFLYLogLine(fbuf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push failed");
+CFLYLogLine("v57 foreground push failed");
 }
 }
-GHCFLogLine("v57 presenter ready");
+CFLYLogLine("v57 presenter ready");
 [self buildHostedWindowForBundleID:bundleID name:name scene:scene presenter:presenter layerHostView:nil sceneID:sceneID pid:pid];
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 scene failed exception");
+CFLYLogLine("v57 scene failed exception");
 } @finally {
-GHCFHostedLaunching = NO;
+CFLYHostedLaunching = NO;
 }
 }
 
@@ -6226,22 +6192,22 @@ CGRect screenBounds = [UIScreen mainScreen].bounds;
 // v38：窗尺寸按 App 定——计算器拿 320x693（内容就是窗，没有标题栏
 // 了；之前 320x737 是含 44pt 标题栏的总高，内容几何不变），别的
 // App 拿 350x757（85% 宽、和屏幕同宽高比）。见
-// GHCFHostedContentSizeForBundleID。
-CGSize hostedContentSize = GHCFHostedContentSizeForBundleID(bundleID);
+// CFLYHostedContentSizeForBundleID。
+CGSize hostedContentSize = CFLYHostedContentSizeForBundleID(bundleID);
 CGFloat winW = hostedContentSize.width;
 CGFloat winH = hostedContentSize.height;
 // v53：浮窗大小預設走共用 helper（小 280x600／中＝內容尺寸／大 414x800；
 // 計算器永遠自己的 320x693，不跟預設走；有存過的位置/大小時，
 // 後面會蓋掉這裡）。
-GHCFPresetSizeForBundleID(bundleID, &winW, &winH);
+CFLYPresetSizeForBundleID(bundleID, &winW, &winH);
 hostedContentSize = CGSizeMake(winW, winH);
 {
 char pbuf[128];
 snprintf(pbuf, sizeof(pbuf), "v57 window build preset size %dx%d %s", (int)winW, (int)winH, bundleID);
-GHCFLogLine(pbuf);
+CFLYLogLine(pbuf);
 }
 // v38：新窗的 scaleRatio 用这个 App 的默认值（计算器 0.77，别的 1.0）。
-GHCFHostedScaleRatio = GHCFDefaultScaleRatioForBundleID(bundleID);
+CFLYHostedScaleRatio = CFLYDefaultScaleRatioForBundleID(bundleID);
 CGRect winFrame = CGRectMake((screenBounds.size.width - winW) / 2.0, (screenBounds.size.height - winH) / 2.0, winW, winH);
 // v40：恢复上次的位置/大小/缩放（有存过的才恢复；没有就走默认+错位）。
 // 存的是窗中心 + 窗尺寸 + scale；恢复后夹在屏幕内（左右留 8pt、
@@ -6252,13 +6218,13 @@ CGRect winFrame = CGRectMake((screenBounds.size.width - winW) / 2.0, (screenBoun
 BOOL geometryRestored = NO;
 CGFloat restoredW = 0, restoredH = 0;
 {
-int geoIdx = GHCFAppIndexForBundleID(bundleID);
+int geoIdx = CFLYAppIndexForBundleID(bundleID);
 CGFloat geoCX, geoCY, geoW, geoH, geoScale;
 // v53：恢復尺寸＝存過的幾何（夾到預設）；固定中心開著
 // 時也恢復尺寸、只不恢復位置（居中開——尺寸是拖調後記住的，位置照舊
 // 不記）；沒存過就走預設（下面分支本來就居中放）。
-BOOL centerOpen = GHCFReadCenterOnOpen();
-if (geoIdx >= 0 && GHCFRestoreGeometryForIndex(geoIdx, &geoCX, &geoCY, &geoW, &geoH, &geoScale)) {
+BOOL centerOpen = CFLYReadCenterOnOpen();
+if (geoIdx >= 0 && CFLYRestoreGeometryForIndex(geoIdx, &geoCX, &geoCY, &geoW, &geoH, &geoScale)) {
 // v63：尺寸固定——存過的 W/H 不再採用，一律用固定尺寸（winW/winH 在
 // 上面已按固定尺寸算好；計算器是自己的 320x693）；只恢復位置（中心）。
 geoW = winW;
@@ -6266,7 +6232,7 @@ geoH = winH;
 if (centerOpen) {
 winFrame = CGRectMake((screenBounds.size.width - geoW) / 2.0, (screenBounds.size.height - geoH) / 2.0, geoW, geoH);
 } else {
-CGFloat safeDistance = GHCFReadSafeDistance();
+CGFloat safeDistance = CFLYReadSafeDistance();
 CGFloat minCX = geoW / 2.0 + 8.0;
 CGFloat maxCX = screenBounds.size.width - geoW / 2.0 - 8.0;
 CGFloat minCY = safeDistance + geoH / 2.0;
@@ -6280,24 +6246,24 @@ winFrame = CGRectMake(geoCX - geoW / 2.0, geoCY - geoH / 2.0, geoW, geoH);
 winW = geoW;
 winH = geoH;
 hostedContentSize = CGSizeMake(geoW, geoH);
-GHCFHostedScaleRatio = geoScale;
+CFLYHostedScaleRatio = geoScale;
 geometryRestored = YES;
 restoredW = geoW;
 restoredH = geoH;
-GHCFLogLine("v57 geometry restored");
+CFLYLogLine("v57 geometry restored");
 }
 }
 if (!geometryRestored) {
 // v40：新窗错位放——每多一个看得见的窗错开 44pt（横竖交错），不直接
 // 盖在旧窗正上方；夹在屏幕里（左右留 8pt、顶留安全距离、底留 8pt）。
-int visibleCount = GHCFVisibleHostedWindowCount();
+int visibleCount = CFLYVisibleHostedWindowCount();
 if (visibleCount > 0) {
-CGFloat step = GHCF_NEW_WINDOW_OFFSET;
+CGFloat step = CFLY_NEW_WINDOW_OFFSET;
 CGFloat dx = step * visibleCount;
 CGFloat dy = step * visibleCount;
 CGFloat minX = 8.0;
 CGFloat maxX = screenBounds.size.width - winW - 8.0;
-CGFloat minY = GHCFReadSafeDistance();
+CGFloat minY = CFLYReadSafeDistance();
 CGFloat maxY = screenBounds.size.height - winH - 8.0;
 CGFloat nx = winFrame.origin.x + dx;
 CGFloat ny = winFrame.origin.y + dy;
@@ -6310,40 +6276,40 @@ winFrame = CGRectMake(nx, ny, winW, winH);
 }
 if (strcmp(bundleID, "com.apple.calculator") == 0) {
 char wbuf[160];
-CGFloat calcScale = hostedContentSize.width / GHCFSceneFrameSizeForBundleID(bundleID).width;
+CGFloat calcScale = hostedContentSize.width / CFLYSceneFrameSizeForBundleID(bundleID).width;
 snprintf(wbuf, sizeof(wbuf), "v57 calculator window %dx%d scale %d%%", (int)winW, (int)winH, (int)(calcScale * 100.0));
-GHCFLogLine(wbuf);
+CFLYLogLine(wbuf);
 }
-GHCFHostedWindow = [[UIWindow alloc] initWithFrame:winFrame];
+CFLYHostedWindow = [[UIWindow alloc] initWithFrame:winFrame];
 // v29：层级降到 Alert 之下——锁屏约在 Alert（2000），锁屏必须盖住我们的窗，密码键盘才能点到（2026-11-13 锁屏密码输不进去的 bug）。
 // v40：基础层级用常量 Alert - 2（1998）；新窗建好后带到最前
 //（Alert - 1.75，见下面 window shown 后）。
-GHCFHostedWindow.windowLevel = GHCF_HOSTED_BASE_LEVEL;
-GHCFHostedWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *hostedScene = GHCFActiveWindowScene();
+CFLYHostedWindow.windowLevel = CFLY_HOSTED_BASE_LEVEL;
+CFLYHostedWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *hostedScene = CFLYActiveWindowScene();
 if (hostedScene) {
-GHCFHostedWindow.windowScene = hostedScene;
+CFLYHostedWindow.windowScene = hostedScene;
 } else {
-GHCFLogLine("v57 hosted scene nil");
+CFLYLogLine("v57 hosted scene nil");
 }
 // 窗的阴影与圆角（画在窗的 layer 上；内容容器自己裁圆角）。
 // v41：圆角、阴影开关/透明度/半径都走设定（浮窗设置 → 浮窗阴影设置）。
-GHCFHostedWindow.layer.shadowColor = [UIColor blackColor].CGColor;
-GHCFHostedWindow.layer.cornerRadius = GHCFReadCornerRadius();
-GHCFHostedWindow.layer.shadowOpacity = GHCFReadShadowEnabled() ? GHCFReadShadowOpacity() : 0.0;
-GHCFHostedWindow.layer.shadowRadius = GHCFReadShadowRadius();
-GHCFHostedWindow.layer.shadowOffset = CGSizeMake(0, 6);
+CFLYHostedWindow.layer.shadowColor = [UIColor blackColor].CGColor;
+CFLYHostedWindow.layer.cornerRadius = CFLYCornerRadiusForSize(CGSizeMake(winW, winH));
+CFLYHostedWindow.layer.shadowOpacity = CFLYReadShadowEnabled() ? CFLYReadShadowOpacity() : 0.0;
+CFLYHostedWindow.layer.shadowRadius = CFLYReadShadowRadius();
+CFLYHostedWindow.layer.shadowOffset = CGSizeMake(0, 6);
 UIViewController *vc = [[UIViewController alloc] init];
 // 内容容器：圆角 35、裁掉超出部分、细边框。v36：底色由白改黑——万一
 // 哪有缝，露黑不露白（v35 计算器两侧的白边就是内容区的白色底）。
 UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, winW, winH)];
 container.backgroundColor = [UIColor blackColor];
-container.layer.cornerRadius = GHCFReadCornerRadius();
+container.layer.cornerRadius = CFLYCornerRadiusForSize(CGSizeMake(winW, winH));
 container.layer.masksToBounds = YES;
 container.layer.borderWidth = 1.0;
 container.layer.borderColor = [UIColor colorWithWhite:0.8 alpha:1.0].CGColor;
 vc.view = container;
-GHCFHostedContainer = container;
+CFLYHostedContainer = container;
 // v38：内容区就是整个窗（没有标题栏了，App 内容从顶到底贴边填满）。
 // v36：底色由白改黑（同容器）。
 UIView *contentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, winW, winH)];
@@ -6356,10 +6322,10 @@ contentView.backgroundColor = [UIColor blackColor];
 contentView.layer.anchorPoint = CGPointMake(0, 0);
 contentView.layer.position = CGPointMake(0, 0);
 [container addSubview:contentView];
-GHCFHostedContentView = contentView;
+CFLYHostedContentView = contentView;
 // v38：嵌 view 分叉——有 presenter 走新建 scene 的老路（反向耦合），
 // 有 layerHostView 走托管已有主 scene 的新路（bounds = 屏幕尺寸，
-// 显示 scale 用 GHCFLayerHostDisplayScaleForContentSizeAndBundleID，
+// 显示 scale 用 CFLYLayerHostDisplayScaleForContentSizeAndBundleID，
 // 不推 scene frame）。presenter 与 layerHostView 有且只有一个非空。
 if (presenter && presenter.presentationView) {
 UIView *presenterView = presenter.presentationView;
@@ -6367,18 +6333,18 @@ UIView *presenterView = presenter.presentationView;
 // presentationView 的 bounds = scene frame 尺寸（内容尺寸 ÷ scale），
 // anchorPoint (0,0)、position (0,0)（FBAL 的左上对齐做法）；内容区
 // layer 的 sublayerTransform 缩回窗尺寸。autoresizing 关掉，尺寸由
-// 缩放管（resize 与滑杆时重算，见 GHCFApplyScaleToHostedWindow）。
-CGSize frameSize = GHCFSceneFrameSizeForContentSizeAndScale(hostedContentSize, GHCFHostedScaleRatio);
+// 缩放管（resize 与滑杆时重算，见 CFLYApplyScaleToHostedWindow）。
+CGSize frameSize = CFLYSceneFrameSizeForContentSizeAndScale(hostedContentSize, CFLYHostedScaleRatio);
 presenterView.autoresizingMask = UIViewAutoresizingNone;
 presenterView.bounds = CGRectMake(0, 0, frameSize.width, frameSize.height);
 presenterView.layer.anchorPoint = CGPointMake(0, 0);
 presenterView.layer.position = CGPointMake(0, 0);
 [contentView insertSubview:presenterView atIndex:0];
-contentView.layer.sublayerTransform = CATransform3DMakeScale(GHCFHostedScaleRatio, GHCFHostedScaleRatio, 1.0);
+contentView.layer.sublayerTransform = CATransform3DMakeScale(CFLYHostedScaleRatio, CFLYHostedScaleRatio, 1.0);
 {
 char sbuf[128];
-snprintf(sbuf, sizeof(sbuf), "v57 scene scaled %d%%", (int)(GHCFHostedScaleRatio * 100.0));
-GHCFLogLine(sbuf);
+snprintf(sbuf, sizeof(sbuf), "v57 scene scaled %d%%", (int)(CFLYHostedScaleRatio * 100.0));
+CFLYLogLine(sbuf);
 }
 } else if (layerHostView) {
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
@@ -6387,15 +6353,15 @@ layerHostView.bounds = CGRectMake(0, 0, screenSize.width, screenSize.height);
 layerHostView.layer.anchorPoint = CGPointMake(0, 0);
 layerHostView.layer.position = CGPointMake(0, 0);
 [contentView insertSubview:layerHostView atIndex:0];
-CGFloat displayScale = GHCFLayerHostDisplayScaleForContentSizeAndBundleID(hostedContentSize, bundleID);
+CGFloat displayScale = CFLYLayerHostDisplayScaleForContentSizeAndBundleID(hostedContentSize, bundleID);
 contentView.layer.sublayerTransform = CATransform3DMakeScale(displayScale, displayScale, 1.0);
 {
 char sbuf[128];
 snprintf(sbuf, sizeof(sbuf), "v57 layer host scaled %d%%", (int)(displayScale * 100.0));
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 } else {
-GHCFLogLine("v57 window failed no view to embed");
+CFLYLogLine("v57 window failed no view to embed");
 return;
 }
 // v38：记实际嵌进去的 view 的 frame——注意：frame 现在是图层的
@@ -6410,10 +6376,10 @@ UIView *embeddedView = (presenter && presenter.presentationView) ? presenter.pre
 CGRect pvFrame = embeddedView.frame;
 char fbuf[160];
 snprintf(fbuf, sizeof(fbuf), "v57 hosted view frame %d,%d %dx%d", (int)pvFrame.origin.x, (int)pvFrame.origin.y, (int)pvFrame.size.width, (int)pvFrame.size.height);
-GHCFLogLine(fbuf);
+CFLYLogLine(fbuf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 hosted view frame failed");
+CFLYLogLine("v57 hosted view frame failed");
 }
 // v38：缩放滑杆条（默认藏着）——点细条展开，盖在内容区顶
 // 上（细条下面，y=24；半透明黑底，不改窗尺寸、不推内容区）。
@@ -6423,33 +6389,33 @@ GHCFLogLine("v57 hosted view frame failed");
 //（在内容区之上），跟着窗一起缓存、一起藏/显示。
 // v42：滑桿條加高到 72pt，第二行放浮窗大小預設（小/中/大三顆鈕，
 // 點一下窗就變那個尺寸，走 resize 路；窄窗（<240pt）不放這行）。
-UIView *scaleBar = [[UIView alloc] initWithFrame:CGRectMake(0, GHCF_HOSTED_STRIP_H, winW, 72)];
+UIView *scaleBar = [[UIView alloc] initWithFrame:CGRectMake(0, CFLY_HOSTED_STRIP_H, winW, 72)];
 scaleBar.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
 scaleBar.hidden = YES;
 [container addSubview:scaleBar];
-GHCFHostedScaleSliderBar = scaleBar;
+CFLYHostedScaleSliderBar = scaleBar;
 UISlider *scaleSlider = [[UISlider alloc] initWithFrame:CGRectMake(10, 3, winW - 70, 30)];
 scaleSlider.minimumValue = 0.5;
 scaleSlider.maximumValue = 2.0;
-scaleSlider.value = GHCFHostedScaleRatio;
+scaleSlider.value = CFLYHostedScaleRatio;
 scaleSlider.minimumTrackTintColor = [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0];
 [scaleSlider addTarget:self action:@selector(handleScaleSlider:) forControlEvents:UIControlEventValueChanged];
 // v40：滑杆松手时存一次位置/大小/缩放（ValueChanged 拖动中一直在触发，
 // 每动一下都写 prefs 太费；松手（TouchUpInside/Outside）才存一次）。
 [scaleSlider addTarget:self action:@selector(handleScaleSliderEnded:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
 [scaleBar addSubview:scaleSlider];
-GHCFHostedScaleSlider = scaleSlider;
+CFLYHostedScaleSlider = scaleSlider;
 UILabel *scaleLabel = [[UILabel alloc] initWithFrame:CGRectMake(winW - 56, 3, 46, 30)];
 {
 char pbuf[32];
-snprintf(pbuf, sizeof(pbuf), "%d%%", (int)(GHCFHostedScaleRatio * 100.0));
+snprintf(pbuf, sizeof(pbuf), "%d%%", (int)(CFLYHostedScaleRatio * 100.0));
 scaleLabel.text = [NSString stringWithCString:pbuf encoding:NSUTF8StringEncoding];
 }
 scaleLabel.textColor = [UIColor whiteColor];
 scaleLabel.font = [UIFont boldSystemFontOfSize:14];
 scaleLabel.textAlignment = NSTextAlignmentCenter;
 [scaleBar addSubview:scaleLabel];
-GHCFHostedScaleLabel = scaleLabel;
+CFLYHostedScaleLabel = scaleLabel;
 if (winW >= 240.0) {
 UILabel *sizeTitle = [[UILabel alloc] initWithFrame:CGRectMake(10, 39, 40, 28)];
 sizeTitle.text = [NSString stringWithCString:"尺寸" encoding:NSUTF8StringEncoding];
@@ -6457,7 +6423,7 @@ sizeTitle.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.8];
 sizeTitle.font = [UIFont systemFontOfSize:13];
 [scaleBar addSubview:sizeTitle];
 const char *sizeNames[3] = {"小", "中", "大"};
-int currentPreset = GHCFReadWindowSizePreset();
+int currentPreset = CFLYReadWindowSizePreset();
 for (int sp = 0; sp < 3; sp++) {
 UIButton *sizeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
 sizeBtn.frame = CGRectMake(winW - 140 + sp * 44, 39, 40, 28);
@@ -6487,10 +6453,10 @@ sizeBtn.titleLabel.font = [UIFont boldSystemFontOfSize:13];
 // pill 从垂直置中改成贴条底（72x6 不变，y=17），给名字让位；名字
 // 与 pill 都跟窗宽走（名字横向拉伸、pill 左右留空、水平置中），
 // 窗调尺寸后不跑偏。
-UIView *topStrip = [[UIView alloc] initWithFrame:CGRectMake(0, 0, winW, GHCF_HOSTED_STRIP_H)];
+UIView *topStrip = [[UIView alloc] initWithFrame:CGRectMake(0, 0, winW, CFLY_HOSTED_STRIP_H)];
 topStrip.backgroundColor = [UIColor clearColor];
 [container addSubview:topStrip];
-GHCFHostedTopStrip = topStrip;
+CFLYHostedTopStrip = topStrip;
 UILabel *stripNameLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, winW, 15)];
 stripNameLabel.text = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
 stripNameLabel.textColor = [[UIColor whiteColor] colorWithAlphaComponent:0.85];
@@ -6501,9 +6467,10 @@ stripNameLabel.shadowOffset = CGSizeMake(0, 1);
 stripNameLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 [topStrip addSubview:stripNameLabel];
 // v59：細條上的小橫條改成 FV 抓手尺寸 36x5（本來 72x6 太長）。
+// 1.0.4（P4）：把手加寬到 44x5、alpha 0.7 → 0.9，拖曳區一眼看得見。
 // v60：雙擊放大／還原取消（皇上說沒用），拖動走細條的 stripDrag。
-UIView *pill = [[UIView alloc] initWithFrame:CGRectMake((winW - 36) / 2.0, 17, 36, 5)];
-pill.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.7];
+UIView *pill = [[UIView alloc] initWithFrame:CGRectMake((winW - 44) / 2.0, 17, 44, 5)];
+pill.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.9];
 pill.layer.cornerRadius = 2.5;
 pill.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
 [topStrip addSubview:pill];
@@ -6518,6 +6485,11 @@ UITapGestureRecognizer *stripTap = [[UITapGestureRecognizer alloc] initWithTarge
 stripTap.delegate = self;
 [stripTap requireGestureRecognizerToFail:stripDrag];
 [topStrip addGestureRecognizer:stripTap];
+// ChinaFly（1.0.4）：長按細條開「窗口打開方式」動作表（7 種）。
+UILongPressGestureRecognizer *stripLongPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleTopStripLongPress:)];
+stripLongPress.delegate = self;
+stripLongPress.minimumPressDuration = 0.6;
+[topStrip addGestureRecognizer:stripLongPress];
 // v42：手勢自定義（綁在窗頂細條上，不綁內容區——App 自己的滑動/
 // 點按不會誤觸；動作走設定 gestureTripleTap/gestureSwipeV/
 // gestureSwipeH/gestureTwoFingerTap；單擊點細條（開／關縮放滑桿條）
@@ -6550,7 +6522,7 @@ twoFingerTap.cancelsTouchesInView = NO;
 {
 char gbuf[128];
 snprintf(gbuf, sizeof(gbuf), "v57 gesture strip attached %lu recognizers", (unsigned long)[topStrip.gestureRecognizers count]);
-GHCFLogLine(gbuf);
+CFLYLogLine(gbuf);
 }
 // v60：标题栏（控制条）整个拿掉——App 名、釘選、± 缩放钮全没了，
 // 不留空条；内容区本来就是整个窗，不用改。缩放改由点细条开滑杆条。
@@ -6567,8 +6539,8 @@ resizeHandle.backgroundColor = [UIColor clearColor];
 resizeHandle.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin;
 resizeHandle.hidden = YES;
 // v63：尺寸固定——大窗上的縮放手柄藏起來（拖角落縮放停用）；收成 peek 時
-// GHCFShowDockPeekForIndex 會再把它顯示出來（小窗調尺寸用），恢復成大窗
-// 時 GHCFHideDockPeekForIndex 再藏回去。
+// CFLYShowDockPeekForIndex 會再把它顯示出來（小窗調尺寸用），恢復成大窗
+// 時 CFLYHideDockPeekForIndex 再藏回去。
 // 角落括号「⌟」：竖条（右边缘）+ 横条（底边缘），白 0.8 alpha。
 UIView *bracketV = [[UIView alloc] initWithFrame:CGRectMake(31, 17, 3, 17)];
 bracketV.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.8];
@@ -6583,63 +6555,63 @@ resizeGesture.minimumNumberOfTouches = 1;
 resizeGesture.maximumNumberOfTouches = 1;
 [resizeHandle addGestureRecognizer:resizeGesture];
 [container addSubview:resizeHandle];
-GHCFHostedResizeHandle = resizeHandle;
-GHCFHostedWindow.rootViewController = vc;
+CFLYHostedResizeHandle = resizeHandle;
+CFLYHostedWindow.rootViewController = vc;
 // v54：浮窗滑出方向——開窗時從設定那邊滑進來（左／右，預設右）。
 // 動畫只改窗 frame，內容不動；
 // slideWin／finalFrame 用局部變數抓著進動畫塊（不用全域量，免得連開
 // 兩窗時塊跑到新窗身上）。
-UIWindow *slideWin = GHCFHostedWindow;
+UIWindow *slideWin = CFLYHostedWindow;
 CGRect finalFrame = slideWin.frame;
-// v72：重建 scene 时不滑入（GHCFSuppressSlideInOnce，重建直接出现在原位）。
-BOOL suppressSlide = GHCFSuppressSlideInOnce;
-GHCFSuppressSlideInOnce = NO;
+// v72：重建 scene 时不滑入（CFLYSuppressSlideInOnce，重建直接出现在原位）。
+BOOL suppressSlide = CFLYSuppressSlideInOnce;
+CFLYSuppressSlideInOnce = NO;
 BOOL doSlideIn = !suppressSlide;
 if (doSlideIn) {
-BOOL slideLeft = GHCFIsFloatingWindowSlideLeft();
+BOOL slideLeft = CFLYIsFloatingWindowSlideLeft();
 CGFloat startX = slideLeft ? (-finalFrame.size.width) : ([UIScreen mainScreen].bounds.size.width);
 slideWin.frame = CGRectMake(startX, finalFrame.origin.y, finalFrame.size.width, finalFrame.size.height);
 }
-GHCFHostedWindow.hidden = NO;
+CFLYHostedWindow.hidden = NO;
 if (doSlideIn) {
 NSTimeInterval openAnimDur = 0.7;
 [UIView animateWithDuration:openAnimDur delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
 slideWin.frame = finalFrame;
 } completion:nil];
 }
-GHCFHostedScene = scene;
-GHCFHostedPresenter = presenter;
-GHCFHostedLayerHostView = layerHostView;
-GHCFHostedSceneID = sceneID;
-strncpy(GHCFHostedBundleID, bundleID, sizeof(GHCFHostedBundleID) - 1);
-GHCFHostedBundleID[sizeof(GHCFHostedBundleID) - 1] = '\0';
-GHCFHostedPid = pid;
-GHCFHostedMinimized = NO;
+CFLYHostedScene = scene;
+CFLYHostedPresenter = presenter;
+CFLYHostedLayerHostView = layerHostView;
+CFLYHostedSceneID = sceneID;
+strncpy(CFLYHostedBundleID, bundleID, sizeof(CFLYHostedBundleID) - 1);
+CFLYHostedBundleID[sizeof(CFLYHostedBundleID) - 1] = '\0';
+CFLYHostedPid = pid;
+CFLYHostedMinimized = NO;
 // v35：新窗也进缓存（这个 App 的第一份），活动下标指到它；以后切
 // 走再切回来，直接复用这一份，不再建新 scene。
-int newCacheIdx = GHCFAppIndexForBundleID(bundleID);
+int newCacheIdx = CFLYAppIndexForBundleID(bundleID);
 if (newCacheIdx >= 0) {
-GHCFActiveAppIndex = newCacheIdx;
-GHCFSaveActiveToCache();
+CFLYActiveAppIndex = newCacheIdx;
+CFLYSaveActiveToCache();
 }
-GHCFLogLine("v57 window shown");
+CFLYLogLine("v57 window shown");
 // v43.23：第 9 件——建窗日誌補原點（40.log §6 建議 3）：window shown 時
 // finalFrame 已定（滑入動畫只改 slideWin.frame，finalFrame 是最終框），
 // 把尺寸＋屏幕原點一起印出來，診斷不用再靠夾取反推位置。
 {
 char wbuf[128];
 snprintf(wbuf, sizeof(wbuf), "v43.23 window shown frame %dx%d@%d,%d", (int)finalFrame.size.width, (int)finalFrame.size.height, (int)finalFrame.origin.x, (int)finalFrame.origin.y);
-GHCFLogLine(wbuf);
+CFLYLogLine(wbuf);
 }
 // v42：浮窗透明度（每窗 winOpacity_<bid>，沒設走全域；調窗的 alpha）。
-GHCFHostedWindow.alpha = GHCFReadWindowOpacityForBundleID(bundleID);
+CFLYHostedWindow.alpha = CFLYReadWindowOpacityForBundleID(bundleID);
 // v40：新窗带到最前（别的窗回基础层级，这个窗升到最前层级、活动量
 // 切到它），再更新阴影背景（开关开着、且有浮窗看得见时显示）。
-GHCFBringWindowToFront(GHCFHostedWindow);
-GHCFUpdateDimOverlay();
+CFLYBringWindowToFront(CFLYHostedWindow);
+CFLYUpdateDimOverlay();
 // 重啟恢復清單 + 任務欄。
-GHCFSaveRestoreList();
-GHCFUpdateTaskbar();
+CFLYSaveRestoreList();
+CFLYUpdateTaskbar();
 // v72：新窗建好不再彈「已打開 <App>」橫幅（皇上：浮窗已打开提示取消）——
 // showNotificationBannerForName 整个拿掉；低电量提示走 showNotificationBannerWithText，不动。
 // v40：恢复了上次的位置/大小——建窗时内容已按恢复的尺寸嵌，再调一次
@@ -6660,53 +6632,53 @@ if (geometryRestored) {
 // v40：重试块抓当前窗的 scene/window（多窗时活动量会切到别的窗，
 // 老写法读活动量会推错窗）；缓存里的 scene 换了（销毁重建）就跳过。
 FBScene *retryScene = scene;
-UIWindow *retryWindow = GHCFHostedWindow;
+UIWindow *retryWindow = CFLYHostedWindow;
 int retryIdx = newCacheIdx;
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 char cbuf[160];
-snprintf(cbuf, sizeof(cbuf), "v57 foreground retry check contentState=%lu minimized=%d", (unsigned long)(retryScene ? [retryScene contentState] : 0), (retryIdx >= 0 && GHCFCacheMinimized[retryIdx]) ? 1 : 0);
-GHCFLogLine(cbuf);
+snprintf(cbuf, sizeof(cbuf), "v57 foreground retry check contentState=%lu minimized=%d", (unsigned long)(retryScene ? [retryScene contentState] : 0), (retryIdx >= 0 && CFLYCacheMinimized[retryIdx]) ? 1 : 0);
+CFLYLogLine(cbuf);
 if (!retryScene || !retryWindow) return;
-if (retryIdx >= 0 && GHCFCacheScenes[retryIdx] != retryScene) return;
+if (retryIdx >= 0 && CFLYCacheScenes[retryIdx] != retryScene) return;
 // v43.7：这扇窗重建后还卡 0、门控已停手——重试也不推（等用户手动恢复／看门狗接手）。
-if (retryIdx >= 0 && retryIdx < GHCFAppCount && GHCFRestoreGaveUp[retryIdx]) return;
+if (retryIdx >= 0 && retryIdx < CFLYAppCount && CFLYRestoreGaveUp[retryIdx]) return;
 @try {
 // v72：重试只在准备中（1）时推 foreground；卡在 0 不推（24.log 证明推 0
 // 没用，卡 0 的交给门控重建）；锁着也不推（等解锁回调推）。
-if ([retryScene contentState] == 1 && !GHCFScreenLocked) {
+if ([retryScene contentState] == 1 && !CFLYScreenLocked) {
 [retryScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 }];
 char rbuf[128];
 snprintf(rbuf, sizeof(rbuf), "v57 foreground retry contentState=%lu", (unsigned long)[retryScene contentState]);
-GHCFLogLine(rbuf);
+CFLYLogLine(rbuf);
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground retry failed");
+CFLYLogLine("v57 foreground retry failed");
 }
 });
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 char cbuf[160];
-snprintf(cbuf, sizeof(cbuf), "v57 foreground retry2 check contentState=%lu minimized=%d", (unsigned long)(retryScene ? [retryScene contentState] : 0), (retryIdx >= 0 && GHCFCacheMinimized[retryIdx]) ? 1 : 0);
-GHCFLogLine(cbuf);
+snprintf(cbuf, sizeof(cbuf), "v57 foreground retry2 check contentState=%lu minimized=%d", (unsigned long)(retryScene ? [retryScene contentState] : 0), (retryIdx >= 0 && CFLYCacheMinimized[retryIdx]) ? 1 : 0);
+CFLYLogLine(cbuf);
 if (!retryScene || !retryWindow) return;
-if (retryIdx >= 0 && GHCFCacheScenes[retryIdx] != retryScene) return;
+if (retryIdx >= 0 && CFLYCacheScenes[retryIdx] != retryScene) return;
 // v43.7：这扇窗重建后还卡 0、门控已停手——重试也不推（等用户手动恢复／看门狗接手）。
-if (retryIdx >= 0 && retryIdx < GHCFAppCount && GHCFRestoreGaveUp[retryIdx]) return;
+if (retryIdx >= 0 && retryIdx < CFLYAppCount && CFLYRestoreGaveUp[retryIdx]) return;
 @try {
 // v72：同上（只在 1 时推、锁着不推）。
-if ([retryScene contentState] == 1 && !GHCFScreenLocked) {
+if ([retryScene contentState] == 1 && !CFLYScreenLocked) {
 [retryScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 }];
 char rbuf[128];
 snprintf(rbuf, sizeof(rbuf), "v57 foreground retry2 contentState=%lu", (unsigned long)[retryScene contentState]);
-GHCFLogLine(rbuf);
+CFLYLogLine(rbuf);
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground retry2 failed");
+CFLYLogLine("v57 foreground retry2 failed");
 }
 });
 // v72：新窗建好时 scene 还没就绪——盖占位等它（不要有任何 App 一开就是黑窗）。
@@ -6717,24 +6689,24 @@ NSUInteger newCS = 2;
 if (scene) {
 @try { newCS = [scene contentState]; } @catch (NSException *e) { (void)e; newCS = 2; }
 }
-if (newCS != 2 && newCacheIdx >= 0 && newCacheIdx < GHCFAppCount) {
-GHCFShowPlaceholderForIndex(newCacheIdx);
-GHCFRestoreGateActive = YES;
-GHCFRestoreGateScene = scene;
-GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
-GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
-GHCFRestoreGateRebuilt = NO;
-GHCFRestoreGateStuckLogged = NO;
-GHCFRestoreGateTimeoutDeferredLogged = NO;
-GHCFRestoreGateTimeoutDeferCount = 0;
-if (newCacheIdx >= 0 && newCacheIdx < GHCFAppCount) GHCFRestoreGaveUp[newCacheIdx] = NO; // v43.7：新 scene 是新的尝试，清掉停手旗标。
-GHCFRestoreGateMode = 1;
-GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
-if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
-GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：新窗也要過尺寸門。
-GHCFSizeGateMatchedOnce = NO;
-GHCFSizeGateWaitingLogged = NO;
-GHCFLogLine("v72 new window gated until ready");
+if (newCS != 2 && newCacheIdx >= 0 && newCacheIdx < CFLYAppCount) {
+CFLYShowPlaceholderForIndex(newCacheIdx);
+CFLYRestoreGateActive = YES;
+CFLYRestoreGateScene = scene;
+CFLYRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+CFLYRestoreGateDeadline = CFLYRestoreGateStart + 5.0;
+CFLYRestoreGateRebuilt = NO;
+CFLYRestoreGateStuckLogged = NO;
+CFLYRestoreGateTimeoutDeferredLogged = NO;
+CFLYRestoreGateTimeoutDeferCount = 0;
+if (newCacheIdx >= 0 && newCacheIdx < CFLYAppCount) CFLYRestoreGaveUp[newCacheIdx] = NO; // v43.7：新 scene 是新的尝试，清掉停手旗标。
+CFLYRestoreGateMode = 1;
+CFLYRestoreGateTargetAlpha = CFLYHostedWindow.alpha;
+if (CFLYRestoreGateTargetAlpha <= 0.01) CFLYRestoreGateTargetAlpha = 1.0;
+CFLYSizeGatePreMatched = CFLYHostedSceneSizeMatchesWindow(); // v73：新窗也要過尺寸門。
+CFLYSizeGateMatchedOnce = NO;
+CFLYSizeGateWaitingLogged = NO;
+CFLYLogLine("v72 new window gated until ready");
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 [self showGatedRestoredWindowTick];
 });
@@ -6742,7 +6714,7 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 window failed exception");
+CFLYLogLine("v57 window failed exception");
 }
 }
 
@@ -6751,7 +6723,7 @@ GHCFLogLine("v57 window failed exception");
 // 复用守卫），不再建新 scene；固定 ID 一个 SpringBoard 会话里只
 // 建一次，残留撞不到。切走别的 App 时也一样（只藏窗、存缓存，见
 // handleAppButton 的切换路径）；真正销毁只在复用守卫判旧时（进程
-// 死了，见 GHCFDestroyCachedEntryAtIndex）。关窗后窗的状态与最小
+// 死了，见 CFLYDestroyCachedEntryAtIndex）。关窗后窗的状态与最小
 // 化一样（hidden=YES、minimized=YES、scene 保持前景），重开走同一条
 // 恢复路（restoreHostedWindow 推前景）；锁屏回调也一样处理（最小
 // 化着的窗锁屏不藏、解锁不弹，等用户点恢复）。
@@ -6759,51 +6731,51 @@ GHCFLogLine("v57 window failed exception");
 // v40：关窗只影响这个窗（别的窗不动），贴边小卡也收掉（彻底关掉，
 // 不再回来——卡没了、窗藏着，下次从启动器重开直接复用缓存里的 scene）。
 - (void)closeHostedWindow {
-if (!GHCFHostedWindow) return;
+if (!CFLYHostedWindow) return;
 // v71：關窗就取消恢復門控（門控進行中關窗時，tick 看到旗標沒了就回，
 // 不會把已關的窗又顯示出來；關窗本身不動）。
-GHCFRestoreGateActive = NO;
-int idx = GHCFActiveAppIndex;
-BOOL wasMinimized = GHCFHostedMinimized;
+CFLYRestoreGateActive = NO;
+int idx = CFLYActiveAppIndex;
+BOOL wasMinimized = CFLYHostedMinimized;
 // v70：關窗前先把掛著的窗恢復回來（退出動畫要在看得見的窗上播，掛著是半截出屏的）。
-if (idx >= 0 && idx < GHCFAppCount && GHCFCacheHung[idx]) {
-GHCFRestoreHungWindowForIndex(idx);
+if (idx >= 0 && idx < CFLYAppCount && CFLYCacheHung[idx]) {
+CFLYRestoreHungWindowForIndex(idx);
 }
 // v54：關窗彈性動畫——先把要存的幾何存好（動畫會改 frame，存完再動；
 // SaveGeometryForIndex 讀的是 w.center／bounds），再用彈簧（damping 0.7）
 // 把窗往滑出方向滑出屏幕、淡出，動畫完才藏窗並把 frame／alpha 還原
 //（幾何不毒化；下次恢復用存過的幾何）。closingWin／startFrame 用局部
 // 變數抓著進動畫塊（不用全域量）。
-UIWindow *closingWin = GHCFHostedWindow;
+UIWindow *closingWin = CFLYHostedWindow;
 CGRect startFrame = closingWin.frame;
 CGFloat startAlpha = closingWin.alpha;
-GHCFHostedMinimized = YES;
-GHCFLogLine("v57 window closed (scene kept)");
+CFLYHostedMinimized = YES;
+CFLYLogLine("v57 window closed (scene kept)");
 // v53：關窗後不再把 scene 推後台（黑屏修法；恢復時本來就推前景，
 // 關了再推後台只會讓下次恢復多一個黑的機會）。
-if (idx >= 0 && idx < GHCFAppCount) {
-GHCFHideDockPeekForIndex(idx);
-GHCFSaveActiveToCache();
+if (idx >= 0 && idx < CFLYAppCount) {
+CFLYHideDockPeekForIndex(idx);
+CFLYSaveActiveToCache();
 // v53：只有從完整浮窗關窗才存幾何——關 peek 會存成 112x216，
 // 是毒化（見 16.log／17.log 的 112x216）。
-if (!wasMinimized) GHCFSaveGeometryForIndex(idx);
+if (!wasMinimized) CFLYSaveGeometryForIndex(idx);
 }
-GHCFUpdateDimOverlay();
+CFLYUpdateDimOverlay();
 // v42：重啟恢復清單 + 任務欄跟著關窗更新。
-GHCFSaveRestoreList();
-GHCFUpdateTaskbar();
+CFLYSaveRestoreList();
+CFLYUpdateTaskbar();
 // v70：退出動畫——設定 exitAnimation（預設 island＝現有的彈簧滑出＋淡出）。
 // 1 縮小淡出／2 向右滑散／3 下沉淡出是普通 UIView 動畫（0.35 秒）；
 // 4 方块拼散走下面的 closeHostedWindowWithShatter（快照切片＋CAAnimation）。
 // v54：彈簧滑出——往滑出方向（左／右，跟開窗同一邊）滑出屏幕＋淡出，
 // 0.4 秒；動畫完才藏窗、還原 frame／alpha／transform（下次恢復不受影響）。
 // v56：遊戲模式開著時動畫減到最少（0.01 秒直接到位，省電）。
-int exitAnim = GHCFReadExitAnimation();
+int exitAnim = CFLYReadExitAnimation();
 // v72：讀完記一行（0–4），下次日誌直接證明讀值有沒有到 dylib。
 {
 char vbuf[64];
 snprintf(vbuf, sizeof(vbuf), "v72 exit anim %d", exitAnim);
-GHCFLogLine(vbuf);
+CFLYLogLine(vbuf);
 }
 if (exitAnim == 4) {
 [self closeHostedWindowWithShatter:closingWin startFrame:startFrame startAlpha:startAlpha completion:nil];
@@ -6818,7 +6790,7 @@ closingWin.alpha = startAlpha;
 };
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 if (exitAnim == 0) {
-BOOL slideLeft = GHCFIsFloatingWindowSlideLeft();
+BOOL slideLeft = CFLYIsFloatingWindowSlideLeft();
 CGFloat offX = slideLeft ? (-startFrame.size.width - 20.0) : (screenBounds.size.width + 20.0);
 NSTimeInterval closeAnimDur = 0.7;
 [UIView animateWithDuration:closeAnimDur delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
@@ -6894,7 +6866,7 @@ if (completion) completion();
 }];
 return;
 }
-UIWindowScene *ws = GHCFActiveWindowScene();
+UIWindowScene *ws = CFLYActiveWindowScene();
 UIWindow *overlayWin = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
 overlayWin.windowScene = ws;
 overlayWin.windowLevel = UIWindowLevelAlert - 1.0;
@@ -6972,7 +6944,7 @@ overlayWin.hidden = YES;
 }
 
 // v35：destroyHostedScene 已删——会话内永不销毁 scene（见文件头 v35
-// 节）。唯一剩下的销毁在 GHCFDestroyCachedEntryAtIndex（只在复用
+// 节）。唯一剩下的销毁在 CFLYDestroyCachedEntryAtIndex（只在复用
 // 守卫判旧、进程死了时调）。切走与关窗只藏窗（见 handleAppButton
 // 的切换路径与 closeHostedWindow）。启动器层级不用这里复位：
 // showLauncher 每次按活动窗有没有定层级（有窗 Alert - 1、没窗
@@ -6987,24 +6959,24 @@ overlayWin.hidden = YES;
 // closeHostedWindowWithShatter，completion 裡取消隱藏＋調 minimize
 // （顯示 peek 不是藏窗；shatter 本身會把窗 hidden=YES，ShowDockPeek
 // 不取消隱藏，不補這行 peek 會隱形；碎片飛的 0.7 秒裡 peek 已經就位）。
-// 動畫中途有人先把這扇窗收了（per-App 的 GHCFCacheMinimized）或活動窗
-// 換了（GHCFHostedWindow 不是這扇窗），completion 只還原視覺
+// 動畫中途有人先把這扇窗收了（per-App 的 CFLYCacheMinimized）或活動窗
+// 換了（CFLYHostedWindow 不是這扇窗），completion 只還原視覺
 // （transform／alpha），不動 frame、不再調 minimize（免得把別人的窗收了／
 // 把已縮成 peek 的窗框還原成大窗）。shatter 失敗退路那條 completion 裡
 // 還要重算一次 peek 排布（退路會把 frame 還原成大窗尺寸）。遊戲模式
 // 開著時動畫 0.01 秒（跟 closeHostedWindow 同一套：4 在遊戲模式走下沉）。
 - (void)minimizeHostedWindowWithExitAnimation:(int)exitAnim fromFrame:(CGRect)startFrame startAlpha:(CGFloat)startAlpha {
-UIWindow *closingWin = GHCFHostedWindow;
+UIWindow *closingWin = CFLYHostedWindow;
 if (!closingWin) return;
 if (exitAnim == 4) {
 [self closeHostedWindowWithShatter:closingWin startFrame:startFrame startAlpha:startAlpha completion:^{
-int cidx = GHCFAppIndexForWindow(closingWin);
-BOOL selfMin = (cidx >= 0 && cidx < GHCFAppCount && GHCFCacheMinimized[cidx]);
-if (selfMin || GHCFHostedWindow == closingWin) closingWin.hidden = NO;
-if (!selfMin && GHCFHostedWindow == closingWin) {
+int cidx = CFLYAppIndexForWindow(closingWin);
+BOOL selfMin = (cidx >= 0 && cidx < CFLYAppCount && CFLYCacheMinimized[cidx]);
+if (selfMin || CFLYHostedWindow == closingWin) closingWin.hidden = NO;
+if (!selfMin && CFLYHostedWindow == closingWin) {
 [self minimizeHostedWindow];
 } else if (selfMin) {
-GHCFLayoutDockPeeks();
+CFLYLayoutDockPeeks();
 }
 }];
 return;
@@ -7031,24 +7003,24 @@ closingWin.alpha = 0.0;
 (void)finished;
 closingWin.transform = CGAffineTransformIdentity;
 closingWin.alpha = startAlpha;
-int cidx = GHCFAppIndexForWindow(closingWin);
-BOOL selfMin = (cidx >= 0 && cidx < GHCFAppCount && GHCFCacheMinimized[cidx]);
-if (selfMin || GHCFHostedWindow != closingWin) return;
+int cidx = CFLYAppIndexForWindow(closingWin);
+BOOL selfMin = (cidx >= 0 && cidx < CFLYAppCount && CFLYCacheMinimized[cidx]);
+if (selfMin || CFLYHostedWindow != closingWin) return;
 closingWin.frame = startFrame;
 [self minimizeHostedWindow];
 }];
 }
 
 - (void)minimizeHostedWindow {
-if (!GHCFHostedWindow || GHCFHostedMinimized) return;
-int idx = GHCFActiveAppIndex;
+if (!CFLYHostedWindow || CFLYHostedMinimized) return;
+int idx = CFLYActiveAppIndex;
 // v70：收起前先清懸掛狀態（點按層拿掉、旗標清掉；窗接著就縮成 peek，不用還原 frame）。
-if (idx >= 0 && idx < GHCFAppCount) GHCFClearHungStateForIndex(idx);
-GHCFHostedMinimized = YES;
-GHCFMinimizeTime = [NSDate timeIntervalSinceReferenceDate];
+if (idx >= 0 && idx < CFLYAppCount) CFLYClearHungStateForIndex(idx);
+CFLYHostedMinimized = YES;
+CFLYMinimizeTime = [NSDate timeIntervalSinceReferenceDate];
 // v50：收成小卡時震一下（ARC 震動反饋開關，預設開；自動 peek 切窗
 // 不走這裡，不會每次切窗都震）。
-if (GHCFReadARCHaptics()) {
+if (CFLYReadARCHaptics()) {
 @try {
 UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
 [haptic impactOccurred];
@@ -7056,7 +7028,7 @@ UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithS
 (void)e;
 }
 }
-GHCFLogLine("v57 window minimized");
+CFLYLogLine("v57 window minimized");
 // v49：最小化不再把 scene 推回後台——peek 要露活內容，後台化的
 // scene 停止合成，peek 就是黑的（v41 改成活內容 peek 卻留著推後台，
 // v42.3 自動 peek 讓黑小窗到處出現）。鎖屏安全不受影響：鎖屏回調
@@ -7065,26 +7037,28 @@ GHCFLogLine("v57 window minimized");
 // 露出一截活內容，上下疊著排），點那截恢復窗；scene 活著（只縮窗、
 // 不推後台、不銷毀，peek 保持前景才有活內容）。收起前的位置/大小先存
 // （縮窗之後再存會存成 peek 的尺寸）。
-if (idx >= 0 && idx < GHCFAppCount) {
-GHCFSaveGeometryForIndex(idx);
-GHCFSaveActiveToCache();
-GHCFShowDockPeekForIndex(idx);
+if (idx >= 0 && idx < CFLYAppCount) {
+CFLYSaveGeometryForIndex(idx);
+CFLYSaveActiveToCache();
+CFLYShowDockPeekForIndex(idx);
 }
-GHCFUpdateDimOverlay();
+CFLYUpdateDimOverlay();
 // v42：重啟恢復清單 + 任務欄跟著收起更新。
-GHCFSaveRestoreList();
-GHCFUpdateTaskbar();
+CFLYSaveRestoreList();
+CFLYUpdateTaskbar();
+// 1.0.4：小卡圓角按 112x242 封頂 28（不再是橢圓形）。
+CFLYApplyHostedWindowCornerRadius();
 }
 
 // v74：靜態佔位內容——App 圖標＋App 名（不轉圈）。圖標拿不到就畫灰色圓角方塊代替（不崩）。
 // parent 是已定好尺寸的佔位 view；圖標 64pt 置中偏上、名字在圖標下方。
-static void GHCFAddStaticAppIconAndName(UIView *parent, const char *bundleID, const char *name) {
+static void CFLYAddStaticAppIconAndName(UIView *parent, const char *bundleID, const char *name) {
 if (!parent) return;
 CGSize bs = parent.bounds.size;
 CGFloat iconSize = 64.0;
 CGFloat iconY = bs.height / 2.0 - 44.0;
 UIImage *icon = nil;
-if (bundleID && bundleID[0] != '\0') icon = GHCFAppIcon(bundleID);
+if (bundleID && bundleID[0] != '\0') icon = CFLYAppIcon(bundleID);
 if (icon) {
 UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
 iv.frame = CGRectMake((bs.width - iconSize) / 2.0, iconY, iconSize, iconSize);
@@ -7113,41 +7087,41 @@ label.textAlignment = NSTextAlignmentCenter;
 // v72：载入占位——深灰底＋靜態 App 圖標＋App 名（v74 起不再轉圈），绝不是全黑。盖在 container 最上面
 //（内容区之上；点按层／调尺寸手柄提到它上面，点按拖动不受影响；
 // userInteractionEnabled=NO，细条拖动与内容点按照常穿过）。
-// 每窗一个，存在 GHCFGatePlaceholders 数组里（跟窗一起缩放／移动；
-// 销毁缓存项时清掉指针，见 GHCFDestroyCachedEntryAtIndex）。
-static void GHCFShowPlaceholderForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-UIView *container = GHCFCacheContainers[idx];
+// 每窗一个，存在 CFLYGatePlaceholders 数组里（跟窗一起缩放／移动；
+// 销毁缓存项时清掉指针，见 CFLYDestroyCachedEntryAtIndex）。
+static void CFLYShowPlaceholderForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+UIView *container = CFLYCacheContainers[idx];
 if (!container) return;
 // v43.22：有凍結快照就繼續顯示它，不蓋深灰佔位（凍結幀是最後一幀活內容，
 // 比深灰好看；點不動，載入提示已在快照上；點按層／調尺寸手柄照舊提到它上面）。
 // v43.23：第 7 件——dock 快照平時是藏著的（hidden=YES，不蓋活內容），
 // 佔位要顯示時才在這裡打開它（scene 掉 0 時小卡顯示最後一幀）。
-UIView *frozen = GHCFGateFrozenSnaps[idx];
+UIView *frozen = CFLYGateFrozenSnaps[idx];
 if (frozen && frozen.superview == container) {
 frozen.hidden = NO;
 [container bringSubviewToFront:frozen];
-if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
-if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+if (CFLYPeekTapOverlays[idx]) [container bringSubviewToFront:CFLYPeekTapOverlays[idx]];
+if (CFLYCacheResizeHandles[idx]) [container bringSubviewToFront:CFLYCacheResizeHandles[idx]];
 return;
 }
 // v43.23：第 7 件——dock 快照：scene 掉 0 時小卡顯示 dock 當下抓的最後一幀，
 // 而不是深灰佔位（97 的 C 只蓋主窗恢復門控，小卡沒有自己的幀）。快照平時藏著，
 // 這裡才打開；點按層／調尺寸手柄照舊提到它上面。
-UIView *dockSnap = GHCFPeekDockSnaps[idx];
+UIView *dockSnap = CFLYPeekDockSnaps[idx];
 if (dockSnap && dockSnap.superview == container) {
-GHCFLogLine("v43.24 placeholder showing dock snapshot");
+CFLYLogLine("v43.24 placeholder showing dock snapshot");
 dockSnap.hidden = NO;
 [container bringSubviewToFront:dockSnap];
-if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
-if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+if (CFLYPeekTapOverlays[idx]) [container bringSubviewToFront:CFLYPeekTapOverlays[idx]];
+if (CFLYCacheResizeHandles[idx]) [container bringSubviewToFront:CFLYCacheResizeHandles[idx]];
 return;
 }
-UIView *ph = GHCFGatePlaceholders[idx];
+UIView *ph = CFLYGatePlaceholders[idx];
 if (ph) {
 [container bringSubviewToFront:ph];
-if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
-if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
+if (CFLYPeekTapOverlays[idx]) [container bringSubviewToFront:CFLYPeekTapOverlays[idx]];
+if (CFLYCacheResizeHandles[idx]) [container bringSubviewToFront:CFLYCacheResizeHandles[idx]];
 return;
 }
 ph = [[UIView alloc] initWithFrame:container.bounds];
@@ -7156,31 +7130,31 @@ ph.userInteractionEnabled = NO;
 // 深灰（0.16），不是黑——一眼能看出「在载入」而不是黑窗。
 ph.backgroundColor = [UIColor colorWithRed:0.16 green:0.16 blue:0.18 alpha:1.0];
 // v74：冷啟動等著時不再轉圈——靜態 App 圖標＋App 名（看起來像 App 在開）。
-GHCFAddStaticAppIconAndName(ph, GHCFCacheBundleIDs[idx], GHCFAppNames[idx]);
+CFLYAddStaticAppIconAndName(ph, CFLYCacheBundleIDs[idx], CFLYAppNames[idx]);
 [container addSubview:ph];
-if (GHCFPeekTapOverlays[idx]) [container bringSubviewToFront:GHCFPeekTapOverlays[idx]];
-if (GHCFCacheResizeHandles[idx]) [container bringSubviewToFront:GHCFCacheResizeHandles[idx]];
-GHCFGatePlaceholders[idx] = ph;
-GHCFLogLine("v74 static placeholder shown");
+if (CFLYPeekTapOverlays[idx]) [container bringSubviewToFront:CFLYPeekTapOverlays[idx]];
+if (CFLYCacheResizeHandles[idx]) [container bringSubviewToFront:CFLYCacheResizeHandles[idx]];
+CFLYGatePlaceholders[idx] = ph;
+CFLYLogLine("v74 static placeholder shown");
 }
 
 // v72：拿掉占位（0.2 秒淡出；没有占位就直接回，不重复淡）。
 // v43.22：佔位拿掉時凍結快照一起拿掉（活內容出來了，不再需要凍結幀）。
 // v43.23：第 7 件——dock 快照只藏回去（hidden=YES），不拿掉：小卡還收著，
 // scene 下次再掉 0 還要靠它顯示最後一幀；小卡恢復／關掉時由
-// GHCFHideDockPeekForIndex／銷毀入口清掉。
-static void GHCFHidePlaceholderForIndex(int idx) {
-if (idx < 0 || idx >= GHCFAppCount) return;
-UIView *frozen = GHCFGateFrozenSnaps[idx];
+// CFLYHideDockPeekForIndex／銷毀入口清掉。
+static void CFLYHidePlaceholderForIndex(int idx) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+UIView *frozen = CFLYGateFrozenSnaps[idx];
 if (frozen) {
-GHCFGateFrozenSnaps[idx] = nil;
+CFLYGateFrozenSnaps[idx] = nil;
 [frozen removeFromSuperview];
 }
-UIView *dockSnap = GHCFPeekDockSnaps[idx];
+UIView *dockSnap = CFLYPeekDockSnaps[idx];
 if (dockSnap) dockSnap.hidden = YES;
-UIView *ph = GHCFGatePlaceholders[idx];
+UIView *ph = CFLYGatePlaceholders[idx];
 if (!ph) return;
-GHCFGatePlaceholders[idx] = nil;
+CFLYGatePlaceholders[idx] = nil;
 [UIView animateWithDuration:0.35 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
 ph.alpha = 0.0;
 } completion:^(BOOL finished) {
@@ -7194,27 +7168,27 @@ ph.alpha = 0.0;
 // (b) 內容區 sublayerTransform 的縮放 vs 該有的縮放（誤差 0.03）——恢復時 transform
 // 還停在小卡縮放（0.27）就是 1.0.72 影片裡黑半邊的樣子。layer-host 路 scene frame
 // 恆為屏幕尺寸，(a) 用屏幕尺寸比、(b) 用顯示 scale 比。沒推過 frame（Valid=NO）算不對上。
-static BOOL GHCFHostedSceneSizeMatchesWindow(void) {
-if (!GHCFHostedScene || !GHCFHostedContentView) return YES;
-if (!GHCFHostedSceneFrameSizeValid) return NO;
-CGSize contentSize = GHCFHostedContentView.bounds.size;
+static BOOL CFLYHostedSceneSizeMatchesWindow(void) {
+if (!CFLYHostedScene || !CFLYHostedContentView) return YES;
+if (!CFLYHostedSceneFrameSizeValid) return NO;
+CGSize contentSize = CFLYHostedContentView.bounds.size;
 if (contentSize.width <= 0 || contentSize.height <= 0) return YES;
 CGSize screenSize = [UIScreen mainScreen].bounds.size;
 CGSize expectedFrame;
 CGFloat expectedScale;
-if (GHCFHostedPresenter && GHCFHostedPresenter.presentationView) {
-CGFloat scale = GHCFHostedScaleRatio;
+if (CFLYHostedPresenter && CFLYHostedPresenter.presentationView) {
+CGFloat scale = CFLYHostedScaleRatio;
 if (scale < 0.5) scale = 0.5;
 if (scale > 2.0) scale = 2.0;
-expectedFrame = GHCFSceneFrameSizeForContentSizeAndScale(contentSize, scale);
+expectedFrame = CFLYSceneFrameSizeForContentSizeAndScale(contentSize, scale);
 expectedScale = scale;
 } else {
 expectedFrame = screenSize;
-expectedScale = GHCFLayerHostDisplayScaleForContentSizeAndBundleID(contentSize, GHCFHostedBundleID);
+expectedScale = CFLYLayerHostDisplayScaleForContentSizeAndBundleID(contentSize, CFLYHostedBundleID);
 }
-if (fabs(GHCFHostedSceneFrameSize.width - expectedFrame.width) > 3.0) return NO;
-if (fabs(GHCFHostedSceneFrameSize.height - expectedFrame.height) > 3.0) return NO;
-CGFloat actualScale = GHCFHostedContentView.layer.sublayerTransform.m11;
+if (fabs(CFLYHostedSceneFrameSize.width - expectedFrame.width) > 3.0) return NO;
+if (fabs(CFLYHostedSceneFrameSize.height - expectedFrame.height) > 3.0) return NO;
+CGFloat actualScale = CFLYHostedContentView.layer.sublayerTransform.m11;
 if (actualScale <= 0) actualScale = 1.0;
 if (fabs(actualScale - expectedScale) > 0.03) return NO;
 return YES;
@@ -7224,28 +7198,28 @@ return YES;
 // 右半邊是黑的）。只對看得見的主窗；小卡（已收起）不走這裡（peek 尺寸由 peek 縮放路管，
 // 內容永遠貼合）；門控已在跑時不重設（恢復／切換的門控優先）。
 - (void)armSizeGateForResize {
-if (GHCFRestoreGateActive) return;
-if (!GHCFHostedWindow || GHCFHostedWindow.hidden || GHCFHostedMinimized) return;
-if (!GHCFHostedScene) return;
-int idx = GHCFActiveAppIndex;
-if (idx < 0 || idx >= GHCFAppCount) return;
-GHCFShowPlaceholderForIndex(idx);
-GHCFRestoreGateActive = YES;
-GHCFRestoreGateScene = GHCFHostedScene;
-GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
-GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
-GHCFRestoreGateRebuilt = NO;
-GHCFRestoreGateStuckLogged = NO;
-GHCFRestoreGateTimeoutDeferredLogged = NO;
-GHCFRestoreGateTimeoutDeferCount = 0;
-if (idx >= 0 && idx < GHCFAppCount) GHCFRestoreGaveUp[idx] = NO; // v43.7：拖调尺寸是新的尝试，清掉停手旗标。
-GHCFRestoreGateMode = 1;
-GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
-if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
-GHCFSizeGatePreMatched = NO;
-GHCFSizeGateMatchedOnce = NO;
-GHCFSizeGateWaitingLogged = NO;
-GHCFLogLine("v73 resize gated until size matches");
+if (CFLYRestoreGateActive) return;
+if (!CFLYHostedWindow || CFLYHostedWindow.hidden || CFLYHostedMinimized) return;
+if (!CFLYHostedScene) return;
+int idx = CFLYActiveAppIndex;
+if (idx < 0 || idx >= CFLYAppCount) return;
+CFLYShowPlaceholderForIndex(idx);
+CFLYRestoreGateActive = YES;
+CFLYRestoreGateScene = CFLYHostedScene;
+CFLYRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+CFLYRestoreGateDeadline = CFLYRestoreGateStart + 5.0;
+CFLYRestoreGateRebuilt = NO;
+CFLYRestoreGateStuckLogged = NO;
+CFLYRestoreGateTimeoutDeferredLogged = NO;
+CFLYRestoreGateTimeoutDeferCount = 0;
+if (idx >= 0 && idx < CFLYAppCount) CFLYRestoreGaveUp[idx] = NO; // v43.7：拖调尺寸是新的尝试，清掉停手旗标。
+CFLYRestoreGateMode = 1;
+CFLYRestoreGateTargetAlpha = CFLYHostedWindow.alpha;
+if (CFLYRestoreGateTargetAlpha <= 0.01) CFLYRestoreGateTargetAlpha = 1.0;
+CFLYSizeGatePreMatched = NO;
+CFLYSizeGateMatchedOnce = NO;
+CFLYSizeGateWaitingLogged = NO;
+CFLYLogLine("v73 resize gated until size matches");
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 [self showGatedRestoredWindowTick];
 });
@@ -7259,14 +7233,14 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
 // 取消条件：窗／scene 没了、scene 换了、恢复中又被收起（这时把窗放出来，
 // 让 peek 看得见，占位由看门狗管）。门控只管显示，不管 resize（还是走 v65 的延后链）。
 - (void)showGatedRestoredWindowTick {
-if (!GHCFRestoreGateActive) return;
-if (!GHCFHostedWindow || !GHCFHostedScene) {
-GHCFRestoreGateActive = NO;
-if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) GHCFHidePlaceholderForIndex(GHCFActiveAppIndex);
+if (!CFLYRestoreGateActive) return;
+if (!CFLYHostedWindow || !CFLYHostedScene) {
+CFLYRestoreGateActive = NO;
+if (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) CFLYHidePlaceholderForIndex(CFLYActiveAppIndex);
 return;
 }
-if (GHCFHostedScene != GHCFRestoreGateScene) { GHCFRestoreGateActive = NO; return; }
-if (GHCFRestoreGateMode == 0) {
+if (CFLYHostedScene != CFLYRestoreGateScene) { CFLYRestoreGateActive = NO; return; }
+if (CFLYRestoreGateMode == 0) {
 // 恢复模式：窗已显示出来、盖着占位等就绪（cs==2 将要显示那一下窗还藏着，
 // tick 的就绪分支会把它显示出来；锁着时窗也被藏着，等解锁）。
 // v43.24：第 1 件——被收起不取消（熔斷照樣重建、重建好的 scene 留快取；
@@ -7275,13 +7249,13 @@ if (GHCFRestoreGateMode == 0) {
 // 已显示窗模式（promote／新窗）：窗应该看得见；被藏起来就取消
 //（占位留着，看门狗会在 scene 就绪时拿掉）。
 // v43.24：第 1 件——被收起不取消（同模式 0；就緒分支的 80ms 塊看到收著會靜靜結束）。
-if (GHCFHostedWindow.hidden) { GHCFRestoreGateActive = NO; return; }
+if (CFLYHostedWindow.hidden) { CFLYRestoreGateActive = NO; return; }
 }
 NSUInteger cs = 2;
-@try { cs = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
+@try { cs = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
 NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
 if (cs == 2) {
-if (GHCFScreenLocked) {
+if (CFLYScreenLocked) {
 // 锁着——先不显示，等解锁（解锁回调会推前景＋盖占位，门控继续等）。
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 [self showGatedRestoredWindowTick];
@@ -7290,8 +7264,8 @@ return;
 }
     // v43.24：第 1 件——收著時尺寸門直接算過（小卡不彈大窗；就緒分支的 80ms 塊
     // 看到收著會靜靜結束門控，點小卡恢復時再重新設門）。
-    if (GHCFHostedMinimized) {
-        GHCFRestoreGateActive = NO;
+    if (CFLYHostedMinimized) {
+        CFLYRestoreGateActive = NO;
         return;
     }
     // v73：尺寸門——scene 內容尺寸對上窗 frame 才算就緒（黑半邊修復）。
@@ -7299,17 +7273,17 @@ return;
     // 佔位繼續蓋著，0.5 秒後再看；卡滿 5 秒還對不上就重建 scene（跟 cs==0 同一路）。
     // 尺寸對上了：第一次對上先記一行、再等一個 tick（半秒）讓 scene 把新尺寸畫出來；
     // 決策時就對上、或上個 tick 已對上，就直接走 80ms 顯示。
-    if (!GHCFHostedSceneSizeMatchesWindow()) {
-        GHCFSizeGateMatchedOnce = NO;
-        if (!GHCFSizeGateWaitingLogged) {
-            GHCFSizeGateWaitingLogged = YES;
-            GHCFLogLine("v73 size gate waiting");
+    if (!CFLYHostedSceneSizeMatchesWindow()) {
+        CFLYSizeGateMatchedOnce = NO;
+        if (!CFLYSizeGateWaitingLogged) {
+            CFLYSizeGateWaitingLogged = YES;
+            CFLYLogLine("v73 size gate waiting");
         }
-        if (GHCFHostedContentView) {
-            [self resizeHostedSceneToContentSize:GHCFHostedContentView.bounds.size];
+        if (CFLYHostedContentView) {
+            [self resizeHostedSceneToContentSize:CFLYHostedContentView.bounds.size];
         }
-        if (now >= GHCFRestoreGateDeadline && !GHCFRestoreGateRebuilt) {
-            GHCFLogLine("v73 size gate timeout, rebuilding scene");
+        if (now >= CFLYRestoreGateDeadline && !CFLYRestoreGateRebuilt) {
+            CFLYLogLine("v73 size gate timeout, rebuilding scene");
             [self rebuildStuckHostedScene];
             return;
         }
@@ -7318,69 +7292,69 @@ return;
         });
         return;
     }
-    if (!GHCFSizeGatePreMatched && !GHCFSizeGateMatchedOnce) {
-        GHCFSizeGateMatchedOnce = YES;
-        GHCFLogLine("v73 size gate matched");
+    if (!CFLYSizeGatePreMatched && !CFLYSizeGateMatchedOnce) {
+        CFLYSizeGateMatchedOnce = YES;
+        CFLYLogLine("v73 size gate matched");
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             [self showGatedRestoredWindowTick];
         });
         return;
     }
     // 就绪——再等多一帧（约 80ms）才显示，让第一帧画好（2d）。
-GHCFRestoreGateActive = NO;
-int idx = GHCFActiveAppIndex;
-CGFloat targetAlpha = GHCFRestoreGateTargetAlpha;
+CFLYRestoreGateActive = NO;
+int idx = CFLYActiveAppIndex;
+CGFloat targetAlpha = CFLYRestoreGateTargetAlpha;
 if (targetAlpha <= 0.01) targetAlpha = 1.0;
-FBScene *readyScene = GHCFHostedScene;
-UIWindow *readyWindow = GHCFHostedWindow;
-int readyMode = GHCFRestoreGateMode;
+FBScene *readyScene = CFLYHostedScene;
+UIWindow *readyWindow = CFLYHostedWindow;
+int readyMode = CFLYRestoreGateMode;
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.08 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 // 80ms 内窗被关／被收／scene 换了——不显示。
-if (!readyWindow || readyWindow != GHCFHostedWindow) return;
-if (!readyScene || readyScene != GHCFHostedScene) return;
-if (GHCFHostedMinimized) return;
+if (!readyWindow || readyWindow != CFLYHostedWindow) return;
+if (!readyScene || readyScene != CFLYHostedScene) return;
+if (CFLYHostedMinimized) return;
 if (readyMode == 0) {
 // 恢复：窗还藏着——拿掉占位，淡入显示。
-if (idx >= 0 && idx < GHCFAppCount) GHCFHidePlaceholderForIndex(idx);
+if (idx >= 0 && idx < CFLYAppCount) CFLYHidePlaceholderForIndex(idx);
 readyWindow.alpha = 0.0;
 readyWindow.hidden = NO;
 [UIView animateWithDuration:0.4 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
 readyWindow.alpha = targetAlpha;
 } completion:nil];
-GHCFLogLine("v72 restore shown after ready");
+CFLYLogLine("v72 restore shown after ready");
 } else {
 // 已显示窗：窗本来就看得见——只把占位淡出。
-if (idx >= 0 && idx < GHCFAppCount) GHCFHidePlaceholderForIndex(idx);
-GHCFLogLine("v72 promote shown after ready");
+if (idx >= 0 && idx < CFLYAppCount) CFLYHidePlaceholderForIndex(idx);
+CFLYLogLine("v72 promote shown after ready");
 }
-GHCFUpdateDimOverlay();
+CFLYUpdateDimOverlay();
 });
 return;
 }
 // 还没就绪——绝不直接显示黑窗，继续等。
-if (cs == 0 && now >= GHCFRestoreGateStart + GHCFRestoreGateStuckZeroTimeout) {
-if (!GHCFRestoreGateRebuilt) {
+if (cs == 0 && now >= CFLYRestoreGateStart + CFLYRestoreGateStuckZeroTimeout) {
+if (!CFLYRestoreGateRebuilt) {
 // v43.12：门控超时先读真实锁屏状态——锁屏通知会乱跳（31.log：锁→解→锁→解
-// 连跑几轮，旗标 GHCFScreenLocked 停在假的 YES 上，门控永远 defer、重建永不
+// 连跑几轮，旗标 CFLYScreenLocked 停在假的 YES 上，门控永远 defer、重建永不
 // 发生）。notify_get_state 读实时状态，不是锁就走重建；只有实时真是锁才 defer。
 // defer 满 6 次（约 3 秒）scene 还是 0 也直接重建——真锁着时重建也只是再得
 // 一个 0、走现成的 gave-up 路，不比卡住更坏。
 uint64_t liveLockState = 0;
 notify_get_state(lockToken, &liveLockState);
-if (GHCFScreenLocked && liveLockState == 1) {
-GHCFRestoreGateTimeoutDeferCount++;
-if (GHCFRestoreGateTimeoutDeferCount >= 6) {
+if (CFLYScreenLocked && liveLockState == 1) {
+CFLYRestoreGateTimeoutDeferCount++;
+if (CFLYRestoreGateTimeoutDeferCount >= 6) {
 char dbuf[128];
-snprintf(dbuf, sizeof(dbuf), "v43.12 restore gate defer cap reached, rebuilding scene (defer %d)", GHCFRestoreGateTimeoutDeferCount);
-GHCFLogLine(dbuf);
+snprintf(dbuf, sizeof(dbuf), "v43.12 restore gate defer cap reached, rebuilding scene (defer %d)", CFLYRestoreGateTimeoutDeferCount);
+CFLYLogLine(dbuf);
 [self rebuildStuckHostedScene];
 return;
 }
-if (!GHCFRestoreGateTimeoutDeferredLogged) {
-GHCFRestoreGateTimeoutDeferredLogged = YES;
+if (!CFLYRestoreGateTimeoutDeferredLogged) {
+CFLYRestoreGateTimeoutDeferredLogged = YES;
 char lbuf[160];
 snprintf(lbuf, sizeof(lbuf), "v72 restore gate timeout deferred, screen locked (live state %llu)", (unsigned long long)liveLockState);
-GHCFLogLine(lbuf);
+CFLYLogLine(lbuf);
 }
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 [self showGatedRestoredWindowTick];
@@ -7388,21 +7362,21 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
 return;
 }
 // 卡在 0 超过约 2 秒——重建 scene（v43.22 熔斷；鎖屏時仍先 defer，滿 6 次才重建）。
-GHCFLogLine("v72 restore gate timeout, rebuilding scene");
+CFLYLogLine("v72 restore gate timeout, rebuilding scene");
 [self rebuildStuckHostedScene];
 return;
 }
 // v43.7：重建一次还是 0——停手，不再门控、不再重试（28.log：重建后还卡 0、
 // 门控一直转，随后 SpringBoard 重启）。静态占位留着盖住黑窗；用户下次
 // 手动点这扇窗恢复时（restoreHostedWindow 入口）再清旗标重新尝试。
-if (!GHCFRestoreGateStuckLogged) {
-GHCFRestoreGateStuckLogged = YES;
-GHCFLogLine("v72 restore gave up after rebuild, placeholder kept");
+if (!CFLYRestoreGateStuckLogged) {
+CFLYRestoreGateStuckLogged = YES;
+CFLYLogLine("v72 restore gave up after rebuild, placeholder kept");
 }
-GHCFRestoreGateActive = NO;
-if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
-GHCFRestoreGaveUp[GHCFActiveAppIndex] = YES;
-GHCFShowPlaceholderForIndex(GHCFActiveAppIndex);
+CFLYRestoreGateActive = NO;
+if (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) {
+CFLYRestoreGaveUp[CFLYActiveAppIndex] = YES;
+CFLYShowPlaceholderForIndex(CFLYActiveAppIndex);
 }
 return;
 }
@@ -7410,7 +7384,7 @@ if (cs == 1) {
 // 准备中——再推一次前景帮它一把。0 不推：24.log 证明推 0 没用（时针案
 // 重试／恢复／解锁／看门狗全推过，一直是 0）。
 @try {
-[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+[CFLYHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 if ([settings respondsToSelector:@selector(setBackgrounded:)]) {
 settings.backgrounded = NO;
@@ -7431,10 +7405,10 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
     // 建时 state=1、推完 foreground 读 0，之后重试／恢复／解锁／看门狗全推过，
     // 一直是 0——不重建永远是黑窗）。重建后重新设门（新 scene 可能还在准备），
     // 只重建一次；重建后还是 0 就继续等，占位一直盖着。
-    int idx = GHCFActiveAppIndex;
-    if (idx < 0 || idx >= GHCFAppCount) return;
-    const char *bid = GHCFCacheBundleIDs[idx];
-    const char *nm = GHCFAppNames[idx];
+    int idx = CFLYActiveAppIndex;
+    if (idx < 0 || idx >= CFLYAppCount) return;
+    const char *bid = CFLYCacheBundleIDs[idx];
+    const char *nm = CFLYAppNames[idx];
     if (!bid || bid[0] == '\0') return;
     char bidCopy[128];
     char nameCopy[128];
@@ -7442,28 +7416,28 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
     bidCopy[sizeof(bidCopy) - 1] = '\0';
     strncpy(nameCopy, nm ? nm : "", sizeof(nameCopy) - 1);
     nameCopy[sizeof(nameCopy) - 1] = '\0';
-    int mode = GHCFRestoreGateMode;
-    CGFloat targetAlpha = GHCFRestoreGateTargetAlpha;
+    int mode = CFLYRestoreGateMode;
+    CGFloat targetAlpha = CFLYRestoreGateTargetAlpha;
     // v43.24：第 1 件——記下重建前是不是收著的（收著時重建後要重新 dock 成小卡，
     // 不能彈出大窗；重建好的 scene 留快取，點小卡恢復時再重新設門）。
-    BOOL wasMinimized = GHCFHostedMinimized;
+    BOOL wasMinimized = CFLYHostedMinimized;
     // 取消当前门控（tick 链停掉；重建后重新设门）。
-    GHCFRestoreGateActive = NO;
+    CFLYRestoreGateActive = NO;
     // 占位先拿掉（旧窗要销毁了；新窗重建后按需再盖）。
-    GHCFHidePlaceholderForIndex(idx);
-    GHCFSuppressSlideInOnce = YES; // 重建不滑入，直接出现在原位。
-    GHCFDestroyCachedEntryAtIndex(idx); // 藏窗、清缓存＋活动量。
+    CFLYHidePlaceholderForIndex(idx);
+    CFLYSuppressSlideInOnce = YES; // 重建不滑入，直接出现在原位。
+    CFLYDestroyCachedEntryAtIndex(idx); // 藏窗、清缓存＋活动量。
     [self createHostedSceneForBundleID:bidCopy name:nameCopy];
-    GHCFLogLine("v72 scene rebuilt after stuck 0");
-    if (!GHCFHostedWindow || !GHCFHostedScene) return;
+    CFLYLogLine("v72 scene rebuilt after stuck 0");
+    if (!CFLYHostedWindow || !CFLYHostedScene) return;
     // v43.24：第 1 件——重建前是收著的：重新 dock 成小卡（不彈大窗），
     // 重建好的 scene 留在快取裡；還沒就緒就重新設門（下面跳過藏窗／佔位那兩支）。
     if (wasMinimized) {
         [self minimizeHostedWindow];
-        GHCFLogLine("v43.24 rebuilt scene re-docked to peek");
+        CFLYLogLine("v43.24 rebuilt scene re-docked to peek");
     }
     NSUInteger cs = 2;
-    @try { cs = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
+    @try { cs = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
     if (cs == 2) {
         // 新 scene 直接就绪——窗已经显示了（create 时显示的），不用再门控。
         return;
@@ -7471,27 +7445,27 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
     // 新 scene 还没就绪——重新设门（不再重建第二次）。
     // v43.24：第 1 件——收著時不藏窗（小卡要看得見）、不蓋佔位（小卡走 dock 快照／看門狗）。
     if (mode == 0) {
-        if (!wasMinimized) GHCFHostedWindow.hidden = YES;
+        if (!wasMinimized) CFLYHostedWindow.hidden = YES;
     } else {
         if (!wasMinimized) {
-            int nidx = GHCFActiveAppIndex;
-            if (nidx >= 0 && nidx < GHCFAppCount) GHCFShowPlaceholderForIndex(nidx);
+            int nidx = CFLYActiveAppIndex;
+            if (nidx >= 0 && nidx < CFLYAppCount) CFLYShowPlaceholderForIndex(nidx);
         }
     }
-    GHCFRestoreGateActive = YES;
-    GHCFRestoreGateScene = GHCFHostedScene;
-    GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
-    GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
-    GHCFRestoreGateRebuilt = YES;
-    GHCFRestoreGateStuckLogged = NO;
-    GHCFRestoreGateTimeoutDeferredLogged = NO;
-    GHCFRestoreGateTimeoutDeferCount = 0;
-    GHCFRestoreGateMode = mode;
-    GHCFRestoreGateTargetAlpha = targetAlpha;
-    GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：重建後現算一次（新 scene 建在正確尺寸上，通常已對上）。
-    GHCFSizeGateMatchedOnce = NO;
-    GHCFSizeGateWaitingLogged = NO;
-    GHCFLogLine("v72 restore gated until ready");
+    CFLYRestoreGateActive = YES;
+    CFLYRestoreGateScene = CFLYHostedScene;
+    CFLYRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+    CFLYRestoreGateDeadline = CFLYRestoreGateStart + 5.0;
+    CFLYRestoreGateRebuilt = YES;
+    CFLYRestoreGateStuckLogged = NO;
+    CFLYRestoreGateTimeoutDeferredLogged = NO;
+    CFLYRestoreGateTimeoutDeferCount = 0;
+    CFLYRestoreGateMode = mode;
+    CFLYRestoreGateTargetAlpha = targetAlpha;
+    CFLYSizeGatePreMatched = CFLYHostedSceneSizeMatchesWindow(); // v73：重建後現算一次（新 scene 建在正確尺寸上，通常已對上）。
+    CFLYSizeGateMatchedOnce = NO;
+    CFLYSizeGateWaitingLogged = NO;
+    CFLYLogLine("v72 restore gated until ready");
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [self showGatedRestoredWindowTick];
     });
@@ -7503,19 +7477,19 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
     // scene 还在小卡尺寸上合成，layer 里是小卡最后一帧；改完尺寸再现抓会是黑的。
     // 活窗尺寸一次定好（restore 里已设好），动画只动快照的 center＋transform
     //（GPU 合成，不触发布局／scene 重排），播完换回真窗。
-    UIWindow *hosted = GHCFHostedWindow;
+    UIWindow *hosted = CFLYHostedWindow;
     if (!hosted) { if (completion) completion(); return; }
     // v43.6：优先用预抓的快照；预抓是 nil（没抓到／这次恢复没走预抓）才走现抓；
     // 现抓也是 nil 才走下面的静态占位（深灰＋图标＋名）。用完就清，不留着。
-    UIView *snap = GHCFRestorePreSnap;
-    GHCFRestorePreSnap = nil;
+    UIView *snap = CFLYRestorePreSnap;
+    CFLYRestorePreSnap = nil;
     if (!snap) {
     @try { snap = [hosted snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; snap = nil; }
     }
-    if (!ready && snap) GHCFLogLine("v74 restore snapshot used");
-    UIWindowScene *ws = GHCFActiveWindowScene();
+    if (!ready && snap) CFLYLogLine("v74 restore snapshot used");
+    UIWindowScene *ws = CFLYActiveWindowScene();
     UIWindow *overlay = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-    overlay.windowLevel = GHCF_HOSTED_FRONT_LEVEL;
+    overlay.windowLevel = CFLY_HOSTED_FRONT_LEVEL;
     overlay.backgroundColor = [UIColor clearColor];
     if (ws) overlay.windowScene = ws;
     UIViewController *vc = [[UIViewController alloc] init];
@@ -7528,12 +7502,12 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
         // 布局按目标框（toFrame）算，transform 会把它压回小卡尺寸。
         animView = [[UIView alloc] initWithFrame:toFrame];
         animView.backgroundColor = [UIColor colorWithRed:0.16 green:0.16 blue:0.18 alpha:1.0];
-        const char *fbBid = (GHCFHostedBundleID[0] != '\0') ? GHCFHostedBundleID : NULL;
-        const char *nm = (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) ? GHCFAppNames[GHCFActiveAppIndex] : NULL;
-        GHCFAddStaticAppIconAndName(animView, fbBid, nm);
-        GHCFLogLine("v74 restore snapshot missing, placeholder");
+        const char *fbBid = (CFLYHostedBundleID[0] != '\0') ? CFLYHostedBundleID : NULL;
+        const char *nm = (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) ? CFLYAppNames[CFLYActiveAppIndex] : NULL;
+        CFLYAddStaticAppIconAndName(animView, fbBid, nm);
+        CFLYLogLine("v74 restore snapshot missing, placeholder");
     }
-    animView.layer.cornerRadius = GHCFReadCornerRadius();
+    animView.layer.cornerRadius = CFLYReadCornerRadius();
     animView.layer.masksToBounds = YES;
     // 快照放在目标框上，再用 center＋transform 把它压回小卡位置／尺寸——
     // 动画只动这两个（GPU 合成），播完回到恒等。
@@ -7544,7 +7518,7 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
     animView.transform = CGAffineTransformMakeScale(s, s);
     [vc.view addSubview:animView];
     overlay.hidden = NO;
-    GHCFSnapshotAnimWindow = overlay;
+    CFLYSnapshotAnimWindow = overlay;
     [UIView animateWithDuration:0.7 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
         animView.transform = CGAffineTransformIdentity;
         animView.center = CGPointMake(CGRectGetMidX(toFrame), CGRectGetMidY(toFrame));
@@ -7553,12 +7527,12 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
         // v43.22：沒就緒且是真快照——不要丟掉，留在窗上當凍結幀（門控等待期間
         // 顯示最後一幀活內容，不換深灰佔位；就緒或沒真快照就照舊丟掉）。
         // 凍結幀點不動（userInteractionEnabled=NO），底部帶一個細微的載入提示。
-        BOOL keepFrozen = (!ready && isRealSnap && GHCFHostedWindow && !GHCFHostedMinimized
-            && GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount);
-        int fidx = GHCFActiveAppIndex;
-        UIView *fcontainer = (keepFrozen && fidx >= 0 && fidx < GHCFAppCount) ? GHCFCacheContainers[fidx] : nil;
+        BOOL keepFrozen = (!ready && isRealSnap && CFLYHostedWindow && !CFLYHostedMinimized
+            && CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount);
+        int fidx = CFLYActiveAppIndex;
+        UIView *fcontainer = (keepFrozen && fidx >= 0 && fidx < CFLYAppCount) ? CFLYCacheContainers[fidx] : nil;
         if (keepFrozen && fcontainer) {
-            UIView *oldFrozen = GHCFGateFrozenSnaps[fidx];
+            UIView *oldFrozen = CFLYGateFrozenSnaps[fidx];
             if (oldFrozen && oldFrozen != animView) [oldFrozen removeFromSuperview];
             animView.transform = CGAffineTransformIdentity;
             animView.frame = fcontainer.bounds;
@@ -7573,13 +7547,13 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
             lz.userInteractionEnabled = NO;
             [animView addSubview:lz];
             [fcontainer addSubview:animView];
-            GHCFGateFrozenSnaps[fidx] = animView;
-            GHCFLogLine("v43.22 frozen snapshot kept during gate");
+            CFLYGateFrozenSnaps[fidx] = animView;
+            CFLYLogLine("v43.22 frozen snapshot kept during gate");
         } else {
             [animView removeFromSuperview];
         }
         overlay.hidden = YES;
-        if (GHCFSnapshotAnimWindow == overlay) GHCFSnapshotAnimWindow = nil;
+        if (CFLYSnapshotAnimWindow == overlay) CFLYSnapshotAnimWindow = nil;
         if (completion) completion();
     }];
 }
@@ -7588,107 +7562,107 @@ dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), 
     // v72：恢复的门控决策（快照动画播完时跑）：scene 就绪就走 tick 的就绪分支
     //（80ms 延迟＋淡入显示）；没就绪就把窗显示出来、盖占位、设门等。
     // 调用前 restoreHostedWindow 已把窗藏好、frame 一次定好、前景推好、
-    // GHCFRestoreGateTargetAlpha 已记好。
+    // CFLYRestoreGateTargetAlpha 已记好。
     // v72：动画 0.25 秒里窗可能被关／被收／活动窗换了——先验证，不符合就作废。
-    if (!GHCFHostedWindow || !GHCFHostedScene) return;
-    if (GHCFHostedMinimized) return;
-    if (GHCFRestoreGateScene && GHCFHostedScene != GHCFRestoreGateScene) return;
-    int idx = GHCFActiveAppIndex;
+    if (!CFLYHostedWindow || !CFLYHostedScene) return;
+    if (CFLYHostedMinimized) return;
+    if (CFLYRestoreGateScene && CFLYHostedScene != CFLYRestoreGateScene) return;
+    int idx = CFLYActiveAppIndex;
     NSUInteger cs = 2;
-    @try { cs = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
+    @try { cs = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; cs = 2; }
     if (cs == 2) {
         // 就绪——设门后直接跑一次 tick，tick 的就绪分支会等 80ms 再淡入显示。
-        GHCFRestoreGateActive = YES;
-        GHCFRestoreGateScene = GHCFHostedScene;
-        GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
-        GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
-        GHCFRestoreGateRebuilt = NO;
-        GHCFRestoreGateStuckLogged = NO;
-        GHCFRestoreGateTimeoutDeferredLogged = NO;
-        GHCFRestoreGateTimeoutDeferCount = 0;
-        GHCFRestoreGateMode = 0;
-        GHCFSizeGatePreMatched = GHCFHostedSceneSizeMatchesWindow(); // v73：決策時尺寸已對上就不用再等一輪 grace。
-        GHCFSizeGateMatchedOnce = NO;
-        GHCFSizeGateWaitingLogged = NO;
+        CFLYRestoreGateActive = YES;
+        CFLYRestoreGateScene = CFLYHostedScene;
+        CFLYRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+        CFLYRestoreGateDeadline = CFLYRestoreGateStart + 5.0;
+        CFLYRestoreGateRebuilt = NO;
+        CFLYRestoreGateStuckLogged = NO;
+        CFLYRestoreGateTimeoutDeferredLogged = NO;
+        CFLYRestoreGateTimeoutDeferCount = 0;
+        CFLYRestoreGateMode = 0;
+        CFLYSizeGatePreMatched = CFLYHostedSceneSizeMatchesWindow(); // v73：決策時尺寸已對上就不用再等一輪 grace。
+        CFLYSizeGateMatchedOnce = NO;
+        CFLYSizeGateWaitingLogged = NO;
         [self showGatedRestoredWindowTick];
         return;
     }
     // 没就绪——窗显示出来、盖占位、设门等（绝不显示黑窗）。
-    if (idx >= 0 && idx < GHCFAppCount) GHCFShowPlaceholderForIndex(idx);
-    CGFloat targetAlpha = GHCFRestoreGateTargetAlpha;
+    if (idx >= 0 && idx < CFLYAppCount) CFLYShowPlaceholderForIndex(idx);
+    CGFloat targetAlpha = CFLYRestoreGateTargetAlpha;
     if (targetAlpha <= 0.01) targetAlpha = 1.0;
-    GHCFHostedWindow.alpha = targetAlpha;
-    GHCFHostedWindow.hidden = NO;
-    GHCFRestoreGateActive = YES;
-    GHCFRestoreGateScene = GHCFHostedScene;
-    GHCFRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
-    GHCFRestoreGateDeadline = GHCFRestoreGateStart + 5.0;
-    GHCFRestoreGateRebuilt = NO;
-    GHCFRestoreGateStuckLogged = NO;
-    GHCFRestoreGateTimeoutDeferredLogged = NO;
-    GHCFRestoreGateTimeoutDeferCount = 0;
-    GHCFRestoreGateMode = 0;
-    GHCFSizeGatePreMatched = NO; // v73：還沒就緒，尺寸門等 tick 裡再判斷。
-    GHCFSizeGateMatchedOnce = NO;
-    GHCFSizeGateWaitingLogged = NO;
-    GHCFLogLine("v72 restore gated until ready");
+    CFLYHostedWindow.alpha = targetAlpha;
+    CFLYHostedWindow.hidden = NO;
+    CFLYRestoreGateActive = YES;
+    CFLYRestoreGateScene = CFLYHostedScene;
+    CFLYRestoreGateStart = [NSDate timeIntervalSinceReferenceDate];
+    CFLYRestoreGateDeadline = CFLYRestoreGateStart + 5.0;
+    CFLYRestoreGateRebuilt = NO;
+    CFLYRestoreGateStuckLogged = NO;
+    CFLYRestoreGateTimeoutDeferredLogged = NO;
+    CFLYRestoreGateTimeoutDeferCount = 0;
+    CFLYRestoreGateMode = 0;
+    CFLYSizeGatePreMatched = NO; // v73：還沒就緒，尺寸門等 tick 裡再判斷。
+    CFLYSizeGateMatchedOnce = NO;
+    CFLYSizeGateWaitingLogged = NO;
+    CFLYLogLine("v72 restore gated until ready");
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [self showGatedRestoredWindowTick];
     });
-    GHCFUpdateDimOverlay();
+    CFLYUpdateDimOverlay();
 }
 
 - (void)restoreHostedWindow {
-if (!GHCFHostedWindow || !GHCFHostedMinimized) return;
+if (!CFLYHostedWindow || !CFLYHostedMinimized) return;
 // v71：恢复门控——之前恢复（见下面）先把上一次没跑完的门控取消
 //（新恢复自己重新设门；旧 tick 看到旗標没了就直接回，不会乱显示）。
 // v72：同时记下这次恢复盯着的 scene（快照动画播完时门控决策拿它验证——
 // 动画里活动窗换了，这次恢复就作废）。
-GHCFRestoreGateActive = NO;
-GHCFRestoreGateScene = GHCFHostedScene;
-int idx = GHCFActiveAppIndex;
+CFLYRestoreGateActive = NO;
+CFLYRestoreGateScene = CFLYHostedScene;
+int idx = CFLYActiveAppIndex;
 // v43.7：手动恢复重新尝试——清掉这扇窗的“重建后还卡 0、已停手”旗标。
-if (idx >= 0 && idx < GHCFAppCount) GHCFRestoreGaveUp[idx] = NO;
+if (idx >= 0 && idx < CFLYAppCount) CFLYRestoreGaveUp[idx] = NO;
 // v72：快照动画的起点——恢复前先记下小卡当下的框（动画从这里长到目标框）。
-CGRect restoreFromFrame = GHCFHostedWindow.frame;
+CGRect restoreFromFrame = CFLYHostedWindow.frame;
 // v43.6：恢复前先抓快照——这时窗还在小卡尺寸、scene 还在小卡尺寸上合成，
 // layer 里是小卡最后一帧活内容；等下面把窗／容器改到大窗尺寸、推 scene
 // resize 之后再抓，抓到的 layer 树是黑的（20:37 影片：微信从小卡恢复整窗黑 0.7 秒）。
 // 抓不到就是 nil，动画里再走现抓／静态占位。
-GHCFRestorePreSnap = nil;
-@try { GHCFRestorePreSnap = [GHCFHostedWindow snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; GHCFRestorePreSnap = nil; }
+CFLYRestorePreSnap = nil;
+@try { CFLYRestorePreSnap = [CFLYHostedWindow snapshotViewAfterScreenUpdates:NO]; } @catch (NSException *e) { (void)e; CFLYRestorePreSnap = nil; }
 // v71：恢复门控——恢复先把窗藏起来（小卡点一下就消失，正常）；
 // frame 照旧长到目标尺寸、前景照旧推，等 scene 就绪再淡入显示
 //（见下面门控判断）。目标 alpha 先记下来，淡入要回到原来的值，不是 1.0。
-GHCFRestoreGateTargetAlpha = GHCFHostedWindow.alpha;
-if (GHCFRestoreGateTargetAlpha <= 0.01) GHCFRestoreGateTargetAlpha = 1.0;
-GHCFHostedWindow.hidden = YES;
+CFLYRestoreGateTargetAlpha = CFLYHostedWindow.alpha;
+if (CFLYRestoreGateTargetAlpha <= 0.01) CFLYRestoreGateTargetAlpha = 1.0;
+CFLYHostedWindow.hidden = YES;
 // v72：目标框先记在局部量里（几何块算出来后填；快照动画与门控决策在方法尾用）。
 CGRect restoreTargetFrame = CGRectZero;
 BOOL restoreHasTargetFrame = NO;
 // v41：從 peek 恢復——先把窗的尺寸從存過的位置/大小還原（收起時縮
 // 成了 112x216；存的是窗中心 + 尺寸 + scale），再把容器/內容區的
 // 尺寸也還原（系統可能在縮窗時改了容器尺寸），點按層藏起來，
-if (idx >= 0 && idx < GHCFAppCount) {
-GHCFHideDockPeekForIndex(idx);
+if (idx >= 0 && idx < CFLYAppCount) {
+CFLYHideDockPeekForIndex(idx);
 // v53：恢復一定要回到全尺寸，絕不能留在 peek 尺寸（皇上 23:43 重點）。
 // 目標尺寸＝存過的幾何（夾到預設）；沒存過幾何（固定
 // 中心開著時本來就不存位置、或從來沒存過）就走
 // 預設尺寸；固定中心開著時位置居中、不讀存過的 X/Y（存的可能是舊的）。
 CGFloat geoCX, geoCY, geoW, geoH, geoScale;
-BOOL hasGeo = GHCFRestoreGeometryForIndex(idx, &geoCX, &geoCY, &geoW, &geoH, &geoScale);
+BOOL hasGeo = CFLYRestoreGeometryForIndex(idx, &geoCX, &geoCY, &geoW, &geoH, &geoScale);
 CGFloat presetW, presetH;
-GHCFPresetSizeForBundleID(GHCFHostedBundleID, &presetW, &presetH);
+CFLYPresetSizeForBundleID(CFLYHostedBundleID, &presetW, &presetH);
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 CGFloat targetW, targetH, targetCX, targetCY;
 // v63：尺寸固定——存過的 W/H 不再採用，目標尺寸一律是固定尺寸
 //（presetW/H 已按固定尺寸算好；計算器是自己的 320x693）；只恢復位置（中心）。
 if (hasGeo) {
-GHCFHostedScaleRatio = geoScale;
+CFLYHostedScaleRatio = geoScale;
 }
 targetW = presetW;
 targetH = presetH;
-if (GHCFReadCenterOnOpen() || !hasGeo) {
+if (CFLYReadCenterOnOpen() || !hasGeo) {
 targetCX = screenBounds.size.width / 2.0;
 targetCY = screenBounds.size.height / 2.0;
 } else {
@@ -7697,7 +7671,7 @@ targetCY = geoCY;
 }
 CGFloat minCX = targetW / 2.0 + 8.0;
 CGFloat maxCX = screenBounds.size.width - targetW / 2.0 - 8.0;
-CGFloat minCY = GHCFReadSafeDistance() + targetH / 2.0;
+CGFloat minCY = CFLYReadSafeDistance() + targetH / 2.0;
 CGFloat maxCY = screenBounds.size.height - targetH / 2.0 - 8.0;
 if (targetCX < minCX) targetCX = minCX;
 if (targetCX > maxCX) targetCX = maxCX;
@@ -7711,39 +7685,39 @@ if (targetCY > maxCY) targetCY = maxCY;
 restoreTargetFrame = CGRectMake(targetCX - targetW / 2.0, targetCY - targetH / 2.0, targetW, targetH);
 restoreHasTargetFrame = YES;
 CGRect restoreTargetContentFrame = CGRectMake(0, 0, targetW, targetH);
-CGRect restoreTargetStripFrame = CGRectMake(0, 0, targetW, GHCF_HOSTED_STRIP_H);
-GHCFHostedWindow.frame = restoreTargetFrame;
-if (GHCFHostedContainer) GHCFHostedContainer.frame = restoreTargetContentFrame;
-if (GHCFHostedContentView) GHCFHostedContentView.frame = restoreTargetContentFrame;
-if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = restoreTargetStripFrame;
+CGRect restoreTargetStripFrame = CGRectMake(0, 0, targetW, CFLY_HOSTED_STRIP_H);
+CFLYHostedWindow.frame = restoreTargetFrame;
+if (CFLYHostedContainer) CFLYHostedContainer.frame = restoreTargetContentFrame;
+if (CFLYHostedContentView) CFLYHostedContentView.frame = restoreTargetContentFrame;
+if (CFLYHostedTopStrip) CFLYHostedTopStrip.frame = restoreTargetStripFrame;
 // v42.3：恢復時把 scene frame 也推回滿窗尺寸（不只改 bounds + transform）。
 // 小窗拖調尺寸時松手推過一次小 frame（resizeHostedSceneToContentSize）；
 // 只推 bounds 不推 frame 的話，scene 還以為自己是小窗，恢復後大窗裡
 // 會只顯示一小塊內容。沒拖過小窗時推的值跟原來一樣（無操作）；
 // layer-host 的窗 ApplyScale 裡本來就不推 frame，不受影響。
 NSUInteger restoreCS = 2;
-if (GHCFHostedScene) {
-@try { restoreCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; restoreCS = 2; }
+if (CFLYHostedScene) {
+@try { restoreCS = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; restoreCS = 2; }
 }
 if (restoreCS != 0) {
 [self resizeHostedSceneToContentSize:CGSizeMake(targetW, targetH)];
 } else {
-FBScene *deferredScene = GHCFHostedScene;
+FBScene *deferredScene = CFLYHostedScene;
 CGSize deferredSize = CGSizeMake(targetW, targetH);
-GHCFLogLine("v68 restore scene not ready, resize deferred");
+CFLYLogLine("v68 restore scene not ready, resize deferred");
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-if (!deferredScene || deferredScene != GHCFHostedScene || GHCFHostedMinimized) return;
+if (!deferredScene || deferredScene != CFLYHostedScene || CFLYHostedMinimized) return;
 NSUInteger cs2 = 2;
 @try { cs2 = [deferredScene contentState]; } @catch (NSException *e) { (void)e; }
 if (cs2 != 0) {
 [self resizeHostedSceneToContentSize:deferredSize];
 } else {
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-if (!deferredScene || deferredScene != GHCFHostedScene || GHCFHostedMinimized) return;
+if (!deferredScene || deferredScene != CFLYHostedScene || CFLYHostedMinimized) return;
 [self resizeHostedSceneToContentSize:deferredSize];
 NSUInteger cs3 = 2;
 @try { cs3 = [deferredScene contentState]; } @catch (NSException *e) { (void)e; }
-if (cs3 == 0) GHCFLogLine("v68 restore scene still not ready");
+if (cs3 == 0) CFLYLogLine("v68 restore scene still not ready");
 });
 }
 });
@@ -7751,12 +7725,12 @@ if (cs3 == 0) GHCFLogLine("v68 restore scene still not ready");
 {
 char gbuf[256];
 snprintf(gbuf, sizeof(gbuf), "v57 window restored frame %dx%d@%d,%d geo %dx%d preset %dx%d", (int)targetW, (int)targetH, (int)(targetCX - targetW / 2.0), (int)(targetCY - targetH / 2.0), hasGeo ? (int)geoW : -1, hasGeo ? (int)geoH : -1, (int)presetW, (int)presetH);
-GHCFLogLine(gbuf);
+CFLYLogLine(gbuf);
 }
 }
-GHCFHostedMinimized = NO;
-GHCFBringWindowToFront(GHCFHostedWindow);
-GHCFLogLine("v57 window restored from peek");
+CFLYHostedMinimized = NO;
+CFLYBringWindowToFront(CFLYHostedWindow);
+CFLYLogLine("v57 window restored from peek");
 // v30：最小化后锁屏再解锁、恢复窗时内容是黑的——锁屏把 scene 的
 // foreground 状态弄丢了，只取消 hidden 不够；恢复时也要把
 // foreground=YES 再推一遍（建窗时同一个已证明能用的做法），
@@ -7764,15 +7738,15 @@ GHCFLogLine("v57 window restored from peek");
 // v72：scene 卡在 0 时不推——24.log 证明推 0 没用（时针案重试／恢复／
 // 解锁／看门狗全推过，一直是 0）；卡 0 的交给门控重建。
 NSUInteger restorePreCS = 2;
-if (GHCFHostedScene) {
-@try { restorePreCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; restorePreCS = 2; }
+if (CFLYHostedScene) {
+@try { restorePreCS = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; restorePreCS = 2; }
 }
 if (restorePreCS == 0) {
-GHCFLogLine("v72 foreground push on restore skipped, scene stuck 0");
+CFLYLogLine("v72 foreground push on restore skipped, scene stuck 0");
 } else {
 @try {
-if (GHCFHostedScene) {
-[GHCFHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
+if (CFLYHostedScene) {
+[CFLYHostedScene updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
 settings.foreground = YES;
 // v31：把 backgrounded 也推回 NO（最小化/锁屏时推过 YES），
 // 和 foreground 一起恢复；setter 不存在就跳过，不崩。
@@ -7781,12 +7755,12 @@ settings.backgrounded = NO;
 }
 }];
 char fbuf[128];
-snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on restore contentState=%lu", (unsigned long)[GHCFHostedScene contentState]);
-GHCFLogLine(fbuf);
+snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on restore contentState=%lu", (unsigned long)[CFLYHostedScene contentState]);
+CFLYLogLine(fbuf);
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 foreground push on restore failed");
+CFLYLogLine("v57 foreground push on restore failed");
 }
 }
 // v72：恢复门控判断——前景刚推完，读一次 contentState：
@@ -7795,26 +7769,28 @@ GHCFLogLine("v57 foreground push on restore failed");
 // 没有目标框（idx 无效）时不播动画，直接跑门控决策。
 {
 NSUInteger gateCS = 2;
-if (GHCFHostedScene) {
-@try { gateCS = [GHCFHostedScene contentState]; } @catch (NSException *e) { (void)e; gateCS = 2; }
+if (CFLYHostedScene) {
+@try { gateCS = [CFLYHostedScene contentState]; } @catch (NSException *e) { (void)e; gateCS = 2; }
 }
 if (restoreHasTargetFrame) {
-[self animateRestoreSnapshotFromFrame:restoreFromFrame toFrame:restoreTargetFrame ready:(gateCS == 2 && GHCFHostedSceneSizeMatchesWindow()) completion:^{ // v43.6：动画优先用恢复前预抓的快照（小卡最后一帧，不会黑）；预抓 nil 才现抓，现抓不到才播静态占位。
+[self animateRestoreSnapshotFromFrame:restoreFromFrame toFrame:restoreTargetFrame ready:(gateCS == 2 && CFLYHostedSceneSizeMatchesWindow()) completion:^{ // v43.6：动画优先用恢复前预抓的快照（小卡最后一帧，不会黑）；预抓 nil 才现抓，现抓不到才播静态占位。
 [self runRestoreGateDecision];
 }];
 } else {
-GHCFRestorePreSnap = nil; // v43.6：没目标框就不播动画，预抓的快照不用了，清掉。
+CFLYRestorePreSnap = nil; // v43.6：没目标框就不播动画，预抓的快照不用了，清掉。
 [self runRestoreGateDecision];
 }
 }
 // v40：恢复完把状态存回缓存、更新阴影背景（窗又看得见了）。
-if (idx >= 0 && idx < GHCFAppCount) {
-GHCFSaveActiveToCache();
+if (idx >= 0 && idx < CFLYAppCount) {
+CFLYSaveActiveToCache();
 }
-GHCFUpdateDimOverlay();
+CFLYUpdateDimOverlay();
 // v42：重啟恢復清單 + 任務欄跟著恢復更新。
-GHCFSaveRestoreList();
-GHCFUpdateTaskbar();
+CFLYSaveRestoreList();
+CFLYUpdateTaskbar();
+// 1.0.4：恢復回大窗，圓角回到設定值（封頂按大窗尺寸算）。
+CFLYApplyHostedWindowCornerRadius();
 }
 
 
@@ -7826,25 +7802,25 @@ GHCFUpdateTaskbar();
 - (void)handleScaleSlider:(UISlider *)sender {
 if (!sender) return;
 // v40：多窗——先切活动量到滑杆所在的窗（scaleRatio 是活动窗的）。
-GHCFSetActiveToWindow(GHCFWindowForView(sender));
+CFLYSetActiveToWindow(CFLYWindowForView(sender));
 CGFloat v = sender.value;
 v = (CGFloat)((int)(v * 100.0 + 0.5)) / 100.0;
 if (v < 0.5) v = 0.5;
 if (v > 2.0) v = 2.0;
 sender.value = v;
-GHCFHostedScaleRatio = v;
-if (GHCFHostedScaleLabel) {
+CFLYHostedScaleRatio = v;
+if (CFLYHostedScaleLabel) {
 char pbuf[32];
 snprintf(pbuf, sizeof(pbuf), "%d%%", (int)(v * 100.0));
-GHCFHostedScaleLabel.text = [NSString stringWithCString:pbuf encoding:NSUTF8StringEncoding];
+CFLYHostedScaleLabel.text = [NSString stringWithCString:pbuf encoding:NSUTF8StringEncoding];
 }
-if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
-GHCFCacheScaleRatios[GHCFActiveAppIndex] = v;
+if (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) {
+CFLYCacheScaleRatios[CFLYActiveAppIndex] = v;
 }
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 scale changed to %d%%", (int)(v * 100.0));
-GHCFLogLine(buf);
-GHCFApplyScaleToHostedWindow(YES);
+CFLYLogLine(buf);
+CFLYApplyScaleToHostedWindow(YES);
 }
 
 // v40：滑杆松手（拖动结束）——存一次位置/大小/缩放（第 6 项）。
@@ -7852,15 +7828,15 @@ GHCFApplyScaleToHostedWindow(YES);
 // 松手才存一次（TouchUpInside/Outside）。
 - (void)handleScaleSliderEnded:(UISlider *)sender {
 (void)sender;
-if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
-GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+if (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) {
+CFLYSaveGeometryForIndex(CFLYActiveAppIndex);
 }
 }
 
 // 拖标题栏移动窗口（参考实现的 moveWindow 做法：取位移、
 // 加到中心点上、位移清零；位置夹在屏幕里，不让窗丢出去）。
 // v40：多窗——拖哪个窗就动哪个窗（recognizer.view 所在的 window，
-// 不是只动 GHCFHostedWindow 这个单一静态，不然拖 B 窗会动到 A 窗）；
+// 不是只动 CFLYHostedWindow 这个单一静态，不然拖 B 窗会动到 A 窗）；
 // 细条 24pt（皇上 11:34：v39 的 16pt 细条太细、太透明，找不到地方抓）。
 // 拖到右邊緣贴边收起（主关掉路徑，像影片一樣）：放手时窗中心进了右缘
 // 60pt 内，窗收成一张贴边小卡（跟最小化一样，scene 活着）；没拖到
@@ -7869,38 +7845,38 @@ GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
 // 值就自动回弹（夹住位置，让窗顶至少离顶缘这个距离；旧 minY=100 是
 // 夹中心，顶缘能出屏——v40 改成夹窗顶）。
 - (void)handleTitleDrag:(UIPanGestureRecognizer *)recognizer {
-UIWindow *dragWindow = GHCFWindowForView(recognizer.view);
-if (!dragWindow) dragWindow = GHCFHostedWindow;
+UIWindow *dragWindow = CFLYWindowForView(recognizer.view);
+if (!dragWindow) dragWindow = CFLYHostedWindow;
 if (!dragWindow) return;
-GHCFSetActiveToWindow(dragWindow);
+CFLYSetActiveToWindow(dragWindow);
 // v41：收起的 peek 窗不拖（點整截是恢復，拖動沒有意義；peek 上的
 // 點按層本來就擋住了細條，這裡是兜底）。
-int dragIdx = GHCFAppIndexForWindow(dragWindow);
-if (dragIdx >= 0 && dragIdx < GHCFAppCount && GHCFCacheMinimized[dragIdx]) return;
+int dragIdx = CFLYAppIndexForWindow(dragWindow);
+if (dragIdx >= 0 && dragIdx < CFLYAppCount && CFLYCacheMinimized[dragIdx]) return;
 // v40：拖动一开始读一次设定（贴边收起往哪边、安全距离），拖动中
 // 不变——每动一下都读 prefs 太费（CFPreferencesAppSynchronize）。
 if (recognizer.state == UIGestureRecognizerStateBegan) {
 // v41：浮窗拖動手勢開關（調度窗口設置，預設開）——關了這次拖動
 // 不動（Began 讀一次，之後的事件看旗標，不每動一下讀 prefs）。
-GHCFDragDisabled = !GHCFReadWindowDragEnabled();
-if (GHCFDragDisabled) {
-GHCFLogLine("v57 window drag disabled");
+CFLYDragDisabled = !CFLYReadWindowDragEnabled();
+if (CFLYDragDisabled) {
+CFLYLogLine("v57 window drag disabled");
 return;
 }
-GHCFDragDockLeft = GHCFIsWindowPositionLeft();
-GHCFDragSafeDistance = GHCFReadSafeDistance();
-GHCFDragFlickUpThreshold = GHCFReadFlickUpVelocityThreshold();
-GHCFLogLine("v57 window dragged");
+CFLYDragDockLeft = CFLYIsWindowPositionLeft();
+CFLYDragSafeDistance = CFLYReadSafeDistance();
+CFLYDragFlickUpThreshold = CFLYReadFlickUpVelocityThreshold();
+CFLYLogLine("v57 window dragged");
 }
-if (GHCFDragDisabled) return;
+if (CFLYDragDisabled) return;
 if (recognizer.state == UIGestureRecognizerStateCancelled || recognizer.state == UIGestureRecognizerStateFailed) {
 return;
 }
-BOOL dockLeft = GHCFDragDockLeft;
-CGFloat safeDistance = GHCFDragSafeDistance;
+BOOL dockLeft = CFLYDragDockLeft;
+CGFloat safeDistance = CFLYDragSafeDistance;
 // v68：跟手修法——translation 不能量在會動的浮窗上（同款毛病）。
 // 改拿固定不動的邊條窗當參考座標，只換這兩行，其餘夾取／門檻邏輯不動。
-UIView *fixedRefView = GHCFStripWindow ? (UIView *)GHCFStripWindow : dragWindow;
+UIView *fixedRefView = CFLYStripWindow ? (UIView *)CFLYStripWindow : dragWindow;
 CGPoint point = [recognizer translationInView:fixedRefView];
 [recognizer setTranslation:CGPointZero inView:fixedRefView];
 CGPoint center = dragWindow.center;
@@ -7926,21 +7902,21 @@ dragWindow.center = CGPointMake(newX, newY);
 if (recognizer.state == UIGestureRecognizerStateEnded) {
 // 放手：窗中心进了贴边那侧的缘 60pt 内——贴边收起（主关掉路徑，
 // 像影片一樣）。右側：中心进右缘 60pt 内；左側：中心进左缘 60pt 内。
-BOOL shouldDock = dockLeft ? (newX <= GHCF_DOCK_DRAG_THRESHOLD) : (screenBounds.size.width - newX <= GHCF_DOCK_DRAG_THRESHOLD);
+BOOL shouldDock = dockLeft ? (newX <= CFLY_DOCK_DRAG_THRESHOLD) : (screenBounds.size.width - newX <= CFLY_DOCK_DRAG_THRESHOLD);
 // v43.3：往上快速一甩也收起——速度超过阈值（设定值 ×25 pt/s，
 // 预设 40 → 1000），跟拖到贴边同一条路（含退出动画）。
 CGPoint flickVel = [recognizer velocityInView:fixedRefView];
-BOOL flickUpDock = (flickVel.y <= -GHCFDragFlickUpThreshold);
+BOOL flickUpDock = (flickVel.y <= -CFLYDragFlickUpThreshold);
 if (shouldDock || flickUpDock) {
-GHCFLogLine(flickUpDock ? "v43.3 window flicked up, docking" : "v57 window docked by drag");
+CFLYLogLine(flickUpDock ? "v43.3 window flicked up, docking" : "v57 window docked by drag");
 // v72：拖去收小卡也按退出動畫播一次（0 island＝現有行為不動，
 // 直接收；1–4 先播動畫再收，播完還原幾何才走 minimize；遊戲模式
 // 開著時新方法裡面自己用 0.01 秒）。讀值記一行，證明設定有沒有到。
-int dockExitAnim = GHCFReadExitAnimation();
+int dockExitAnim = CFLYReadExitAnimation();
 {
 char dbuf[64];
 snprintf(dbuf, sizeof(dbuf), "v72 dock exit anim %d", dockExitAnim);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 }
 if (dockExitAnim == 0) {
 [self minimizeHostedWindow];
@@ -7957,7 +7933,7 @@ return;
 // v63：尺寸固定——拖到頂部不再放大到全屏（拉大拉小後續再做）；
 // 掉下來走下面正常的夾取＋存位置。
 if ((newY - winH / 2.0) <= safeDistance) {
-GHCFLogLine("v68 fullscreen snap disabled, fixed size");
+CFLYLogLine("v68 fullscreen snap disabled, fixed size");
 }
 if (newX - winW / 2.0 <= 24.0) newX = winW / 2.0 + 8.0;
 else if (screenBounds.size.width - (newX + winW / 2.0) <= 24.0) newX = screenBounds.size.width - winW / 2.0 - 8.0;
@@ -7975,8 +7951,8 @@ if (snapY > maxCY) snapY = maxCY;
 dragWindow.center = CGPointMake(snapX, snapY);
 // v40：拖动结束存一次位置/大小/缩放（第 6 项）——下次开同一 App
 // 恢复到这次的位置和大小（贴边收起时 minimizeHostedWindow 里已存）。
-if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
-GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+if (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) {
+CFLYSaveGeometryForIndex(CFLYActiveAppIndex);
 }
 }
 }
@@ -7987,15 +7963,95 @@ GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
 // v40：多窗——点哪个窗的细条，就切活动量到那个窗、把它带到
 // 最前（层级升到最前），再展开／收起它的滑杆条。
 - (void)handleTopStripTap:(UITapGestureRecognizer *)recognizer {
-UIWindow *tapWindow = GHCFWindowForView(recognizer.view);
+UIWindow *tapWindow = CFLYWindowForView(recognizer.view);
 if (tapWindow) {
-GHCFSetActiveToWindow(tapWindow);
-GHCFBringWindowToFront(tapWindow);
+CFLYSetActiveToWindow(tapWindow);
+CFLYBringWindowToFront(tapWindow);
 }
 // v63：尺寸固定——點細條不再開縮放滑桿條（拉大拉小後續再做）；
 // 點細條只剩帶到最前（上面已做）。滑桿條本來就是 hidden=YES 建的，
 // 唯一開它的路就是這裡，拿掉後它永遠不出現，裡面的小／中／大鈕也跟著沒用。
-GHCFLogLine("v68 scale bar disabled, fixed size");
+CFLYLogLine("v68 scale bar disabled, fixed size");
+}
+
+// ChinaFly（1.0.4）：窗口打開方式（7 種）——長按浮窗細條（標題列）
+// 彈動作表，選了就按那種方式擺當前這扇窗。
+- (void)handleTopStripLongPress:(UILongPressGestureRecognizer *)recognizer {
+if (recognizer.state != UIGestureRecognizerStateBegan) return;
+[self showWindowOpenModeSheet];
+}
+
+- (void)handleWindowOpenModeButton:(UIButton *)sender {
+(void)sender;
+[self showWindowOpenModeSheet];
+}
+
+- (void)showWindowOpenModeSheet {
+if (!CFLYHostedWindow) return;
+UIAlertController *sheet = [UIAlertController alertControllerWithTitle:[NSString stringWithCString:"窗口打開方式" encoding:NSUTF8StringEncoding] message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+NSArray *titles = [NSArray arrayWithObjects:
+[NSString stringWithCString:"暫存分屏" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"一檔空掛" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"二檔空掛" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"三檔空掛" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"下探窗口" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"上探窗口" encoding:NSUTF8StringEncoding],
+[NSString stringWithCString:"取出窗" encoding:NSUTF8StringEncoding],
+nil];
+for (int i = 0; i < 7; i++) {
+int mode = i;
+UIAlertAction *act = [UIAlertAction actionWithTitle:[titles objectAtIndex:(NSUInteger)i] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+(void)action;
+[self applyWindowOpenMode:mode];
+}];
+[sheet addAction:act];
+}
+UIAlertAction *cancel = [UIAlertAction actionWithTitle:[NSString stringWithCString:"取消" encoding:NSUTF8StringEncoding] style:UIAlertActionStyleCancel handler:nil];
+[sheet addAction:cancel];
+UIViewController *vc = CFLYHostedWindow.rootViewController;
+if (vc) [vc presentViewController:sheet animated:YES completion:nil];
+else CFLYLogLine("ChinaFly window mode sheet no vc");
+}
+
+// 0 暫存分屏（標準浮窗）、1/2/3 一/二/三檔空掛（露 40/70/100pt）、
+// 4 下探窗口（從頂滑入）、5 上探窗口（從底滑入）、6 取出窗（恢復）。
+- (void)applyWindowOpenMode:(int)mode {
+if (!CFLYHostedWindow) return;
+int idx = CFLYActiveAppIndex;
+char buf[128];
+snprintf(buf, sizeof(buf), "ChinaFly window open mode %d", mode);
+CFLYLogLine(buf);
+if (mode == 6) {
+// 取出窗：小卡恢復成浮窗。
+if (CFLYHostedMinimized) [self restoreHostedWindow];
+return;
+}
+if (mode >= 1 && mode <= 3) {
+// 空掛：記檔位再收成小卡（排布時按檔位露多少）。
+if (idx >= 0 && idx < CFLYAppCount && CFLYPeekLevels) CFLYPeekLevels[idx] = mode;
+if (!CFLYHostedMinimized) [self minimizeHostedWindow];
+else CFLYLayoutDockPeeks();
+return;
+}
+if (mode == 0) {
+// 暫存分屏：小卡就恢復，已經是浮窗就不動。
+if (CFLYHostedMinimized) [self restoreHostedWindow];
+return;
+}
+// 下探／上探：從屏外滑入當前位置。
+CGRect target = CFLYHostedWindow.frame;
+CGRect screenBounds = [UIScreen mainScreen].bounds;
+CGRect start = target;
+if (mode == 4) start.origin.y = -target.size.height;
+else start.origin.y = screenBounds.size.height;
+CFLYHostedWindow.frame = start;
+CFLYHostedWindow.hidden = NO;
+[UIView animateWithDuration:0.45 delay:0 usingSpringWithDamping:0.8 initialSpringVelocity:0.5 options:UIViewAnimationOptionCurveEaseOut animations:^{
+CFLYHostedWindow.frame = target;
+} completion:^(BOOL finished) {
+(void)finished;
+CFLYLogLine("ChinaFly window slide-in done");
+}];
 }
 
 // ── v42 新方法（窗控制／手勢／任務欄／配對／鍵盤） ──
@@ -8004,7 +8060,7 @@ GHCFLogLine("v68 scale bar disabled, fixed size");
 // 窗 + 容器/內容區/細條/滑桿條/手柄都跟著改，scene frame 重推，
 // 位置/大小存一次（下次開同一 App 恢復）。
 - (void)resizeActiveWindowToFrame:(CGRect)frame {
-if (!GHCFHostedWindow || !GHCFHostedContainer || !GHCFHostedContentView) return;
+if (!CFLYHostedWindow || !CFLYHostedContainer || !CFLYHostedContentView) return;
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 CGFloat newW = frame.size.width;
 CGFloat newH = frame.size.height;
@@ -8015,32 +8071,32 @@ if (newH > screenBounds.size.height - 120.0) newH = screenBounds.size.height - 1
 CGFloat newX = frame.origin.x;
 CGFloat newY = frame.origin.y;
 if (newX < 8.0) newX = 8.0;
-if (newY < GHCFReadSafeDistance()) newY = GHCFReadSafeDistance();
+if (newY < CFLYReadSafeDistance()) newY = CFLYReadSafeDistance();
 if (newX + newW > screenBounds.size.width - 8.0) newX = screenBounds.size.width - 8.0 - newW;
 if (newY + newH > screenBounds.size.height - 8.0) newY = screenBounds.size.height - 8.0 - newH;
-GHCFHostedWindow.frame = CGRectMake(newX, newY, newW, newH);
-if (GHCFHostedContainer) GHCFHostedContainer.frame = CGRectMake(0, 0, newW, newH);
-if (GHCFHostedContentView) GHCFHostedContentView.frame = CGRectMake(0, 0, newW, newH);
-if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = CGRectMake(0, 0, newW, GHCF_HOSTED_STRIP_H);
-if (GHCFHostedScaleSliderBar) {
-GHCFHostedScaleSliderBar.frame = CGRectMake(0, GHCF_HOSTED_STRIP_H, newW, 72);
-for (UIView *sub in GHCFHostedScaleSliderBar.subviews) {
+CFLYHostedWindow.frame = CGRectMake(newX, newY, newW, newH);
+if (CFLYHostedContainer) CFLYHostedContainer.frame = CGRectMake(0, 0, newW, newH);
+if (CFLYHostedContentView) CFLYHostedContentView.frame = CGRectMake(0, 0, newW, newH);
+if (CFLYHostedTopStrip) CFLYHostedTopStrip.frame = CGRectMake(0, 0, newW, CFLY_HOSTED_STRIP_H);
+if (CFLYHostedScaleSliderBar) {
+CFLYHostedScaleSliderBar.frame = CGRectMake(0, CFLY_HOSTED_STRIP_H, newW, 72);
+for (UIView *sub in CFLYHostedScaleSliderBar.subviews) {
 if ([sub isKindOfClass:[UIButton class]] && sub.tag >= 100 && sub.tag <= 102) {
 int sp = (int)sub.tag - 100;
 sub.frame = CGRectMake(newW - 140 + sp * 44, 39, 40, 28);
 }
 }
 }
-if (GHCFHostedScaleSlider) GHCFHostedScaleSlider.frame = CGRectMake(10, 3, newW - 70, 30);
-if (GHCFHostedScaleLabel) GHCFHostedScaleLabel.frame = CGRectMake(newW - 56, 3, 46, 30);
-if (GHCFHostedResizeHandle) GHCFHostedResizeHandle.frame = CGRectMake(newW - 36, newH - 36, 36, 36);
+if (CFLYHostedScaleSlider) CFLYHostedScaleSlider.frame = CGRectMake(10, 3, newW - 70, 30);
+if (CFLYHostedScaleLabel) CFLYHostedScaleLabel.frame = CGRectMake(newW - 56, 3, 46, 30);
+if (CFLYHostedResizeHandle) CFLYHostedResizeHandle.frame = CGRectMake(newW - 36, newH - 36, 36, 36);
 [self resizeHostedSceneToContentSize:CGSizeMake(newW, newH)];
-if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
-GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+if (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) {
+CFLYSaveGeometryForIndex(CFLYActiveAppIndex);
 }
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 window resized to %dx%d", (int)newW, (int)newH);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 [self armSizeGateForResize]; // v73：拖調尺寸鬆手後，尺寸沒對上之前蓋佔位等 scene 重畫。
 }
 
@@ -8051,7 +8107,7 @@ GHCFLogLine(buf);
 // 的視圖層；layer-host 的 scene 內容不一定進視圖層，抓不到活內容時退回整屏。
 - (void)takeScreenshotOfHostedWindowOrScreen {
 UIImage *img = nil;
-UIWindow *hosted = GHCFHostedWindow;
+UIWindow *hosted = CFLYHostedWindow;
 if (hosted && !hosted.hidden) {
 CGSize size = hosted.bounds.size;
 if (size.width > 0 && size.height > 0) {
@@ -8076,9 +8132,9 @@ UIGraphicsEndImageContext();
 }
 if (img) {
 UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil);
-GHCFLogLine("v43.24 screenshot saved to photos");
+CFLYLogLine("v43.24 screenshot saved to photos");
 } else {
-GHCFLogLine("v43.24 screenshot failed");
+CFLYLogLine("v43.24 screenshot failed");
 }
 }
 
@@ -8089,19 +8145,19 @@ if (strcmp(action, "screenshot") == 0) {
 [self takeScreenshotOfHostedWindowOrScreen];
 return;
 }
-if (!GHCFHostedWindow) return;
+if (!CFLYHostedWindow) return;
 if (strcmp(action, "pin") == 0) {
-if (GHCFHostedBundleID[0] == '\0') return;
-BOOL pinned = GHCFIsWindowPinned(GHCFHostedBundleID);
-NSMutableArray *ids = [NSMutableArray arrayWithArray:GHCFReadIDList("pinnedWindowIDs")];
-NSString *bidStr = [NSString stringWithCString:GHCFHostedBundleID encoding:NSUTF8StringEncoding];
+if (CFLYHostedBundleID[0] == '\0') return;
+BOOL pinned = CFLYIsWindowPinned(CFLYHostedBundleID);
+NSMutableArray *ids = [NSMutableArray arrayWithArray:CFLYReadIDList("pinnedWindowIDs")];
+NSString *bidStr = [NSString stringWithCString:CFLYHostedBundleID encoding:NSUTF8StringEncoding];
 [ids removeObject:bidStr];
 if (!pinned) [ids insertObject:bidStr atIndex:0];
-GHCFWriteIDList("pinnedWindowIDs", ids);
-GHCFBringWindowToFront(GHCFHostedWindow);
+CFLYWriteIDList("pinnedWindowIDs", ids);
+CFLYBringWindowToFront(CFLYHostedWindow);
 char buf[256];
-snprintf(buf, sizeof(buf), "v57 window %s %s", GHCFHostedBundleID, !pinned ? "pinned" : "unpinned");
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 window %s %s", CFLYHostedBundleID, !pinned ? "pinned" : "unpinned");
+CFLYLogLine(buf);
 } else if (strcmp(action, "dock") == 0) {
 [self minimizeHostedWindow];
 } else if (strcmp(action, "close") == 0) {
@@ -8110,7 +8166,7 @@ GHCFLogLine(buf);
 [self cycleMainWindow];
 } else if (strcmp(action, "maximize") == 0) {
 // v63：尺寸固定——maximize 手勢停用（拉大拉小後續再做）。
-GHCFLogLine("v68 maximize gesture disabled, fixed size");
+CFLYLogLine("v68 maximize gesture disabled, fixed size");
 }
 }
 
@@ -8118,18 +8174,18 @@ GHCFLogLine("v68 maximize gesture disabled, fixed size");
 //（保持窗中心不動），同時寫回預設（下次開窗也用這個尺寸）。
 - (void)handleSizePresetButton:(UIButton *)sender {
 int preset = (int)sender.tag - 100;
-if (preset < 0 || preset > 2 || !GHCFHostedWindow) return;
-GHCFWritePrefsCString("windowSizePreset", preset == 0 ? "small" : (preset == 2 ? "large" : "medium"));
+if (preset < 0 || preset > 2 || !CFLYHostedWindow) return;
+CFLYWritePrefsCString("windowSizePreset", preset == 0 ? "small" : (preset == 2 ? "large" : "medium"));
 // v53：計算器不跟預設走（永遠 320x693；prefs 照寫，建窗／恢復共用同一個 helper）。
 CGFloat presetW, presetH;
-GHCFPresetSizeForBundleID(GHCFHostedBundleID, &presetW, &presetH);
+CFLYPresetSizeForBundleID(CFLYHostedBundleID, &presetW, &presetH);
 CGSize size = CGSizeMake(presetW, presetH);
-CGRect frame = GHCFHostedWindow.frame;
+CGRect frame = CFLYHostedWindow.frame;
 CGFloat cx = frame.origin.x + frame.size.width / 2.0;
 CGFloat cy = frame.origin.y + frame.size.height / 2.0;
 [self resizeActiveWindowToFrame:CGRectMake(cx - size.width / 2.0, cy - size.height / 2.0, size.width, size.height)];
-if (GHCFHostedScaleSliderBar) {
-for (UIView *sub in GHCFHostedScaleSliderBar.subviews) {
+if (CFLYHostedScaleSliderBar) {
+for (UIView *sub in CFLYHostedScaleSliderBar.subviews) {
 if ([sub isKindOfClass:[UIButton class]] && sub.tag >= 100 && sub.tag <= 102) {
 BOOL current = ((int)sub.tag - 100 == preset);
 sub.layer.borderWidth = current ? 2.0 : 1.0;
@@ -8139,47 +8195,47 @@ sub.layer.borderColor = current ? [UIColor colorWithRed:0.83 green:0.68 blue:0.2
 }
 char buf[64];
 snprintf(buf, sizeof(buf), "v57 window size preset %d", preset);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 
 // v42：手勢自定義（細條上的手勢；動作走設定，沒設回預設：
 // 三擊=釘選、上下滑=收起貼邊、左右滑=關掉、雙指點=放大全屏
 //（放大全屏從 v68 起停用＝無動作）。
 - (void)handleGestureTripleTap:(UITapGestureRecognizer *)recognizer {
-UIWindow *w = GHCFWindowForView(recognizer.view);
-if (w) GHCFSetActiveToWindow(w);
-char *action = GHCFReadPrefsCString("gestureTripleTap");
+UIWindow *w = CFLYWindowForView(recognizer.view);
+if (w) CFLYSetActiveToWindow(w);
+char *action = CFLYReadPrefsCString("gestureTripleTap");
 const char *a = action ? action : "pin";
 [self performGestureAction:a];
 if (action) free(action);
-GHCFLogLine("v57 gesture triple tap");
+CFLYLogLine("v57 gesture triple tap");
 }
 - (void)handleGestureSwipeVertical:(UISwipeGestureRecognizer *)recognizer {
-UIWindow *w = GHCFWindowForView(recognizer.view);
-if (w) GHCFSetActiveToWindow(w);
-char *action = GHCFReadPrefsCString("gestureSwipeV");
+UIWindow *w = CFLYWindowForView(recognizer.view);
+if (w) CFLYSetActiveToWindow(w);
+char *action = CFLYReadPrefsCString("gestureSwipeV");
 const char *a = action ? action : "dock";
 [self performGestureAction:a];
 if (action) free(action);
-GHCFLogLine("v57 gesture swipe vertical");
+CFLYLogLine("v57 gesture swipe vertical");
 }
 - (void)handleGestureSwipeHorizontal:(UISwipeGestureRecognizer *)recognizer {
-UIWindow *w = GHCFWindowForView(recognizer.view);
-if (w) GHCFSetActiveToWindow(w);
-char *action = GHCFReadPrefsCString("gestureSwipeH");
+UIWindow *w = CFLYWindowForView(recognizer.view);
+if (w) CFLYSetActiveToWindow(w);
+char *action = CFLYReadPrefsCString("gestureSwipeH");
 const char *a = action ? action : "close";
 [self performGestureAction:a];
 if (action) free(action);
-GHCFLogLine("v57 gesture swipe horizontal");
+CFLYLogLine("v57 gesture swipe horizontal");
 }
 - (void)handleGestureTwoFingerTap:(UITapGestureRecognizer *)recognizer {
-UIWindow *w = GHCFWindowForView(recognizer.view);
-if (w) GHCFSetActiveToWindow(w);
-char *action = GHCFReadPrefsCString("gestureTwoFingerTap");
+UIWindow *w = CFLYWindowForView(recognizer.view);
+if (w) CFLYSetActiveToWindow(w);
+char *action = CFLYReadPrefsCString("gestureTwoFingerTap");
 const char *a = action ? action : "maximize";
 [self performGestureAction:a];
 if (action) free(action);
-GHCFLogLine("v57 gesture two finger tap");
+CFLYLogLine("v57 gesture two finger tap");
 }
 
 // v53：懸浮球三個 handler 已整個拿掉（只留一個觸發鈕按鈕）。
@@ -8187,34 +8243,34 @@ GHCFLogLine("v57 gesture two finger tap");
 - (void)handleTaskbarButton:(UIButton *)sender {
 NSInteger idx = sender.tag;
 if (idx == 99) {
-int docked = GHCFDockAllVisibleWindows(NO);
+int docked = CFLYDockAllVisibleWindows(NO);
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 taskbar dock all %d windows", docked);
-GHCFLogLine(buf);
-GHCFUpdateTaskbar();
+CFLYLogLine(buf);
+CFLYUpdateTaskbar();
 return;
 }
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheWindows[idx]) return;
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheWindows[idx]) return;
 [self promoteWindowToMainIndex:(int)idx];
-GHCFUpdateTaskbar();
+CFLYUpdateTaskbar();
 }
 
 // v43.20：長按芯片直接關窗——不彈菜單。最小化（小卡）的項直接關，不先
 // promote／恢復成大窗（不會閃黑窗）；可見主窗走現有關窗路。關完芯片消失。
 - (void)closeCachedEntryAtIndex:(int)idx {
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheWindows[idx]) return;
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheWindows[idx]) return;
 // v43.20：先裝回活動量再關——closeHostedWindow 只認活動窗；裝回不顯示
 //（LoadCacheToActive 只搬指針，不推前景、不恢復），所以小卡不會閃回大窗。
-GHCFLoadCacheToActive(idx);
+CFLYLoadCacheToActive(idx);
 [self closeHostedWindow];
 // v43.20：把項從緩存拿掉（scene 留著——進程繼續跑，重開再托管現有 scene），
 // 任務欄只給非空緩存項畫芯片，拿掉芯片就消失。
-GHCFDropCachedEntryKeepingScene(idx);
-GHCFSaveRestoreList();
-GHCFUpdateDimOverlay();
-GHCFUpdateTaskbar();
+CFLYDropCachedEntryKeepingScene(idx);
+CFLYSaveRestoreList();
+CFLYUpdateDimOverlay();
+CFLYUpdateTaskbar();
 }
 
 // v43.20：芯片長按＝直接關掉那個 App，不彈菜單。
@@ -8222,12 +8278,12 @@ GHCFUpdateTaskbar();
 - (void)handleTaskbarChipLongPress:(UILongPressGestureRecognizer *)recognizer {
 if (recognizer.state != UIGestureRecognizerStateBegan) return;
 NSInteger idx = recognizer.view.tag;
-if (idx < 0 || idx >= GHCFAppCount) return;
-if (!GHCFCacheWindows[idx]) return;
+if (idx < 0 || idx >= CFLYAppCount) return;
+if (!CFLYCacheWindows[idx]) return;
 [self closeCachedEntryAtIndex:(int)idx];
 char buf[96];
 snprintf(buf, sizeof(buf), "v43.20 taskbar long press close chip %d", (int)idx);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 
 // v42：ARC 裡的「設置」——收起 ARC，開浮窗設定卡片。
@@ -8246,45 +8302,45 @@ GHCFLogLine(buf);
 // kbHeight：鍵盤高度（pt）；bid：發通知的 App 包名，NULL 表示不比對
 //（舊路徑沒有包名）。只對活動浮窗動作；橫屏放大不認「自動上移」開關，
 // 上移／關窗照舊認各自開關。
-- (void)ghcfHandleKeyboardShowHeight:(CGFloat)kbHeight bundleID:(const char *)bid {
-if (!GHCFHostedWindow || GHCFHostedMinimized) return;
-if (bid && bid[0] != '\0' && strcmp(bid, GHCFHostedBundleID) != 0) return;
+- (void)cflyHandleKeyboardShowHeight:(CGFloat)kbHeight bundleID:(const char *)bid {
+if (!CFLYHostedWindow || CFLYHostedMinimized) return;
+if (bid && bid[0] != '\0' && strcmp(bid, CFLYHostedBundleID) != 0) return;
 if (kbHeight <= 0) return;
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 BOOL landscape = screenBounds.size.width > screenBounds.size.height;
-int mode = GHCFReadKeyboardPopupModeForOrientation(landscape);
+int mode = CFLYReadKeyboardPopupModeForOrientation(landscape);
 // v43.18：放大改走模式分流（取代橫屏放大不分內外先 return）——
 // 內置：豎屏看 enlargeOnKeyboardPortrait、橫屏看 landscapeEnlargeOnKeyboard；
 // 外置：看 enlargeOnExternalKeyboard。放大完 return（不上移，照現況）；
 // 外置且放大關著，照現況直接回（不放大不上移）。
 if (mode == 1) {
-if (GHCFReadEnlargeOnExternalKeyboard()) {
-[self ghcfEnlargeWindowForKeyboardHeight:kbHeight];
+if (CFLYReadEnlargeOnExternalKeyboard()) {
+[self cflyEnlargeWindowForKeyboardHeight:kbHeight];
 } else {
-GHCFLogLine("v43.5 keyboard show outer mode no shift");
+CFLYLogLine("v43.5 keyboard show outer mode no shift");
 }
 return;
 }
-if ((!landscape && GHCFReadEnlargeOnKeyboardPortrait()) || (landscape && GHCFReadLandscapeEnlargeOnKeyboard())) {
-[self ghcfEnlargeWindowForKeyboardHeight:kbHeight];
+if ((!landscape && CFLYReadEnlargeOnKeyboardPortrait()) || (landscape && CFLYReadLandscapeEnlargeOnKeyboard())) {
+[self cflyEnlargeWindowForKeyboardHeight:kbHeight];
 return;
 }
-if (!GHCFReadKeyboardAvoidEnabled()) return;
-if (GHCFKeyboardShifted) return;
-CGRect winFrame = GHCFHostedWindow.frame;
+if (!CFLYReadKeyboardAvoidEnabled()) return;
+if (CFLYKeyboardShifted) return;
+CGRect winFrame = CFLYHostedWindow.frame;
 CGFloat winBottom = winFrame.origin.y + winFrame.size.height;
 CGFloat kbTop = screenBounds.size.height - kbHeight;
 if (winBottom <= kbTop) return;
-GHCFKeyboardSavedFrame = winFrame;
+CFLYKeyboardSavedFrame = winFrame;
 CGFloat shift = winBottom - kbTop;
 CGFloat newY = winFrame.origin.y - shift;
-CGFloat minY = GHCFReadSafeDistance();
+CGFloat minY = CFLYReadSafeDistance();
 if (newY < minY) newY = minY;
-GHCFHostedWindow.frame = CGRectMake(winFrame.origin.x, newY, winFrame.size.width, winFrame.size.height);
-GHCFKeyboardShifted = YES;
+CFLYHostedWindow.frame = CGRectMake(winFrame.origin.x, newY, winFrame.size.width, winFrame.size.height);
+CFLYKeyboardShifted = YES;
 char buf[128];
 snprintf(buf, sizeof(buf), "v43.5 window shifted up for keyboard %dpt mode=inner", (int)shift);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 // v43.5：橫屏鍵盤彈起放大浮窗——把活動窗放大到鍵盤上方空位，收起恢復原尺寸。
 // 用 resizeActiveWindowToFrame（走現成夾取＋scene 改尺寸＋尺寸門）；
@@ -8296,69 +8352,69 @@ GHCFLogLine(buf);
 // 不拉回屏幕中心（Lee 拖過的位置不動）。守衛也跟著改：以前是「寬高任一
 // 會變大才動」，寬度固定後那個條件在正常情況（749→530）會誤擋——現在只看
 // 窗底是不是已經在鍵盤上方，已經在上面就不用動。
-- (void)ghcfEnlargeWindowForKeyboardHeight:(CGFloat)kbHeight {
-if (GHCFKeyboardEnlarged || !GHCFHostedWindow || GHCFHostedMinimized) return;
+- (void)cflyEnlargeWindowForKeyboardHeight:(CGFloat)kbHeight {
+if (CFLYKeyboardEnlarged || !CFLYHostedWindow || CFLYHostedMinimized) return;
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-CGRect winFrame = GHCFHostedWindow.frame;
+CGRect winFrame = CFLYHostedWindow.frame;
 CGFloat targetW = winFrame.size.width;
 CGFloat targetH = screenBounds.size.height - kbHeight - 60.0;
 CGFloat kbTop = screenBounds.size.height - kbHeight;
 if (winFrame.origin.y + winFrame.size.height <= kbTop) return;
 CGFloat cx = winFrame.origin.x + winFrame.size.width / 2.0;
 CGFloat cy = (screenBounds.size.height - kbHeight) / 2.0;
-GHCFKeyboardEnlargedSavedFrame = winFrame;
-GHCFKeyboardEnlarged = YES;
+CFLYKeyboardEnlargedSavedFrame = winFrame;
+CFLYKeyboardEnlarged = YES;
 [self resizeActiveWindowToFrame:CGRectMake(cx - targetW / 2.0, cy - targetH / 2.0, targetW, targetH)];
 char buf[128];
 snprintf(buf, sizeof(buf), "v43.5 window enlarged for keyboard %dx%d", (int)targetW, (int)targetH);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
-- (void)ghcfRestoreEnlargedWindowForKeyboard {
-if (!GHCFKeyboardEnlarged || !GHCFHostedWindow) return;
-GHCFKeyboardEnlarged = NO;
-[self resizeActiveWindowToFrame:GHCFKeyboardEnlargedSavedFrame];
-GHCFLogLine("v43.5 window restored after keyboard hide (enlarge)");
+- (void)cflyRestoreEnlargedWindowForKeyboard {
+if (!CFLYKeyboardEnlarged || !CFLYHostedWindow) return;
+CFLYKeyboardEnlarged = NO;
+[self resizeActiveWindowToFrame:CFLYKeyboardEnlargedSavedFrame];
+CFLYLogLine("v43.5 window restored after keyboard hide (enlarge)");
 }
-- (void)ghcfHandleKeyboardHideBundleID:(const char *)bid {
+- (void)cflyHandleKeyboardHideBundleID:(const char *)bid {
 // v43.10：最小化守衛（跟 show 路對稱）——鍵盤彈起上移後窗被收成小卡，
 // shift 旗標還在；收起時不能把滿窗框推到小卡窗上（內容還停在小卡縮放，
 // 其餘全黑，半黑）。直接清旗標走人，不要動窗框。
-if (!GHCFHostedWindow || GHCFHostedMinimized) { GHCFKeyboardShifted = NO; return; }
-if (bid && bid[0] != '\0' && strcmp(bid, GHCFHostedBundleID) != 0) return;
+if (!CFLYHostedWindow || CFLYHostedMinimized) { CFLYKeyboardShifted = NO; return; }
+if (bid && bid[0] != '\0' && strcmp(bid, CFLYHostedBundleID) != 0) return;
 // v43.22：記一行來源（ChinaFly 1.0.0 只剩 NSNotification 路，bid 是 NULL），
 // 以後不用猜 hide 是哪個通道送的。
 {
 char hbuf[192];
 snprintf(hbuf, sizeof(hbuf), "v43.22 keyboard hide src=%s", (bid && bid[0] != '\0') ? bid : "NSNotification");
-GHCFLogLine(hbuf);
+CFLYLogLine(hbuf);
 }
 // v43.22：hide 去重——一次收鍵盤可能兩個通道各送一次（Darwin＋NSNotification），
 // 1 秒內同一 bundle 的第二次 hide 直接忽略（37.log L133 恢復後緊接 L134 關窗）。
 // 關窗分支整個刪掉了（Lee 點頭），去重照做：第二次不能再有副作用。
 {
 NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
-const char *keyBid = (bid && bid[0] != '\0') ? bid : GHCFHostedBundleID;
-if (keyBid && keyBid[0] != '\0' && GHCFKeyboardHideLastBid[0] != '\0'
-    && strcmp(keyBid, GHCFKeyboardHideLastBid) == 0
-    && (now - GHCFKeyboardHideLastTime) < 1.0) {
-GHCFLogLine("v43.22 keyboard hide ignored, duplicate within 1s");
+const char *keyBid = (bid && bid[0] != '\0') ? bid : CFLYHostedBundleID;
+if (keyBid && keyBid[0] != '\0' && CFLYKeyboardHideLastBid[0] != '\0'
+    && strcmp(keyBid, CFLYKeyboardHideLastBid) == 0
+    && (now - CFLYKeyboardHideLastTime) < 1.0) {
+CFLYLogLine("v43.22 keyboard hide ignored, duplicate within 1s");
 return;
 }
 if (keyBid && keyBid[0] != '\0') {
-strncpy(GHCFKeyboardHideLastBid, keyBid, sizeof(GHCFKeyboardHideLastBid) - 1);
-GHCFKeyboardHideLastBid[sizeof(GHCFKeyboardHideLastBid) - 1] = '\0';
+strncpy(CFLYKeyboardHideLastBid, keyBid, sizeof(CFLYKeyboardHideLastBid) - 1);
+CFLYKeyboardHideLastBid[sizeof(CFLYKeyboardHideLastBid) - 1] = '\0';
 }
-GHCFKeyboardHideLastTime = now;
+CFLYKeyboardHideLastTime = now;
 }
 // 放大中先恢復尺寸（放大時 shift 沒跑，恢復尺寸就夠了，不關窗）。
-if (GHCFKeyboardEnlarged) {
-[self ghcfRestoreEnlargedWindowForKeyboard];
+if (CFLYKeyboardEnlarged) {
+[self cflyRestoreEnlargedWindowForKeyboard];
 return;
 }
-if (!GHCFKeyboardShifted) return;
-GHCFHostedWindow.frame = GHCFKeyboardSavedFrame;
-GHCFKeyboardShifted = NO;
-GHCFLogLine("v43.5 window restored after keyboard hide");
+if (!CFLYKeyboardShifted) return;
+CFLYHostedWindow.frame = CFLYKeyboardSavedFrame;
+CFLYKeyboardShifted = NO;
+CFLYLogLine("v43.5 window restored after keyboard hide");
 }
 // v42：鍵盤監聽（NSNotificationCenter——鍵盤通知由 App 行程發，
 // SpringBoard 這邊可能收不到；收到了走上面共用邏輯。Darwin 橋接
@@ -8371,27 +8427,27 @@ if (frameValue) {
 CGRect kf = [frameValue CGRectValue];
 kbHeight = kf.size.height;
 }
-[self ghcfHandleKeyboardShowHeight:kbHeight bundleID:NULL];
+[self cflyHandleKeyboardShowHeight:kbHeight bundleID:NULL];
 }
 - (void)handleKeyboardWillHide:(NSNotification *)note {
 (void)note;
-[self ghcfHandleKeyboardHideBundleID:NULL];
+[self cflyHandleKeyboardHideBundleID:NULL];
 }
 
 // v42：任意文字的通知橫幅（低電量收窗提示用；v72 起「已打開 <App>」
 // 那條拿掉了，只剩低電量提示走這裡）。
 - (void)showNotificationBannerWithText:(const char *)text {
-if (!GHCFReadNotificationBanner()) return;
+if (!CFLYReadNotificationBanner()) return;
 if (!text) text = "";
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 CGFloat w = screenBounds.size.width - 64.0;
 CGFloat h = 44.0;
-if (!GHCFNotificationBannerWindow) {
-GHCFNotificationBannerWindow = [[UIWindow alloc] initWithFrame:CGRectMake(32, GHCFReadSafeDistance() + 8, w, h)];
-GHCFNotificationBannerWindow.windowLevel = UIWindowLevelAlert - 0.25;
-GHCFNotificationBannerWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *bannerScene = GHCFActiveWindowScene();
-if (bannerScene) GHCFNotificationBannerWindow.windowScene = bannerScene;
+if (!CFLYNotificationBannerWindow) {
+CFLYNotificationBannerWindow = [[UIWindow alloc] initWithFrame:CGRectMake(32, CFLYReadSafeDistance() + 8, w, h)];
+CFLYNotificationBannerWindow.windowLevel = UIWindowLevelAlert - 0.25;
+CFLYNotificationBannerWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *bannerScene = CFLYActiveWindowScene();
+if (bannerScene) CFLYNotificationBannerWindow.windowScene = bannerScene;
 UIViewController *vc = [[UIViewController alloc] init];
 UIView *pill = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, h)];
 pill.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
@@ -8406,19 +8462,19 @@ label.textColor = [UIColor whiteColor];
 label.font = [UIFont systemFontOfSize:15];
 label.textAlignment = NSTextAlignmentCenter;
 [pill addSubview:label];
-GHCFNotificationBannerWindow.rootViewController = vc;
+CFLYNotificationBannerWindow.rootViewController = vc;
 }
-GHCFNotificationBannerWindow.frame = CGRectMake(32, GHCFReadSafeDistance() + 8, w, h);
-UILabel *label = (UILabel *)[GHCFNotificationBannerWindow.rootViewController.view viewWithTag:99];
+CFLYNotificationBannerWindow.frame = CGRectMake(32, CFLYReadSafeDistance() + 8, w, h);
+UILabel *label = (UILabel *)[CFLYNotificationBannerWindow.rootViewController.view viewWithTag:99];
 if (label) label.text = [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
-GHCFNotificationBannerWindow.hidden = NO;
-double duration = GHCFReadBannerDuration();
+CFLYNotificationBannerWindow.hidden = NO;
+double duration = CFLYReadBannerDuration();
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-GHCFNotificationBannerWindow.hidden = YES;
+CFLYNotificationBannerWindow.hidden = YES;
 });
 char buf[256];
 snprintf(buf, sizeof(buf), "v57 notification banner text %s", text);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 
 // v54 (a)：點插件自己的通知橫幅 → 把浮窗叫回來（開關 bannerOpensFloatingWindow
@@ -8426,39 +8482,39 @@ GHCFLogLine(buf);
 // 快取裡第一個藏著的窗重開；都沒有就只記 log。
 - (void)handleBannerTap:(UITapGestureRecognizer *)recognizer {
 (void)recognizer;
-if (!GHCFReadBannerOpensFloatingWindow()) {
-GHCFLogLine("v57 banner tap ignored, switch off");
+if (!CFLYReadBannerOpensFloatingWindow()) {
+CFLYLogLine("v57 banner tap ignored, switch off");
 return;
 }
-for (int k = 0; k < GHCFAppCount; k++) {
-int i = GHCFFrontOrder[k];
-if (GHCFCacheWindows[i] && GHCFCacheMinimized[i] && !GHCFCacheWindows[i].hidden) {
-GHCFLogLine("v57 banner tap restoring peek");
+for (int k = 0; k < CFLYAppCount; k++) {
+int i = CFLYFrontOrder[k];
+if (CFLYCacheWindows[i] && CFLYCacheMinimized[i] && !CFLYCacheWindows[i].hidden) {
+CFLYLogLine("v57 banner tap restoring peek");
 [self promoteWindowToMainIndex:i];
 return;
 }
 }
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheWindows[i] && GHCFCacheWindows[i].hidden && GHCFCacheScenes[i]) {
-const char *bid = GHCFCacheBundleIDs[i];
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheWindows[i] && CFLYCacheWindows[i].hidden && CFLYCacheScenes[i]) {
+const char *bid = CFLYCacheBundleIDs[i];
 if (bid && bid[0] != '\0') {
 char name[128];
-GHCFAppNameForBundleID(bid, name, sizeof(name));
+CFLYAppNameForBundleID(bid, name, sizeof(name));
 char buf[192];
 snprintf(buf, sizeof(buf), "v57 banner tap reopening %s", bid);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 [self launchHostedApp:bid name:name];
 return;
 }
 }
 }
-GHCFLogLine("v57 banner tap no window to open");
+CFLYLogLine("v57 banner tap no window to open");
 }
 
 // v54 (b)：從橫幅窗認是哪個 App（探針）：(1) rootViewController 的
 // bannerContext.bundleID（有的話）；(2) 窗裡的 UILabel 文字反查 App 名
 //（恰好一個 App 對上才認）。都認不到回 NO。
-static BOOL GHCFBannerAppForWindow(UIWindow *bannerWin, char *outBid, size_t outSize) {
+static BOOL CFLYBannerAppForWindow(UIWindow *bannerWin, char *outBid, size_t outSize) {
 if (!bannerWin || !outBid || outSize == 0) return NO;
 outBid[0] = '\0';
 @try {
@@ -8494,15 +8550,15 @@ for (UIView *sub in [v subviews]) [stack addObject:sub];
 }
 char found[128] = {0};
 int foundCount = 0;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFAppBundleIDs[i][0] == '\0') continue;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYAppBundleIDs[i][0] == '\0') continue;
 char name[128];
-GHCFAppNameForBundleID(GHCFAppBundleIDs[i], name, sizeof(name));
+CFLYAppNameForBundleID(CFLYAppBundleIDs[i], name, sizeof(name));
 if (name[0] == '\0') continue;
 NSString *nameStr = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
 for (id t in labels) {
 if ([(NSString *)t isEqualToString:nameStr]) {
-if (foundCount == 0) strncpy(found, GHCFAppBundleIDs[i], sizeof(found) - 1);
+if (foundCount == 0) strncpy(found, CFLYAppBundleIDs[i], sizeof(found) - 1);
 foundCount++;
 break;
 }
@@ -8521,10 +8577,10 @@ return NO;
 // 類名含 Banner 的窗新出現；有就認 App、開關開著就為它開浮窗。
 // 沒有可靠 hook 點（這套代碼不用 Logos hook，SpringBoard 橫幅呈現也沒有
 // 通知可聽），所以用輪詢＋認 App 兩步探針；認不到 App 就只記 log 不開窗。
-static BOOL GHCFSystemBannerSeen = NO;
-static void GHCFCheckSystemBanner(void) {
-if (!GHCFReadBannerOpensFloatingWindow()) {
-GHCFSystemBannerSeen = NO;
+static BOOL CFLYSystemBannerSeen = NO;
+static void CFLYCheckSystemBanner(void) {
+if (!CFLYReadBannerOpensFloatingWindow()) {
+CFLYSystemBannerSeen = NO;
 return;
 }
 UIApplication *app = [UIApplication sharedApplication];
@@ -8538,23 +8594,23 @@ if (cls && strstr(cls, "Banner")) { bannerWin = w; break; }
 }
 if (bannerWin) break;
 }
-if (bannerWin && !GHCFSystemBannerSeen) {
-GHCFSystemBannerSeen = YES;
+if (bannerWin && !CFLYSystemBannerSeen) {
+CFLYSystemBannerSeen = YES;
 char bid[128] = {0};
-if (GHCFBannerAppForWindow(bannerWin, bid, sizeof(bid))) {
+if (CFLYBannerAppForWindow(bannerWin, bid, sizeof(bid))) {
 char buf[256];
 snprintf(buf, sizeof(buf), "v57 system banner for %s, opening window (probe)", bid);
-GHCFLogLine(buf);
-if (GHCFLauncherShared) {
+CFLYLogLine(buf);
+if (CFLYLauncherShared) {
 char name[128];
-GHCFAppNameForBundleID(bid, name, sizeof(name));
-[GHCFLauncherShared launchHostedApp:bid name:name];
+CFLYAppNameForBundleID(bid, name, sizeof(name));
+[CFLYLauncherShared launchHostedApp:bid name:name];
 }
 } else {
-GHCFLogLine("v57 system banner appeared, app unknown (probe)");
+CFLYLogLine("v57 system banner appeared, app unknown (probe)");
 }
 } else if (!bannerWin) {
-GHCFSystemBannerSeen = NO;
+CFLYSystemBannerSeen = NO;
 }
 }
 
@@ -8565,25 +8621,25 @@ GHCFSystemBannerSeen = NO;
 - (void)handleResizeDrag:(UIPanGestureRecognizer *)recognizer {
 // v40：多窗——先切活动量到缩放手柄所在的窗（不切的话改的是活动窗，
 // 可能是别的窗的尺寸）。
-UIWindow *resizeWindow = GHCFWindowForView(recognizer.view);
+UIWindow *resizeWindow = CFLYWindowForView(recognizer.view);
 if (resizeWindow) {
-GHCFSetActiveToWindow(resizeWindow);
+CFLYSetActiveToWindow(resizeWindow);
 }
-if (!GHCFHostedWindow || !GHCFHostedContainer || !GHCFHostedContentView) return;
+if (!CFLYHostedWindow || !CFLYHostedContainer || !CFLYHostedContentView) return;
 // v42.3：小窗（peek）也在右下角拖著調尺寸——走下面那條分支（最小
 // 112x242、最大滿窗；放手超過滿窗 80% 就升為大窗、剛才的大窗縮成 peek）。
-if (GHCFHostedMinimized) {
+if (CFLYHostedMinimized) {
 [self handlePeekResizeDrag:recognizer];
 return;
 }
 // v63：尺寸固定——大窗拖角落縮放停用（拉大拉小後續再做）；手柄在大窗上
 // 是藏著的（見建窗處），這裡是兜底。小窗（peek）調尺寸不受影響（上面已分流）。
-GHCFLogLine("v68 window resize disabled, fixed size");
+CFLYLogLine("v68 window resize disabled, fixed size");
 return;
-CGPoint point = [recognizer translationInView:GHCFHostedContainer];
-[recognizer setTranslation:CGPointZero inView:GHCFHostedContainer];
+CGPoint point = [recognizer translationInView:CFLYHostedContainer];
+[recognizer setTranslation:CGPointZero inView:CFLYHostedContainer];
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-CGRect frame = GHCFHostedWindow.frame;
+CGRect frame = CFLYHostedWindow.frame;
 CGFloat newW = frame.size.width + point.x;
 CGFloat newH = frame.size.height + point.y;
 if (newW < 200.0) newW = 200.0;
@@ -8594,23 +8650,23 @@ if (newH > screenBounds.size.height - 120.0) newH = screenBounds.size.height - 1
 // 松手时才调 scene 的 frame（V5_DESIGN.md §2.2：改尺寸防抖，
 // 拖动时不要每次移动都调一次）。细条 24pt、滑杆条在细条下面
 // （y=24），都跟着窗宽走。
-GHCFHostedWindow.frame = CGRectMake(frame.origin.x, frame.origin.y, newW, newH);
-GHCFHostedContainer.frame = CGRectMake(0, 0, newW, newH);
-if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = CGRectMake(0, 0, newW, GHCF_HOSTED_STRIP_H);
-GHCFHostedContentView.frame = CGRectMake(0, 0, newW, newH);
+CFLYHostedWindow.frame = CGRectMake(frame.origin.x, frame.origin.y, newW, newH);
+CFLYHostedContainer.frame = CGRectMake(0, 0, newW, newH);
+if (CFLYHostedTopStrip) CFLYHostedTopStrip.frame = CGRectMake(0, 0, newW, CFLY_HOSTED_STRIP_H);
+CFLYHostedContentView.frame = CGRectMake(0, 0, newW, newH);
 // v38：滑杆条跟着窗宽走（在细条下面）。
-if (GHCFHostedScaleSliderBar) GHCFHostedScaleSliderBar.frame = CGRectMake(0, GHCF_HOSTED_STRIP_H, newW, 36);
-if (GHCFHostedScaleSlider) GHCFHostedScaleSlider.frame = CGRectMake(10, 3, newW - 70, 30);
-if (GHCFHostedScaleLabel) GHCFHostedScaleLabel.frame = CGRectMake(newW - 56, 3, 46, 30);
+if (CFLYHostedScaleSliderBar) CFLYHostedScaleSliderBar.frame = CGRectMake(0, CFLY_HOSTED_STRIP_H, newW, 36);
+if (CFLYHostedScaleSlider) CFLYHostedScaleSlider.frame = CGRectMake(10, 3, newW - 70, 30);
+if (CFLYHostedScaleLabel) CFLYHostedScaleLabel.frame = CGRectMake(newW - 56, 3, 46, 30);
 if (recognizer.state == UIGestureRecognizerStateEnded) {
 char rbuf[128];
 snprintf(rbuf, sizeof(rbuf), "v57 window resized to %dx%d", (int)newW, (int)newH);
-GHCFLogLine(rbuf);
+CFLYLogLine(rbuf);
 [self resizeHostedSceneToContentSize:CGSizeMake(newW, newH)];
 // v40：调尺寸结束存一次位置/大小/缩放（第 6 项）——下次开同一 App
 // 恢复到这次的位置和大小。
-if (GHCFActiveAppIndex >= 0 && GHCFActiveAppIndex < GHCFAppCount) {
-GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
+if (CFLYActiveAppIndex >= 0 && CFLYActiveAppIndex < CFLYAppCount) {
+CFLYSaveGeometryForIndex(CFLYActiveAppIndex);
 }
 }
 }
@@ -8624,29 +8680,29 @@ GHCFSaveGeometryForIndex(GHCFActiveAppIndex);
 // 直接升為大窗（restoreHostedWindow，帶到最前時中央規則把剛才的大窗縮成
 // peek）；否則留在小窗、記住該 App 的小窗尺寸（PeekW/PeekH）、整疊 peek 重排。
 - (void)handlePeekResizeDrag:(UIPanGestureRecognizer *)recognizer {
-if (!GHCFHostedWindow || !GHCFHostedContainer || !GHCFHostedContentView) return;
-int idx = GHCFActiveAppIndex;
-if (idx < 0 || idx >= GHCFAppCount) return;
+if (!CFLYHostedWindow || !CFLYHostedContainer || !CFLYHostedContentView) return;
+int idx = CFLYActiveAppIndex;
+if (idx < 0 || idx >= CFLYAppCount) return;
 // v68：跟手修法——translation 不能量在會動的容器上（同款毛病，
 // 容器原點跟著尺寸動，穩態約 2/3 速度）。改拿固定不動的邊條窗當參考
 // 座標，只換這兩行，其餘夾取／升大窗邏輯不動。
-UIView *fixedRefView = GHCFStripWindow ? (UIView *)GHCFStripWindow : (UIView *)GHCFHostedContainer;
+UIView *fixedRefView = CFLYStripWindow ? (UIView *)CFLYStripWindow : (UIView *)CFLYHostedContainer;
 CGPoint point = [recognizer translationInView:fixedRefView];
 [recognizer setTranslation:CGPointZero inView:fixedRefView];
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-CGRect frame = GHCFHostedWindow.frame;
+CGRect frame = CFLYHostedWindow.frame;
 if (recognizer.state == UIGestureRecognizerStateBegan) {
 char bbuf[128];
-snprintf(bbuf, sizeof(bbuf), "v57 peek resize start %s %dx%d", GHCFCacheBundleIDs[idx], (int)frame.size.width, (int)frame.size.height);
-GHCFLogLine(bbuf);
+snprintf(bbuf, sizeof(bbuf), "v57 peek resize start %s %dx%d", CFLYCacheBundleIDs[idx], (int)frame.size.width, (int)frame.size.height);
+CFLYLogLine(bbuf);
 }
 CGFloat fullW, fullH;
-GHCFFullSizeForIndex(idx, &fullW, &fullH);
+CFLYFullSizeForIndex(idx, &fullW, &fullH);
 CGFloat newW = frame.size.width + point.x;
 CGFloat newH = frame.size.height + point.y;
-if (newW < GHCF_DOCK_PEEK_W) newW = GHCF_DOCK_PEEK_W;
+if (newW < CFLY_DOCK_PEEK_W) newW = CFLY_DOCK_PEEK_W;
 if (newW > fullW) newW = fullW;
-if (newH < GHCF_DOCK_PEEK_H) newH = GHCF_DOCK_PEEK_H;
+if (newH < CFLY_DOCK_PEEK_H) newH = CFLY_DOCK_PEEK_H;
 if (newH > fullH) newH = fullH;
 CGFloat newX = frame.origin.x + (frame.size.width - newW) / 2.0;
 CGFloat newY = frame.origin.y + (frame.size.height - newH) / 2.0;
@@ -8654,37 +8710,37 @@ if (newX < 2.0) newX = 2.0;
 if (newX + newW > screenBounds.size.width - 2.0) newX = screenBounds.size.width - 2.0 - newW;
 if (newY < 2.0) newY = 2.0;
 if (newY + newH > screenBounds.size.height - 2.0) newY = screenBounds.size.height - 2.0 - newH;
-GHCFHostedWindow.frame = CGRectMake(newX, newY, newW, newH);
-GHCFHostedContainer.frame = CGRectMake(0, 0, newW, newH);
-GHCFHostedContentView.frame = CGRectMake(0, 0, newW, newH);
-if (GHCFHostedTopStrip) GHCFHostedTopStrip.frame = CGRectMake(0, 0, newW, GHCF_HOSTED_STRIP_H);
+CFLYHostedWindow.frame = CGRectMake(newX, newY, newW, newH);
+CFLYHostedContainer.frame = CGRectMake(0, 0, newW, newH);
+CFLYHostedContentView.frame = CGRectMake(0, 0, newW, newH);
+if (CFLYHostedTopStrip) CFLYHostedTopStrip.frame = CGRectMake(0, 0, newW, CFLY_HOSTED_STRIP_H);
 // 點按層跟著小窗走（不然放大後露出的地方點了會直接碰到 App 內容）。
-if (GHCFPeekTapOverlays[idx]) GHCFPeekTapOverlays[idx].frame = CGRectMake(0, 0, newW, newH);
+if (CFLYPeekTapOverlays[idx]) CFLYPeekTapOverlays[idx].frame = CGRectMake(0, 0, newW, newH);
 // 手柄排版是關掉的（None），手動跟到右下角。
-if (GHCFHostedResizeHandle) GHCFHostedResizeHandle.frame = CGRectMake(newW - 36, newH - 36, 36, 36);
+if (CFLYHostedResizeHandle) CFLYHostedResizeHandle.frame = CGRectMake(newW - 36, newH - 36, 36, 36);
 BOOL ended = (recognizer.state == UIGestureRecognizerStateEnded);
 BOOL cancelled = (recognizer.state == UIGestureRecognizerStateCancelled);
 if (!ended && !cancelled) return;
 char ebuf[128];
-snprintf(ebuf, sizeof(ebuf), "v57 peek resize end %s %dx%d", GHCFCacheBundleIDs[idx], (int)newW, (int)newH);
-GHCFLogLine(ebuf);
+snprintf(ebuf, sizeof(ebuf), "v57 peek resize end %s %dx%d", CFLYCacheBundleIDs[idx], (int)newW, (int)newH);
+CFLYLogLine(ebuf);
 if (ended && newW >= fullW * 0.8 && newH >= fullH * 0.8) {
 // 放手時已接近滿窗 → 直接升為大窗（恢復到存過的滿窗尺寸；帶到最前時
 // 中央規則把剛才的大窗縮成 peek，來回切就這麼換）。
-GHCFLogLine("v57 peek resized to full, promoting to main");
+CFLYLogLine("v57 peek resized to full, promoting to main");
 [self restoreHostedWindow];
 return;
 }
 // 留在小窗：記住這次的小窗尺寸（下次收成 peek 就用這個尺寸），
 // 內容按新尺寸重排（現成的調尺寸路徑），再重排整疊 peek。
-GHCFSavePeekSizeForIndex(idx, newW, newH);
+CFLYSavePeekSizeForIndex(idx, newW, newH);
 [self resizeHostedSceneToContentSize:CGSizeMake(newW, newH)];
-GHCFLayoutDockPeeks();
+CFLYLayoutDockPeeks();
 }
 
 // 松手后把新内容尺寸告诉 scene（只在松手时调一次）。
 - (void)resizeHostedSceneToContentSize:(CGSize)size {
-if (!GHCFHostedScene) return;
+if (!CFLYHostedScene) return;
 @try {
 // v38：反向耦合（所有 App 都一样）——内容区已经是新尺寸了（
 // handleResizeDrag 里改过），直接调同一条缩放路径：立即改
@@ -8692,17 +8748,17 @@ if (!GHCFHostedScene) return;
 // 新 frame（= 新内容尺寸 ÷ scale）+ 重设安全区 insets（第 3 项）。
 char buf[128];
 snprintf(buf, sizeof(buf), "v57 scene resized %d,%d", (int)size.width, (int)size.height);
-GHCFLogLine(buf);
-GHCFApplyScaleToHostedWindow(YES);
+CFLYLogLine(buf);
+CFLYApplyScaleToHostedWindow(YES);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("v57 scene resize failed");
+CFLYLogLine("v57 scene resize failed");
 }
 }
 
 
 - (void)handleBackgroundTap:(UITapGestureRecognizer *)recognizer {
-GHCFLogLine("v57 background tapped, dismissing launcher");
+CFLYLogLine("v57 background tapped, dismissing launcher");
 [self dismissLauncher];
 }
 
@@ -8711,60 +8767,61 @@ GHCFLogLine("v57 background tapped, dismissing launcher");
 // userInteractionEnabled 是 NO）。
 - (void)handleLauncherOverlayTap:(UITapGestureRecognizer *)recognizer {
 (void)recognizer;
-GHCFLogLine("v57 launcher overlay tapped, dismissing");
+CFLYLogLine("v57 launcher overlay tapped, dismissing");
 [self dismissLauncher];
 }
 
 - (void)showLauncher {
 // v53：分屏關著時 ARC 不再觸發（開關關了就真的停用）。
-if (!GHCFReadEnabled()) {
-GHCFLogLine("v57 launcher blocked, splitscreen disabled");
+if (!CFLYReadEnabled()) {
+CFLYLogLine("v57 launcher blocked, splitscreen disabled");
 return;
 }
 // v54 F／G：開 ARC 前先按 prefs 槽位重載 App 清單（設定頁剛選的 App
 // 立刻看得到；dylib 記憶體的清單只在啟動時載過，否則是 stale 的）。
-GHCFLoadCustomApps();
-if (GHCFLauncherVisible) {
-GHCFLogLine("v57 launcher already open");
+CFLYLoadCustomApps();
+if (CFLYLauncherVisible) {
+CFLYLogLine("v57 launcher already open");
 return;
 }
 // v40：每次打开都重建（设定页的 App 开关、左右位置可能改了，重建
 // 才能立刻生效；窗很轻（几个视图），重建不贵）。旧窗先放掉。
 // v43.39：崩窗口逐行日志（1.0.112）——trollfan 第 4 次开死在 built 到
 // opened 之间；每步一行，下次再崩直接定位到步，不用猜。
-GHCFLogLine("v43.39 showLauncher enter");
-GHCFLauncherWindow = nil;
+CFLYLogLine("v43.39 showLauncher enter");
+CFLYLauncherWindow = nil;
 [self buildLauncherWindow];
-GHCFLogLine("v43.39 showLauncher build returned");
-GHCFLogLine("v43.39 showLauncher strip update begin");
+CFLYLogLine("v43.39 showLauncher build returned");
+CFLYLogLine("v43.39 showLauncher strip update begin");
 // v40：感应带跟小窗位置设定走（设定改了，下次开启动器时带子就跟到
 // 对的边；觸發鈕一直在右邊，永遠能開啟動器）。
-GHCFUpdateStripPosition();
-GHCFLogLine("v43.39 showLauncher strip update done");
+CFLYUpdateStripPosition();
+CFLYLogLine("v43.39 showLauncher strip update done");
 // v55：層級固定在建窗時（覆蓋層 1999.25、背景 1999，都在浮窗之上、
 // 鎖屏之下），不再按有沒有窗切換。背景窗先顯示、覆蓋層後顯示。
-GHCFLogLine("v43.39 showLauncher unhide begin");
-GHCFLauncherBackdropWindow.hidden = NO;
-GHCFLauncherWindow.hidden = NO;
-GHCFLogLine("v43.39 showLauncher unhide done");
-GHCFLauncherVisible = YES;
+CFLYLogLine("v43.39 showLauncher unhide begin");
+CFLYLauncherBackdropWindow.hidden = NO;
+CFLYLauncherWindow.hidden = NO;
+CFLYLogLine("v43.39 showLauncher unhide done");
+CFLYLauncherVisible = YES;
 // v43.2：啟動器背景暗度跟樣式走——圓環 0.65（S2 那種明顯變暗），格狀照舊
-// 0.55。每次打開都重設（關閉四散動畫會把背景根視圖 alpha 收到 0，
+// 0.55。1.0.4：表盤不壓暗（新影片裡背景是亮的，壁紙直接透出來），暗度 0。
+// 每次打開都重設（關閉四散動畫會把背景根視圖 alpha 收到 0，
 // 這裡順手復原，免得下次打開背景是透明的）。
-GHCFLogLine("v43.39 showLauncher dim reset begin");
-if (GHCFLauncherBackdropWindow) {
-UIView *bgRoot = GHCFLauncherBackdropWindow.rootViewController.view;
+CFLYLogLine("v43.39 showLauncher dim reset begin");
+if (CFLYLauncherBackdropWindow) {
+UIView *bgRoot = CFLYLauncherBackdropWindow.rootViewController.view;
 if (bgRoot) {
-CGFloat dimAlpha = GHCFReadLauncherStyleRadial() ? 0.65 : 0.55;
+CGFloat dimAlpha = CFLYReadLauncherStyleDial() ? 0.0 : (CFLYReadLauncherStyleRadial() ? 0.65 : 0.55);
 bgRoot.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:dimAlpha];
 bgRoot.alpha = 1.0;
 }
 }
-GHCFLogLine("v43.39 showLauncher dim reset done");
-GHCFLogLine("v43.39 showLauncher before opened");
-GHCFLogLine("v57 launcher opened");
+CFLYLogLine("v43.39 showLauncher dim reset done");
+CFLYLogLine("v43.39 showLauncher before opened");
+CFLYLogLine("v57 launcher opened");
 // v41：叫出 ARC 時給一下震動（ARC 設置的震動反饋開關，預設開）。
-if (GHCFReadARCHaptics()) {
+if (CFLYReadARCHaptics()) {
 @try {
 UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
 [haptic impactOccurred];
@@ -8774,64 +8831,64 @@ UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithS
 }
 // v43.42（1.0.115，表盘启动器）：表盘打开时悬浮钮隐藏——中心钮就是
 // 觸發鈕钮本人（表盘里画一颗）；关掉时放回原位（见 dismissLauncher）。
-if (GHCFReadLauncherStyleDial() && GHCFReadDialModeEnabled() && GHCFFlyTriggerButtonWindow) {
-GHCFFlyTriggerButtonWindow.hidden = YES;
-GHCFDialHidFlyTriggerButton = YES;
+if (CFLYReadLauncherStyleDial() && CFLYReadDialModeEnabled() && CFLYFlyTriggerButtonWindow) {
+CFLYFlyTriggerButtonWindow.hidden = YES;
+CFLYDialHidFlyTriggerButton = YES;
 }
 }
 
 // v43.19：遞迴收啟動器裡的按鈕——新樣式的按鈕在 scroll view／面板裡面，
 // 不是 contentView 的直接子視圖；面板容器（9101 側邊欄／9102 抽屜／
 // 9103 輪盤 scroll view／9104 磁貼卡／9105 輪盤圓點／9106 表盘圆盘）一起淡出。
-static void GHCFCollectLauncherFlyers(UIView *view, NSMutableArray *flyers, NSMutableArray *panels) {
+static void CFLYCollectLauncherFlyers(UIView *view, NSMutableArray *flyers, NSMutableArray *panels) {
 for (UIView *sub in view.subviews) {
 if ([sub isKindOfClass:[UIButton class]]) {
 [flyers addObject:sub];
 } else {
 if (sub.tag == 9101 || sub.tag == 9102 || sub.tag == 9103 || sub.tag == 9104 || sub.tag == 9105 || sub.tag == 9106) [panels addObject:sub];
-GHCFCollectLauncherFlyers(sub, flyers, panels);
+CFLYCollectLauncherFlyers(sub, flyers, panels);
 }
 }
 }
 
 - (void)dismissLauncher {
-if (!GHCFLauncherVisible) return;
-GHCFLauncherVisible = NO;
+if (!CFLYLauncherVisible) return;
+CFLYLauncherVisible = NO;
 // v43.42（1.0.115，表盘启动器）：表盘打开时藏了悬浮钮，关掉时放回来
 //（钮位是用户拖好的 prefs，不动；只恢复显示）。
-if (GHCFDialHidFlyTriggerButton) {
+if (CFLYDialHidFlyTriggerButton) {
 // v43.43：開關關著時不放回（邊緣滑動也能叫出表盤，關掉時同樣藏過鈕）。
-if (GHCFFlyTriggerButtonWindow && GHCFReadFlyTriggerButtonEnabled()) GHCFFlyTriggerButtonWindow.hidden = NO;
-GHCFDialHidFlyTriggerButton = NO;
+if (CFLYFlyTriggerButtonWindow && CFLYReadFlyTriggerButtonEnabled()) CFLYFlyTriggerButtonWindow.hidden = NO;
+CFLYDialHidFlyTriggerButton = NO;
 }
 // v43.37（1.0.110，扇形轉盤）：轉盤狀態清空——圖標按鈕跟著舊窗走，
 // 靜態陣列不留著它們（不然每次打開都漏 25 顆按鈕）；弱引用跟著歸 nil。
 // ChinaFly（1.0.2）：菜單模式也清掉，下次打開一律先是 App。
-GHCFDialMenuMode = NO;
-GHCFDialButtons = nil;
-GHCFDialRadii = nil;
-GHCFDialAngles = nil;
-GHCFDialTotal = 0;
-GHCFDialRotation = 0;
-GHCFDialPanView = nil;
+CFLYDialMenuMode = NO;
+CFLYDialButtons = nil;
+CFLYDialRadii = nil;
+CFLYDialAngles = nil;
+CFLYDialTotal = 0;
+CFLYDialRotation = 0;
+CFLYDialPanView = nil;
 // v43.2：關閉動畫——圖標往外四散飛走（S2 關啟動器那樣），不是直接消失。
 // 四散方向是各圖標相對屏幕中心的方向（圓環／格狀都適用），140pt 外＋縮 0.6＋淡出，0.35 秒。
 // 動畫跑完才藏窗；中途重開的話 completion 只藏舊窗（指標比對＋
-// GHCFLauncherVisible 守衛），不會把新開的啟動器藏掉。
+// CFLYLauncherVisible 守衛），不會把新開的啟動器藏掉。
 NSMutableArray *flyers = nil;
 NSMutableArray *panels = nil;
-if (GHCFLauncherContentView) {
+if (CFLYLauncherContentView) {
 flyers = [NSMutableArray array];
 panels = [NSMutableArray array];
-GHCFCollectLauncherFlyers(GHCFLauncherContentView, flyers, panels);
+CFLYCollectLauncherFlyers(CFLYLauncherContentView, flyers, panels);
 }
-UIWindow *dismissWin = GHCFLauncherWindow;
-UIWindow *dismissBgWin = GHCFLauncherBackdropWindow;
+UIWindow *dismissWin = CFLYLauncherWindow;
+UIWindow *dismissBgWin = CFLYLauncherBackdropWindow;
 UIView *dismissBgRoot = dismissBgWin ? dismissBgWin.rootViewController.view : nil;
 if (!flyers || [flyers count] == 0) {
-GHCFLauncherWindow.hidden = YES;
+CFLYLauncherWindow.hidden = YES;
 if (dismissBgWin) dismissBgWin.hidden = YES;
-GHCFLogLine("v57 launcher dismissed");
+CFLYLogLine("v57 launcher dismissed");
 return;
 }
 CGRect screenBounds = [UIScreen mainScreen].bounds;
@@ -8851,13 +8908,13 @@ for (UIView *panel in panels) panel.alpha = 0.0;
 if (dismissBgRoot) dismissBgRoot.alpha = 0.0;
 } completion:^(BOOL finished) {
 (void)finished;
-if (!GHCFLauncherVisible) {
-if (GHCFLauncherWindow == dismissWin) GHCFLauncherWindow.hidden = YES;
+if (!CFLYLauncherVisible) {
+if (CFLYLauncherWindow == dismissWin) CFLYLauncherWindow.hidden = YES;
 if (dismissBgWin) dismissBgWin.hidden = YES;
 }
 if (dismissBgRoot) dismissBgRoot.alpha = 1.0;
 for (UIView *panel in panels) panel.alpha = 1.0;
-GHCFLogLine("v57 launcher dismissed");
+CFLYLogLine("v57 launcher dismissed");
 }];
 }
 
@@ -8873,35 +8930,35 @@ GHCFLogLine("v57 launcher dismissed");
 - (void)buildLauncherWindow {
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 // 背景窗（只建一次，會話裡留著；層級 1999，在浮窗之上、覆蓋層之下）。
-if (!GHCFLauncherBackdropWindow) {
-GHCFLauncherBackdropWindow = [[UIWindow alloc] initWithFrame:screenBounds];
-GHCFLauncherBackdropWindow.windowLevel = UIWindowLevelAlert - 1.0;
-GHCFLauncherBackdropWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *bgScene = GHCFActiveWindowScene();
-if (bgScene) GHCFLauncherBackdropWindow.windowScene = bgScene;
+if (!CFLYLauncherBackdropWindow) {
+CFLYLauncherBackdropWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+CFLYLauncherBackdropWindow.windowLevel = UIWindowLevelAlert - 1.0;
+CFLYLauncherBackdropWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *bgScene = CFLYActiveWindowScene();
+if (bgScene) CFLYLauncherBackdropWindow.windowScene = bgScene;
 UIViewController *bgVC = [[UIViewController alloc] init];
 UIView *bgRoot = [[UIView alloc] initWithFrame:screenBounds];
-bgRoot.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.55];
+bgRoot.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:(CFLYReadLauncherStyleDial() ? 0.0 : 0.55)];
 UITapGestureRecognizer *bgTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleBackgroundTap:)];
 [bgRoot addGestureRecognizer:bgTap];
 bgVC.view = bgRoot;
-GHCFLauncherBackdropWindow.rootViewController = bgVC;
-} else if (!GHCFLauncherBackdropWindow.windowScene) {
+CFLYLauncherBackdropWindow.rootViewController = bgVC;
+} else if (!CFLYLauncherBackdropWindow.windowScene) {
 // v43.2：背景窗只建一次——第一次建時若 scene 是 nil（建窗太早），背景就
 // 永遠不顯示（Lee 說啟動器「不變暗」可能就是這個）；下次打開時補上 scene。
-UIWindowScene *bgSceneRetry = GHCFActiveWindowScene();
-if (bgSceneRetry) GHCFLauncherBackdropWindow.windowScene = bgSceneRetry;
+UIWindowScene *bgSceneRetry = CFLYActiveWindowScene();
+if (bgSceneRetry) CFLYLauncherBackdropWindow.windowScene = bgSceneRetry;
 }
 // 覆蓋層窗（每次打開都重建；全屏透明，圖標直接按屏幕座標排）。
-GHCFLauncherWindow = [[UIWindow alloc] initWithFrame:screenBounds];
-GHCFLauncherWindow.windowLevel = UIWindowLevelAlert - 0.75;
-GHCFLauncherWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *launcherScene = GHCFActiveWindowScene();
+CFLYLauncherWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+CFLYLauncherWindow.windowLevel = UIWindowLevelAlert - 0.75;
+CFLYLauncherWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *launcherScene = CFLYActiveWindowScene();
 if (launcherScene) {
-GHCFLauncherWindow.windowScene = launcherScene;
-GHCFLogLine("v57 launcher scene found");
+CFLYLauncherWindow.windowScene = launcherScene;
+CFLYLogLine("v57 launcher scene found");
 } else {
-GHCFLogLine("v57 launcher scene nil");
+CFLYLogLine("v57 launcher scene nil");
 }
 UIViewController *launcherVC = [[UIViewController alloc] init];
 UIView *contentView = [[UIView alloc] initWithFrame:screenBounds];
@@ -8910,10 +8967,10 @@ UITapGestureRecognizer *overlayTap = [[UITapGestureRecognizer alloc] initWithTar
 overlayTap.delegate = self;
 [contentView addGestureRecognizer:overlayTap];
 launcherVC.view = contentView;
-GHCFLauncherContentView = contentView;
-GHCFLauncherWindow.rootViewController = launcherVC;
+CFLYLauncherContentView = contentView;
+CFLYLauncherWindow.rootViewController = launcherVC;
 [self rebuildARCContent];
-GHCFLogLine("v57 launcher built");
+CFLYLogLine("v57 launcher built");
 }
 
 //（每次打開、置頂變了、選完 App 後都調）：v55——啟動器只剩 App 圖標
@@ -8925,63 +8982,63 @@ GHCFLogLine("v57 launcher built");
 - (void)rebuildARCContent {
 // v54 F／G：重建 ARC 內容前先按 prefs 槽位重載 App 清單（跟 showLauncher
 // 同一條路；設定頁剛選的 App 下次開 ARC 立刻看得到）。
-GHCFLoadCustomApps();
-if (!GHCFLauncherContentView) return;
-for (UIView *sub in [GHCFLauncherContentView.subviews copy]) [sub removeFromSuperview];
+CFLYLoadCustomApps();
+if (!CFLYLauncherContentView) return;
+for (UIView *sub in [CFLYLauncherContentView.subviews copy]) [sub removeFromSuperview];
 // v43.19：橫向輪盤的靜態指標清掉（舊 scroll view 已拆掉，下次重建再填）。
-GHCFCarouselScrollView = nil;
-GHCFCarouselCards = nil;
-GHCFCarouselPageControl = nil;
-CGFloat iconSize = GHCFReadARCIconSize();
+CFLYCarouselScrollView = nil;
+CFLYCarouselCards = nil;
+CFLYCarouselPageControl = nil;
+CGFloat iconSize = CFLYReadARCIconSize();
 // 順序：置頂／最近／全部（只顯示啟動器裡開著的 App；置頂的不在
 // 最近裡重複，最近的不在全部裡重複）。
-NSArray *pinned = GHCFReadIDList("pinnedAppIDs");
-NSArray *recent = GHCFReadIDList("recentAppIDs");
+NSArray *pinned = CFLYReadIDList("pinnedAppIDs");
+NSArray *recent = CFLYReadIDList("recentAppIDs");
 NSMutableArray *pinnedInLauncher = [NSMutableArray array];
 NSMutableArray *recentInLauncher = [NSMutableArray array];
 NSMutableArray *allRest = [NSMutableArray array];
 for (id item in pinned) {
 if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
-int idx = bid ? GHCFAppIndexForBundleID(bid) : -1;
-if (idx >= 0 && GHCFIsAppEnabled(idx)) [pinnedInLauncher addObject:item];
+int idx = bid ? CFLYAppIndexForBundleID(bid) : -1;
+if (idx >= 0 && CFLYIsAppEnabled(idx)) [pinnedInLauncher addObject:item];
 }
 for (id item in recent) {
 if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
-int idx = bid ? GHCFAppIndexForBundleID(bid) : -1;
-if (idx >= 0 && GHCFIsAppEnabled(idx) && ![pinnedInLauncher containsObject:item]) [recentInLauncher addObject:item];
+int idx = bid ? CFLYAppIndexForBundleID(bid) : -1;
+if (idx >= 0 && CFLYIsAppEnabled(idx) && ![pinnedInLauncher containsObject:item]) [recentInLauncher addObject:item];
 }
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFAppBundleIDs[i][0] == '\0' || !GHCFIsAppEnabled(i)) continue;
-NSString *bidStr = [NSString stringWithCString:GHCFAppBundleIDs[i] encoding:NSUTF8StringEncoding];
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYAppBundleIDs[i][0] == '\0' || !CFLYIsAppEnabled(i)) continue;
+NSString *bidStr = [NSString stringWithCString:CFLYAppBundleIDs[i] encoding:NSUTF8StringEncoding];
 if ([pinnedInLauncher containsObject:bidStr]) continue;
 if ([recentInLauncher containsObject:bidStr]) continue;
 [allRest addObject:bidStr];
 }
 // ChinaFly（1.0.0）：allRest 按 menuAppOrder 排（沒開過菜單編輯頁時用
 // 影片 17 個默認；置頂／最近仍在前面，不動）。
-GHCFOrderAppsByMenuOrder(allRest);
+CFLYOrderAppsByMenuOrder(allRest);
 // 弧區：三段合併成一個順序（置頂→最近→全部），按層數分同心弧。
 NSMutableArray *ordered = [NSMutableArray array];
 [ordered addObjectsFromArray:pinnedInLauncher];
 [ordered addObjectsFromArray:recentInLauncher];
 [ordered addObjectsFromArray:allRest];
 if ([ordered count] == 0) {
-GHCFLogLine("v57 launcher no apps");
+CFLYLogLine("v57 launcher no apps");
 return;
 }
 // v43.4：啟動器裡的工具鈕已拿掉（皇上 2026-11-18 說沒必要留），
 // 只排 App 圖標。
-GHCFLogLine("v43.4 launcher no tool buttons");
+CFLYLogLine("v43.4 launcher no tool buttons");
 // v43.19：啟動器樣式七檔——0 圓環、1 側邊欄、2 抽屜、3 橫向輪盤、
 // 4 磁貼（見下面四個新函數）、5 扇形轉盤（1.0.110：同一套圓環排布＋
 // 轉盤手勢，見 handleDialPan:）、6 表盘启动器（1.0.115，見
 // addDialLauncherIconsForBids）。
-// ChinaFly（1.0.0）：預設走表盤（見 GHCFReadLauncherStyle）；舊樣式
+// ChinaFly（1.0.0）：預設走表盤（見 CFLYReadLauncherStyle）；舊樣式
 // 代碼留著休眠，明確存過舊值才走。
 // v72：樣式分支記一行，下次日誌證明讀值有沒有到。
-int launcherStyle = GHCFReadLauncherStyle();
+int launcherStyle = CFLYReadLauncherStyle();
 {
 const char *styleName = "radial";
 if (launcherStyle == 1) styleName = "sidebar";
@@ -8992,7 +9049,7 @@ else if (launcherStyle == 5) styleName = "trollfan";
 else if (launcherStyle == 6) styleName = "dial";
 char sbuf[64];
 snprintf(sbuf, sizeof(sbuf), "v43.19 launcher style %s", styleName);
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 if (launcherStyle == 1) {
 [self addSidebarLauncherIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
@@ -9006,18 +9063,18 @@ if (launcherStyle == 1) {
 // v43.42（1.0.115，表盘启动器）：第 7 档；表盘模式关了就回落圆环。
 // ChinaFly（1.0.2，表盤菜單）：菜單模式時排已開的菜單動作（33 個，
 // 開關決定出不出來；全關了就回 App，不留空表盤）。
-if (GHCFReadDialModeEnabled()) {
-if (GHCFDialMenuMode) {
-NSArray *menuIDs = GHCFEnabledMenuIdentifiers();
+if (CFLYReadDialModeEnabled()) {
+if (CFLYDialMenuMode) {
+NSArray *menuIDs = CFLYEnabledMenuIdentifiers();
 if (menuIDs && [menuIDs count] > 0) {
-[self addDialLauncherIconsForBids:menuIDs iconSize:GHCFReadDialIconSize() action:@selector(handleDialMenuActionButton:)];
+[self addDialLauncherIconsForBids:menuIDs iconSize:CFLYReadDialIconSize() action:@selector(handleDialMenuActionButton:)];
 } else {
-GHCFLogLine("ChinaFly dial menu empty, all toggles off, back to apps");
-GHCFDialMenuMode = NO;
-[self addDialLauncherIconsForBids:ordered iconSize:GHCFReadDialIconSize() action:@selector(handleAppButton:)];
+CFLYLogLine("ChinaFly dial menu empty, all toggles off, back to apps");
+CFLYDialMenuMode = NO;
+[self addDialLauncherIconsForBids:ordered iconSize:CFLYReadDialIconSize() action:@selector(handleAppButton:)];
 }
 } else {
-[self addDialLauncherIconsForBids:ordered iconSize:GHCFReadDialIconSize() action:@selector(handleAppButton:)];
+[self addDialLauncherIconsForBids:ordered iconSize:CFLYReadDialIconSize() action:@selector(handleAppButton:)];
 }
 } else {
 [self addRadialARCIconsForBids:ordered iconSize:iconSize action:@selector(handleAppButton:)];
@@ -9030,12 +9087,12 @@ GHCFDialMenuMode = NO;
 // radial（0）走回靜態圓環，不裝。
 // contentView 每次打開都重建，弱引用守衛保證一個視圖只裝一次
 //（重建時舊視圖已釋放，弱引用自動歸 nil）。
-if ((launcherStyle == 5 || launcherStyle == 6) && GHCFReadCarouselEnabled() && !GHCFIsARCSlideBottom() && GHCFDialTotal > 0 && GHCFDialPanView != GHCFLauncherContentView) {
+if ((launcherStyle == 5 || launcherStyle == 6) && CFLYReadCarouselEnabled() && !CFLYIsARCSlideBottom() && CFLYDialTotal > 0 && CFLYDialPanView != CFLYLauncherContentView) {
 UIPanGestureRecognizer *dialPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleDialPan:)];
-[GHCFLauncherContentView addGestureRecognizer:dialPan];
-GHCFDialPanView = GHCFLauncherContentView;
+[CFLYLauncherContentView addGestureRecognizer:dialPan];
+CFLYDialPanView = CFLYLauncherContentView;
 }
-GHCFLogLine("v57 launcher icons only");
+CFLYLogLine("v57 launcher icons only");
 }
 
 // v41：ARC 裡一列圖標（bids 是 bundleID 字串的陣列；
@@ -9052,9 +9109,9 @@ GHCFLogLine("v57 launcher icons only");
 - (CGFloat)addARCIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
 if (!bids || [bids count] == 0) return 8.0;
 NSInteger N = (NSInteger)[bids count];
-int L = GHCFReadARCLayerCount();
+int L = CFLYReadARCLayerCount();
 // v58（§152）：記原始值——下次日誌一眼看出設定檔裡到底是 "3" 還是沒寫進去。
-char *rawLayer = GHCFReadPrefsCString("arcLayerCount");
+char *rawLayer = CFLYReadPrefsCString("arcLayerCount");
 int E = (L < N) ? L : (int)N;
 if (E < 1) E = 1;
 // v63：層數最高 5 層——四個陣列全是 [5]（weights {1,2,3,4,5}；
@@ -9084,16 +9141,16 @@ radii[k] = (E == 1) ? 278.0 : (104.0 + k * (278.0 - 104.0) / (E - 1));
 }
 // v55：弧心錨到側邊緣（arcSlideSide：左 0／右 screenW，預設右），
 // 開口朝屏幕內；cy 是觸發鈕中心或邊緣滑動的手指 Y
-//（GHCFLauncherAnchorY），沒錨點就屏幕中間。掃掠按安全區不對稱收窄，
+//（CFLYLauncherAnchorY），沒錨點就屏幕中間。掃掠按安全區不對稱收窄，
 // 保證最外圈圖標整顆在屏幕內（錨點靠頂時扇面往下開，靠底時往上開）。
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 CGFloat screenW = screenBounds.size.width;
 CGFloat screenH = screenBounds.size.height;
-BOOL slideLeft = GHCFIsARCSlideLeft();
+BOOL slideLeft = CFLYIsARCSlideLeft();
 CGFloat cx = slideLeft ? 0.0 : screenW;
-CGFloat cy = GHCFLauncherAnchorY;
+CGFloat cy = CFLYLauncherAnchorY;
 if (cy < 0) cy = screenH / 2.0;
-CGFloat topInset = GHCFScreenSafeTopInset();
+CGFloat topInset = CFLYScreenSafeTopInset();
 CGFloat topLimit = topInset + size / 2.0 + 4.0;
 CGFloat botLimit = screenH - 34.0 - size / 2.0 - 4.0;
 if (cy < topLimit) cy = topLimit;
@@ -9139,11 +9196,11 @@ CGFloat dir = slideLeft ? 1.0 : -1.0;
 CGFloat ix = cx + dir * R * cos(ang);
 CGFloat iy = cy + R * sin(ang);
 char name[128];
-GHCFAppNameForBundleID(bid, name, sizeof(name));
-NSInteger tag = GHCFAppIndexForBundleID(bid);
+CFLYAppNameForBundleID(bid, name, sizeof(name));
+NSInteger tag = CFLYAppIndexForBundleID(bid);
 if (tag < 0) continue;
 UIButton *btn = [self arcIconButtonForBundleID:bid name:name tag:tag action:action atCenter:CGPointMake(ix, iy) size:size withName:NO];
-[GHCFLauncherContentView addSubview:btn];
+[CFLYLauncherContentView addSubview:btn];
 CGFloat bottom = iy + size / 2.0;
 if (bottom > maxBottom) maxBottom = bottom;
 }
@@ -9151,7 +9208,7 @@ if (bottom > maxBottom) maxBottom = bottom;
 char buf[192];
 snprintf(buf, sizeof(buf), "v58 arc layers=%d icons=%d effLayers=%d side=%s anchorY=%d raw=%s", L, (int)N, E, slideLeft ? "left" : "right", (int)cy, rawLayer ? rawLayer : "none");
 if (rawLayer) free(rawLayer);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 return maxBottom + 12.0;
 }
 
@@ -9161,7 +9218,7 @@ return maxBottom + 12.0;
 // v43.8：Rmax 改成硬邊（原來再減 12pt 邊距）：單圈那條路自己另取 12pt
 // 邊距；多圈 fallback 時 25 個 App 要開到第 3 圈（半徑 182，40pt 圖標時
 // 硬邊是 187，12pt 邊距只到 175，第 3 圈會被攔住，25 個裝不下）。
-static int GHCFRadialRingLayout(CGFloat iconSize, CGFloat gearSize, CGFloat radii[6], int caps[6]) {
+static int CFLYRadialRingLayout(CGFloat iconSize, CGFloat gearSize, CGFloat radii[6], int caps[6]) {
 for (int i = 0; i < 6; i++) { radii[i] = 0; caps[i] = 0; }
 CGRect sb = [UIScreen mainScreen].bounds;
 CGFloat Rmax = MIN(sb.size.width, sb.size.height) / 2.0 - iconSize / 2.0;
@@ -9189,7 +9246,7 @@ return total;
 // 从顶部 -90° 开始均分 360°；中央 76pt 大齿轮不动）。图标大小走 arcIconSize
 // 设定值；装不下就往小缩（每次减 4，最小 40pt，跟以前一样）；缩到 40pt
 // 还装不下（单圈约 20 个）才开多圈——多圈走原来的同心圆环逻辑
-//（GHCFRadialRingLayout），25 个 App 时是 3 圈（2 圈在 40pt 下只装得下 22 个）。
+//（CFLYRadialRingLayout），25 个 App 时是 3 圈（2 圈在 40pt 下只装得下 22 个）。
 // v43.23：第 3 件——滑出方向選「從底部出」時圓心改跟觸發位置走（貼底緣），
 // 圖標只排上半扇、按半圓弧長重算每環容量；左／右兩檔圓心仍是屏幕中心。
 - (CGFloat)addRadialARCIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
@@ -9200,9 +9257,9 @@ CGPoint center = CGPointMake(screenBounds.size.width / 2.0, screenBounds.size.he
 CGFloat gearSize = 76.0;
 // v43.23：第 3 件——從底部出：圓心不再是屏幕中心，改跟觸發位置走
 //（邊緣滑動手指的 X／觸發鈕中心 X），貼在底緣上方；左／右兩檔不動。
-BOOL slideBottom = GHCFIsARCSlideBottom();
+BOOL slideBottom = CFLYIsARCSlideBottom();
 if (slideBottom) {
-CGFloat ax = GHCFLauncherAnchorX;
+CGFloat ax = CFLYLauncherAnchorX;
 if (ax < 0) ax = screenBounds.size.width / 2.0;
 CGFloat axMargin = 76.0;
 if (ax < axMargin) ax = axMargin;
@@ -9215,23 +9272,23 @@ if (icon > 72.0) icon = 72.0;
 // v43.37（1.0.110，扇形轉盤）：轉盤狀態重建——trollfan 才記，
 // 每次重排都清空、轉角歸零（slideBottom 扇形不轉，循環裡不記；
 // radial（0）靜態圓環，不進這裡）。
-if (GHCFReadLauncherStyleTrollFan()) {
-GHCFDialButtons = [NSMutableArray array];
-GHCFDialRadii = [NSMutableArray array];
-GHCFDialAngles = [NSMutableArray array];
-GHCFDialCenter = center;
-GHCFDialRotation = 0;
-GHCFDialLastTickRotation = 0;
-GHCFDialTotal = (int)total;
+if (CFLYReadLauncherStyleTrollFan()) {
+CFLYDialButtons = [NSMutableArray array];
+CFLYDialRadii = [NSMutableArray array];
+CFLYDialAngles = [NSMutableArray array];
+CFLYDialCenter = center;
+CFLYDialRotation = 0;
+CFLYDialLastTickRotation = 0;
+CFLYDialTotal = (int)total;
 }
 // v43.32：ARC 触发方式时转盘按扇形排（起始角＋扇角，Trigger.plist）；
 // 扇角 360 就是全圆（只转个起始方向）；其他方式／底部扇形保持全圆。
 // （偏离 7a5734b 一处：7a5734b 时转盘挂在 radial 上，这里转盘已是独立第 6 档，
 // 所以多一道 trollfan 門——radial（0）靜態圓環一行都不動，扇形排只改轉盤。）
-BOOL arcFanMode = GHCFReadLauncherStyleTrollFan() && !slideBottom && GHCFReadTriggerModeIsARC() && GHCFReadARCFanAngle() < 360.0;
-double arcStart = -GHCFReadARCStartAngle() * M_PI / 180.0;
-double arcSpan = GHCFReadARCFanAngle() * M_PI / 180.0;
-GHCFDialSlot = (arcFanMode && total > 1) ? arcSpan / (double)(total - 1) : 2.0 * M_PI / (double)total;
+BOOL arcFanMode = CFLYReadLauncherStyleTrollFan() && !slideBottom && CFLYReadTriggerModeIsARC() && CFLYReadARCFanAngle() < 360.0;
+double arcStart = -CFLYReadARCStartAngle() * M_PI / 180.0;
+double arcSpan = CFLYReadARCFanAngle() * M_PI / 180.0;
+CFLYDialSlot = (arcFanMode && total > 1) ? arcSpan / (double)(total - 1) : 2.0 * M_PI / (double)total;
 // v43.8 单圈优先：半径取 Rmax（留 12pt 边距），容量＝周长／间距；
 // 装不下就往小缩（每次减 4，最小 40），缩到底还装不下就不走单圈。
 CGFloat radii[6] = {0, 0, 0, 0, 0, 0};
@@ -9252,7 +9309,7 @@ icon -= 4.0;
 }
 if (rings == 0) {
 // v43.8 fallback：单圈装不下，走原来的多圈同心圆环逻辑。
-GHCFRadialRingLayout(icon, gearSize, radii, caps);
+CFLYRadialRingLayout(icon, gearSize, radii, caps);
 rings = 0;
 for (int r = 0; r < 6; r++) { if (caps[r] > 0) rings++; else break; }
 if (rings == 0) {
@@ -9267,7 +9324,7 @@ rings = 1;
 // v43.14：圆环版吃层数设定——层数＝最多几圈；图标装得下就用更少圈，
 // 不留空圈；缩到 40pt 下限还装不下才多开圈（不为守层数把图标缩到看不见）。
 {
-int maxRings = GHCFReadARCLayerCount();
+int maxRings = CFLYReadARCLayerCount();
 if (rings > maxRings) {
 int capMax = 0;
 for (int r = 0; r < maxRings; r++) capMax += caps[r];
@@ -9277,7 +9334,7 @@ for (int r = maxRings; r < 6; r++) { radii[r] = 0; caps[r] = 0; }
 rings = maxRings;
 char cbuf[128];
 snprintf(cbuf, sizeof(cbuf), "v43.14 radial layer cap %d, rings %d -> %d", maxRings, geomRings, rings);
-GHCFLogLine(cbuf);
+CFLYLogLine(cbuf);
 }
 }
 }
@@ -9289,7 +9346,7 @@ GHCFLogLine(cbuf);
 // 48pt，第一環 rr0=74 > 48，rr==0 兜底把 25 個全塞一圈 48pt 半圓。
 if (slideBottom) {
 CGFloat pitch = icon + 14.0;
-CGFloat topRoom = center.y - GHCFScreenSafeTopInset();
+CGFloat topRoom = center.y - CFLYScreenSafeTopInset();
 CGFloat maxR = topRoom - icon / 2.0 - 8.0;
 if (maxR < 40.0) maxR = 40.0;
 CGFloat hRoom = center.x;
@@ -9343,13 +9400,13 @@ rr++;
 if (capSum < (int)total) {
 char obuf[160];
 snprintf(obuf, sizeof(obuf), "v43.24 radial bottom fan overflow, cap=%d total=%d center=%d", capSum, (int)total, (int)center.x);
-GHCFLogLine(obuf);
+CFLYLogLine(obuf);
 }
 rings = rr;
 for (int r = rr; r < 6; r++) { radii[r] = 0; caps[r] = 0; }
 char bbuf[128];
 snprintf(bbuf, sizeof(bbuf), "v43.23 radial bottom fan center=%d,%d rings=%d cap=%d", (int)center.x, (int)center.y, rings, capSum);
-GHCFLogLine(bbuf);
+CFLYLogLine(bbuf);
 }
 CGFloat maxBottom = 0;
 NSInteger idx = 0;
@@ -9394,17 +9451,17 @@ if (angle > hi) angle = hi;
 }
 CGPoint p = CGPointMake(center.x + radius * cos(angle), center.y + radius * sin(angle));
 char name[128];
-GHCFAppNameForBundleID(bid, name, sizeof(name));
-NSInteger tag = GHCFAppIndexForBundleID(bid);
+CFLYAppNameForBundleID(bid, name, sizeof(name));
+NSInteger tag = CFLYAppIndexForBundleID(bid);
 if (tag < 0) continue;
 UIButton *btn = [self arcIconButtonForBundleID:bid name:name tag:tag action:action atCenter:p size:icon withName:NO];
-[GHCFLauncherContentView addSubview:btn];
+[CFLYLauncherContentView addSubview:btn];
 // v43.37（1.0.110，扇形轉盤）：記下半徑／基準角，供轉盤拖動重排
 //（trollfan 才記；slideBottom 扇形不轉，循環裡不記）。
-if (!slideBottom && GHCFReadLauncherStyleTrollFan()) {
-[GHCFDialButtons addObject:btn];
-[GHCFDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
-[GHCFDialAngles addObject:[NSNumber numberWithDouble:angle]];
+if (!slideBottom && CFLYReadLauncherStyleTrollFan()) {
+[CFLYDialButtons addObject:btn];
+[CFLYDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
+[CFLYDialAngles addObject:[NSNumber numberWithDouble:angle]];
 }
 CGFloat bottom = p.y + icon / 2.0;
 if (bottom > maxBottom) maxBottom = bottom;
@@ -9412,16 +9469,16 @@ if (bottom > maxBottom) maxBottom = bottom;
 }
 // 中間大設定齒輪。
 UIButton *gearBtn = [self arcRadialGearButtonAtCenter:center size:gearSize];
-[GHCFLauncherContentView addSubview:gearBtn];
+[CFLYLauncherContentView addSubview:gearBtn];
 {
 char sbuf[128];
 snprintf(sbuf, sizeof(sbuf), "v43.2 radial icons=%d size=%d rings=%d", (int)total, (int)icon, rings);
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 return maxBottom + 12.0;
 }
 
-// v43.42（1.0.115，表盘启动器，第 7 档 dial）：照 TrollOpen 参考图／影片
+// v43.42（1.0.115，表盘启动器，第 7 档 dial）：照 參考影片
 // 的排布做（只模仿排布与设置项，不抄代码、不拿它的图和素材）：
 // 图标沿圆弧排开、中心钮（觸發鈕）在弧顶、扇形向下展开；
 // 7 圈同心弧，扇区 54°–104°（向下偏右，跟参考图一样；钮在右边缘附近时
@@ -9436,7 +9493,7 @@ return maxBottom + 12.0;
 // 打开时悬浮钮已由 showLauncher 藏起（关掉时放回）；中心钮点一下收起。
 // 背景沿用 0.55 黑遮罩，另加一面淡白圆盘（透明度走导航台设置）。
 // 指针只画示意短针（形态影片里辨认不出来）；隐藏指针开时不画。
-// 转盘状态照 trollfan 的记法记（GHCFDialButtons／Radii／Angles／
+// 转盘状态照 trollfan 的记法记（CFLYDialButtons／Radii／Angles／
 // Center），拨动＋tick＋吸附走现成的 handleDialPan:；
 // radial（0）／trollfan（5）现有分支一行不动。
 - (CGFloat)addDialLauncherIconsForBids:(NSArray *)bids iconSize:(CGFloat)size action:(SEL)action {
@@ -9448,27 +9505,25 @@ CGFloat screenH = screenBounds.size.height;
 CGFloat icon = size;
 if (icon < 28.0) icon = 28.0;
 if (icon > 64.0) icon = 64.0;
-CGFloat spacing = GHCFReadDialElementSpacing();
+CGFloat spacing = CFLYReadDialElementSpacing();
 CGFloat pitch = icon + spacing;
 if (pitch < icon + 2.0) pitch = icon + 2.0;
-// v43.42 fix（皇上 16:08）：默认居中圆盘（圆心屏幕正中，不锚觸發鈕钮位；
-// 430x932 的機上就是 215,466；前三圈 72/122/172，見下面半徑算法）；
-// 居中显示关时弧顶才是按钮位置往上 60pt。
+// 1.0.4（影片實測值，皇上 22:49 點頭）：默认居中圆盘（圆心 215,429——
+// 0.46H，比屏幕正中高 ~37pt；4 圈 42/80/110/140，見下面半徑算法）。
 CGPoint center;
-BOOL centered = GHCFReadDialCentered();
+BOOL centered = CFLYReadDialCentered();
 if (centered) {
-center = CGPointMake(screenW / 2.0, screenH / 2.0);
+center = CGPointMake(screenW / 2.0, screenH * 0.46);
 } else {
-CGFloat ax = GHCFLauncherAnchorX;
-CGFloat ay = GHCFLauncherAnchorY;
-if (ax < 0) ax = (CGFloat)GHCFReadFlyTriggerButtonX();
-if (ay < 0) ay = (CGFloat)GHCFReadFlyTriggerButtonY();
-if (ax < 0) ax = screenW - 28.0;
+CGFloat ax = CFLYLauncherAnchorX;
+CGFloat ay = CFLYLauncherAnchorY;
+// 1.0.4：觸發鈕已删；邊緣滑動時錨點是手指位置，沒錨點就居中。
+if (ax < 0) ax = screenW / 2.0;
 if (ay < 0) ay = screenH / 2.0;
-center = CGPointMake(ax, ay - GHCFDialUpShift);
+center = CGPointMake(ax, ay - CFLYDialUpShift);
 }
 // 圆心夹在屏幕里（顶留刘海＋钮半径，底留 Home 条＋钮半径）。
-CGFloat topInset = GHCFScreenSafeTopInset();
+CGFloat topInset = CFLYScreenSafeTopInset();
 CGFloat topLimit = topInset + 28.0 + 4.0;
 CGFloat botLimit = screenH - 34.0 - 28.0 - 4.0;
 if (center.x < 32.0) center.x = 32.0;
@@ -9504,18 +9559,14 @@ CGFloat scale = icon / 36.0;
 capSum = 0;
 rings = 7;
 if (centered) {
-// 居中圆盘：从齿轮外缘起、环距＝图标＋14，外圈不超屏幕半宽。
-CGFloat maxR = MIN(screenW, screenH) / 2.0 - icon / 2.0 - 12.0;
-CGFloat r0 = 38.0 + icon / 2.0 + 16.0;
-CGFloat step = icon + 14.0;
-rings = 0;
-while (rings < 7) {
-CGFloat r = r0 + rings * step;
-if (r > maxR) break;
-radii[rings] = r;
-rings++;
-}
-if (rings < 1) { radii[0] = maxR; rings = 1; }
+// 1.0.4（影片實測值）：居中圓盤固定 4 圈 42/80/110/140（430 寬換算，
+// 隨屏幕等比縮放）。舊公式 r0 = 38 + icon/2 + 16 裡的 38 是中央齒輪半徑，
+// 影片的圓盤中央沒有按鈕，故 r0 應為 ~42；環距舊的 icon+14 亦改為影片
+// 的 icon+8（元素間距，見 pitch）。
+CGFloat vscale = MIN(screenW, screenH) / 430.0;
+static const CGFloat videoRadii[4] = {42.0, 80.0, 110.0, 140.0};
+rings = 4;
+for (int vr = 0; vr < 4; vr++) radii[vr] = videoRadii[vr] * vscale;
 }
 for (int k = 0; k < rings; k++) {
 CGFloat r = centered ? radii[k] : baseRadii[k] * scale;
@@ -9586,7 +9637,7 @@ while (outer > 0 && caps[outer] <= 0) outer--;
 counts[outer] += (int)total - assigned;
 char obuf[160];
 snprintf(obuf, sizeof(obuf), "v43.42 dial overflow, cap=%d total=%d center=%d,%d", capSum, (int)total, (int)center.x, (int)center.y);
-GHCFLogLine(obuf);
+CFLYLogLine(obuf);
 assigned = (int)total;
 }
 // 保险：最低图标底边不许过 882（效果图上移 60pt 那档的数，离屏底 50pt）。
@@ -9608,55 +9659,41 @@ center.y -= up;
 }
 }
 // 转盘状态重建（跟 trollfan 同一套，拨动＋tick＋吸附走 handleDialPan:）。
-GHCFDialButtons = [NSMutableArray array];
-GHCFDialRadii = [NSMutableArray array];
-GHCFDialAngles = [NSMutableArray array];
-GHCFDialCenter = center;
-GHCFDialRotation = 0;
-GHCFDialLastTickRotation = 0;
-GHCFDialTotal = (int)total;
-GHCFDialSlot = (centered && total > 1) ? 2.0 * M_PI / (double)total : ((total > 1) ? span / (double)(total - 1) : 2.0 * M_PI);
-// 淡白圆盘（在图标下面；渐变开时上亮下淡，关时平色）。
-if (GHCFReadDialCircleBg()) {
-CGFloat discR = radii[rings - 1] + icon / 2.0 + 12.0;
-UIView *disc = [[UIView alloc] initWithFrame:CGRectMake(center.x - discR, center.y - discR, discR * 2.0, discR * 2.0)];
-disc.tag = 9106;
-disc.userInteractionEnabled = NO;
-disc.backgroundColor = [GHCFReadDialCircleBgColor() colorWithAlphaComponent:(CGFloat)GHCFReadDialCircleBgOpacity()];
-disc.layer.cornerRadius = discR;
-disc.layer.masksToBounds = YES;
-if (GHCFReadDialGradientBg()) {
-CAGradientLayer *grad = [CAGradientLayer layer];
-grad.frame = disc.bounds;
-grad.colors = [NSArray arrayWithObjects:(id)[GHCFReadDialGradientStartColor() colorWithAlphaComponent:0.28].CGColor, (id)[GHCFReadDialGradientEndColor() colorWithAlphaComponent:0.04].CGColor, nil];
-grad.startPoint = CGPointMake(0.5, 0.0);
-grad.endPoint = CGPointMake(0.5, 1.0);
-[disc.layer addSublayer:grad];
-}
-[GHCFLauncherContentView addSubview:disc];
-// 指针（示意短针：圆心到第一圈，中角方向；隐藏指针开时不画；
-// 针色走 dialIconSelectedColor，针角就是選中圈的基準角）。
+CFLYDialButtons = [NSMutableArray array];
+CFLYDialRadii = [NSMutableArray array];
+CFLYDialAngles = [NSMutableArray array];
+CFLYDialCenter = center;
+CFLYDialRotation = 0;
+CFLYDialLastTickRotation = 0;
+CFLYDialTotal = (int)total;
+CFLYDialSlot = (centered && total > 1) ? 2.0 * M_PI / (double)total : ((total > 1) ? span / (double)(total - 1) : 2.0 * M_PI);
+// 1.0.4：大圆盘底色已删（影片的表盘没有圆盘，图标直接浮在壁纸上；
+// 李 17:29「不是圆形」）。指针保留（默认隐藏，dialHidePointer 默认
+// True；针色固定 #3D8DFF，不再走颜色行）。指针放在一个透明容器 view
+// 里（跟图标一样随 contentView 重建一起清掉）。
 double midA = centered ? -M_PI_2 : (angLo + angHi) / 2.0;
-GHCFDialPointerAngle = midA;
-if (!GHCFReadDialHidePointer()) {
+CFLYDialPointerAngle = midA;
+if (!CFLYReadDialHidePointer()) {
 CGFloat px0 = center.x + 30.0 * cos(midA);
 CGFloat py0 = center.y + 30.0 * sin(midA);
 CGFloat px1 = center.x + radii[0] * cos(midA);
 CGFloat py1 = center.y + radii[0] * sin(midA);
 UIBezierPath *path = [UIBezierPath bezierPath];
-[path moveToPoint:CGPointMake(px0 - center.x + discR, py0 - center.y + discR)];
-[path addLineToPoint:CGPointMake(px1 - center.x + discR, py1 - center.y + discR)];
+[path moveToPoint:CGPointMake(px0, py0)];
+[path addLineToPoint:CGPointMake(px1, py1)];
 CAShapeLayer *needle = [CAShapeLayer layer];
 needle.path = path.CGPath;
-needle.strokeColor = [GHCFReadDialIconSelectedColor() colorWithAlphaComponent:0.85].CGColor;
+needle.strokeColor = [UIColor colorWithRed:61.0/255.0 green:141.0/255.0 blue:1.0 alpha:0.85].CGColor;
 needle.lineWidth = 2.0;
 needle.lineCap = kCALineCapRound;
-[disc.layer addSublayer:needle];
-}
+UIView *needleHost = [[UIView alloc] initWithFrame:CFLYLauncherContentView.bounds];
+needleHost.userInteractionEnabled = NO;
+[needleHost.layer addSublayer:needle];
+[CFLYLauncherContentView addSubview:needleHost];
 }
 CGFloat maxBottom = 0;
 NSInteger idx = 0;
-GHCFBuildingDialIcons = YES;
+CFLYBuildingDialIcons = YES;
 for (int ring = 0; ring < rings; ring++) {
 int count = counts[ring];
 if (count <= 0) continue;
@@ -9680,53 +9717,36 @@ if (!bid || bid[0] == '\0') continue;
 double angle = (count == 1) ? (lo + hi) / 2.0 : lo + step * (double)j;
 CGPoint p = CGPointMake(center.x + radius * cos(angle), center.y + radius * sin(angle));
 // ChinaFly（1.0.2，表盤菜單）：菜單模式時 bids 其實是菜單 identifier
-//（GHCFEnabledMenuIdentifiers 來的），按菜單表排，不走 App 那條路。
-if (GHCFDialMenuMode) {
-int midx = GHCFMenuItemIndexForIdentifier(bid);
+//（CFLYEnabledMenuIdentifiers 來的），按菜單表排，不走 App 那條路。
+if (CFLYDialMenuMode) {
+int midx = CFLYMenuItemIndexForIdentifier(bid);
 if (midx < 0) continue;
 UIButton *btn = [self arcMenuButtonForMenuIndex:midx atCenter:p size:icon action:action];
-[GHCFLauncherContentView addSubview:btn];
-[GHCFDialButtons addObject:btn];
-[GHCFDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
-[GHCFDialAngles addObject:[NSNumber numberWithDouble:angle]];
+[CFLYLauncherContentView addSubview:btn];
+[CFLYDialButtons addObject:btn];
+[CFLYDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
+[CFLYDialAngles addObject:[NSNumber numberWithDouble:angle]];
 CGFloat bottom = p.y + icon / 2.0;
 if (bottom > maxBottom) maxBottom = bottom;
 continue;
 }
 char name[128];
-GHCFAppNameForBundleID(bid, name, sizeof(name));
-NSInteger tag = GHCFAppIndexForBundleID(bid);
+CFLYAppNameForBundleID(bid, name, sizeof(name));
+NSInteger tag = CFLYAppIndexForBundleID(bid);
 if (tag < 0) continue;
 UIButton *btn = [self arcIconButtonForBundleID:bid name:name tag:tag action:action atCenter:p size:icon withName:NO];
-[GHCFLauncherContentView addSubview:btn];
-[GHCFDialButtons addObject:btn];
-[GHCFDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
-[GHCFDialAngles addObject:[NSNumber numberWithDouble:angle]];
+[CFLYLauncherContentView addSubview:btn];
+[CFLYDialButtons addObject:btn];
+[CFLYDialRadii addObject:[NSNumber numberWithDouble:(double)radius]];
+[CFLYDialAngles addObject:[NSNumber numberWithDouble:angle]];
 CGFloat bottom = p.y + icon / 2.0;
 if (bottom > maxBottom) maxBottom = bottom;
 }
 }
-GHCFBuildingDialIcons = NO;
-GHCFDialRefreshIconRings();
-// 中心钮：觸發鈕本人（悬浮钮已藏起，这颗就是它）；点一下收起启动器。
-// 图拿不到就回落齿轮钮（设置入口不断）。
-UIButton *centerBtn = nil;
-UIImage *flyTriggerImage = GHCFLoadFlyTriggerImage();
-double dSize = GHCFReadPrefsDouble("flyTriggerIconSize", 56.0);
-if (dSize < 44.0) dSize = 44.0;
-if (dSize > 72.0) dSize = 72.0;
-if (flyTriggerImage) {
-centerBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-centerBtn.frame = CGRectMake(center.x - dSize / 2.0, center.y - dSize / 2.0, dSize, dSize);
-[centerBtn setImage:flyTriggerImage forState:UIControlStateNormal];
-centerBtn.imageView.contentMode = UIViewContentModeScaleAspectFit;
-centerBtn.layer.cornerRadius = dSize / 2.0;
-centerBtn.layer.masksToBounds = YES;
-[centerBtn addTarget:self action:@selector(handleDialCenterButton:) forControlEvents:UIControlEventTouchUpInside];
-} else {
-centerBtn = [self arcRadialGearButtonAtCenter:center size:76.0];
-}
-[GHCFLauncherContentView addSubview:centerBtn];
+CFLYBuildingDialIcons = NO;
+CFLYDialRefreshIconRings();
+// 1.0.4：中心钮已删（影片的居中圆盘中央没有按钮，圆心是空的旋转轴；
+// 点外面收起启动器，不再靠中心钮）。
 // ChinaFly（1.0.2，表盤菜單入口 A）：表盤頂上一個菜單鈕，點一下在 App
 // 和菜單動作之間切（rebuildARCContent 重建內容，開關／排序下次打開就
 // 生效，不用 respring）。放屏幕頂中央（表盤圓盤上方、劉海下面），
@@ -9740,68 +9760,63 @@ menuBtn.layer.cornerRadius = mSize / 2.0;
 menuBtn.layer.masksToBounds = YES;
 menuBtn.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.5];
 menuBtn.tintColor = [UIColor whiteColor];
-const char *symName = GHCFDialMenuMode ? "square.grid.2x2" : "list.bullet";
+const char *symName = CFLYDialMenuMode ? "square.grid.2x2" : "list.bullet";
 UIImage *symImg = [UIImage systemImageNamed:[NSString stringWithCString:symName encoding:NSUTF8StringEncoding]];
 if (symImg) {
 [menuBtn setImage:symImg forState:UIControlStateNormal];
 } else {
 char mbuf[96];
 snprintf(mbuf, sizeof(mbuf), "ChinaFly dial menu toggle symbol %s nil", symName);
-GHCFLogLine(mbuf);
-[menuBtn setTitle:[NSString stringWithCString:(GHCFDialMenuMode ? "APPS" : "MENU") encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
+CFLYLogLine(mbuf);
+[menuBtn setTitle:[NSString stringWithCString:(CFLYDialMenuMode ? "APPS" : "MENU") encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
 [menuBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
 menuBtn.titleLabel.font = [UIFont boldSystemFontOfSize:9];
 }
 [menuBtn addTarget:self action:@selector(handleDialMenuButton:) forControlEvents:UIControlEventTouchUpInside];
-[GHCFLauncherContentView addSubview:menuBtn];
+[CFLYLauncherContentView addSubview:menuBtn];
 }
 {
 char sbuf[160];
 snprintf(sbuf, sizeof(sbuf), "v43.42 dial icons=%d size=%d rings=%d center=%d,%d centered=%d", (int)total, (int)icon, rings, (int)center.x, (int)center.y, centered ? 1 : 0);
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 return maxBottom + 12.0;
 }
 
 // v43.42（1.0.115，表盘启动器）：中心觸發鈕钮点一下收起启动器
 //（悬浮钮回原位，见 dismissLauncher）。
-- (void)handleDialCenterButton:(UIButton *)sender {
-(void)sender;
-[self dismissLauncher];
-}
-
 // ChinaFly（1.0.2，表盤菜單入口 A）：表盤頂上的菜單鈕，點一下在 App
 // 和菜單動作之間切（rebuildARCContent 重建內容；開關／排序下次打開就
 // 生效，不用 respring）。關啟動器時模式清掉（見 dismissLauncher），
 // 下次打開一律先是 App。
 - (void)handleDialMenuButton:(UIButton *)sender {
 (void)sender;
-GHCFDialMenuMode = !GHCFDialMenuMode;
+CFLYDialMenuMode = !CFLYDialMenuMode;
 char buf[64];
-snprintf(buf, sizeof(buf), "ChinaFly dial menu mode %d", GHCFDialMenuMode ? 1 : 0);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "ChinaFly dial menu mode %d", CFLYDialMenuMode ? 1 : 0);
+CFLYLogLine(buf);
 [self rebuildARCContent];
 }
 
 // ChinaFly（1.0.2，表盤菜單）：菜單動作鈕。灰掉的點不到（enabled=NO，
-// 這裡再守一道 working）。7 個真能做的走 GHCFMenuActionPerform。
+// 這裡再守一道 working）。7 個真能做的走 CFLYMenuActionPerform。
 // 截圖三件先收啟動器再做——截圖要等窗收掉（0.45 秒，收窗動畫 0.35 秒＋
 // 餘量），不然快照裡有表盤自己；鎖屏／手電筒／音量收掉就做。
 - (void)handleDialMenuActionButton:(UIButton *)sender {
 NSInteger idx = sender.tag;
-if (idx < 0 || idx >= 33) return;
-const GHCFMenuItemDef *def = &GHCFMenuItems[idx];
+if (idx < 0 || idx >= 47) return;
+const CFLYMenuItemDef *def = &CFLYMenuItems[idx];
 if (!def || !def->working) return;
 const char *ident = def->identifier;
-BOOL isShot = (strcmp(ident, "takeScreenshot") == 0 || strcmp(ident, "takeScreenshotAndEdit") == 0 || strcmp(ident, "screenshotToPasteboard") == 0);
+BOOL isShot = (strcmp(ident, "screenshot") == 0 || strcmp(ident, "screenshotEdit") == 0 || strcmp(ident, "screenshotCopy") == 0);
 NSString *identStr = [NSString stringWithCString:ident encoding:NSUTF8StringEncoding];
 [self dismissLauncher];
 if (isShot) {
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.45 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-GHCFMenuActionPerform([identStr UTF8String]);
+CFLYMenuActionPerform([identStr UTF8String]);
 });
 } else {
-GHCFMenuActionPerform(ident);
+CFLYMenuActionPerform(ident);
 }
 }
 
@@ -9811,42 +9826,42 @@ GHCFMenuActionPerform(ident);
 // 齒輪鈕在圓心，不跟著轉。圓心 40pt 內不算（角度在圓心附近不穩定，
 // 手指按著齒輪不轉盤）。
 - (void)handleDialPan:(UIPanGestureRecognizer *)recognizer {
-if (!GHCFDialButtons || [GHCFDialButtons count] == 0 || GHCFDialTotal <= 0) return;
-UIView *view = GHCFLauncherContentView;
+if (!CFLYDialButtons || [CFLYDialButtons count] == 0 || CFLYDialTotal <= 0) return;
+UIView *view = CFLYLauncherContentView;
 if (!view) return;
 CGPoint p = [recognizer locationInView:view];
-double dx = (double)(p.x - GHCFDialCenter.x);
-double dy = (double)(p.y - GHCFDialCenter.y);
+double dx = (double)(p.x - CFLYDialCenter.x);
+double dy = (double)(p.y - CFLYDialCenter.y);
 if (dx * dx + dy * dy < 40.0 * 40.0) return;
 double ang = atan2(dy, dx);
 if (recognizer.state == UIGestureRecognizerStateBegan) {
-GHCFDialLastTouchAngle = ang;
+CFLYDialLastTouchAngle = ang;
 return;
 }
 if (recognizer.state == UIGestureRecognizerStateChanged) {
-double delta = ang - GHCFDialLastTouchAngle;
+double delta = ang - CFLYDialLastTouchAngle;
 // 角度跳變（-π↔π 邊界）時 delta 會跳 ±2π，折回 [-π, π]。
 if (delta > M_PI) delta -= 2.0 * M_PI;
 if (delta < -M_PI) delta += 2.0 * M_PI;
-GHCFDialLastTouchAngle = ang;
-GHCFDialRotation += delta;
-GHCFDialApplyRotation();
-double slot = (GHCFDialSlot > 0) ? GHCFDialSlot : 2.0 * M_PI / (double)GHCFDialTotal;
-if (fabs(GHCFDialRotation - GHCFDialLastTickRotation) >= slot) {
-GHCFDialLastTickRotation = GHCFDialRotation;
-GHCFDialTickFeedback();
+CFLYDialLastTouchAngle = ang;
+CFLYDialRotation += delta;
+CFLYDialApplyRotation();
+double slot = (CFLYDialSlot > 0) ? CFLYDialSlot : 2.0 * M_PI / (double)CFLYDialTotal;
+if (fabs(CFLYDialRotation - CFLYDialLastTickRotation) >= slot) {
+CFLYDialLastTickRotation = CFLYDialRotation;
+CFLYDialTickFeedback();
 }
 return;
 }
 if (recognizer.state == UIGestureRecognizerStateEnded || recognizer.state == UIGestureRecognizerStateCancelled) {
 // 吸附到最近的格子。
-double slot = (GHCFDialSlot > 0) ? GHCFDialSlot : 2.0 * M_PI / (double)GHCFDialTotal;
-double target = round(GHCFDialRotation / slot) * slot;
-GHCFDialRotation = target;
+double slot = (CFLYDialSlot > 0) ? CFLYDialSlot : 2.0 * M_PI / (double)CFLYDialTotal;
+double target = round(CFLYDialRotation / slot) * slot;
+CFLYDialRotation = target;
 [UIView animateWithDuration:0.15 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-GHCFDialApplyRotation();
+CFLYDialApplyRotation();
 } completion:nil];
-GHCFDialLastTickRotation = target;
+CFLYDialLastTickRotation = target;
 }
 }
 
@@ -9868,7 +9883,7 @@ NSInteger n = (NSInteger)[bids count];
 CGFloat contentH = 28.0 + n * (icon + gap) - gap + pad;
 CGFloat maxBarH = screenH - 48.0;
 CGFloat barH = contentH > maxBarH ? maxBarH : contentH;
-BOOL slideLeft = GHCFIsARCSlideLeft();
+BOOL slideLeft = CFLYIsARCSlideLeft();
 CGFloat barX = slideLeft ? 4.0 : screenW - barW - 4.0;
 CGFloat barY = (screenH - barH) / 2.0;
 UIView *bar = [[UIView alloc] initWithFrame:CGRectMake(barX, barY, barW, barH)];
@@ -9876,7 +9891,7 @@ bar.tag = 9101;
 bar.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
 bar.layer.cornerRadius = barW / 2.0;
 bar.layer.masksToBounds = YES;
-[GHCFLauncherContentView addSubview:bar];
+[CFLYLauncherContentView addSubview:bar];
 UIButton *collapseBtn = [UIButton buttonWithType:UIButtonTypeCustom];
 collapseBtn.frame = CGRectMake(0, 4.0, barW, 20.0);
 [collapseBtn setTitle:[NSString stringWithCString:(slideLeft ? "\xE2\x80\xBA" : "\xE2\x80\xB9") encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
@@ -9895,8 +9910,8 @@ if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
 if (!bid || bid[0] == '\0') continue;
 char nameBuf[128];
-GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
-NSInteger tag = GHCFAppIndexForBundleID(bid);
+CFLYAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = CFLYAppIndexForBundleID(bid);
 if (tag < 0) continue;
 UIButton *btn = [self arcIconButtonForBundleID:bid name:nameBuf tag:tag action:action atCenter:CGPointMake(barW / 2.0, y + icon / 2.0) size:icon withName:NO];
 [sv addSubview:btn];
@@ -9906,7 +9921,7 @@ sv.contentSize = CGSizeMake(barW, y > 0 ? y - gap : 0);
 {
 char sbuf[96];
 snprintf(sbuf, sizeof(sbuf), "v43.19 sidebar icons=%d size=%d side=%s", (int)n, (int)icon, slideLeft ? "left" : "right");
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 return barH;
 }
@@ -9934,7 +9949,7 @@ panel.tag = 9102;
 panel.backgroundColor = [UIColor colorWithWhite:0.12 alpha:0.97];
 panel.layer.cornerRadius = 24.0;
 panel.layer.masksToBounds = YES;
-[GHCFLauncherContentView addSubview:panel];
+[CFLYLauncherContentView addSubview:panel];
 UIView *dragZone = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenW, 56.0)];
 dragZone.backgroundColor = [UIColor clearColor];
 [panel addSubview:dragZone];
@@ -9966,8 +9981,8 @@ if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
 if (!bid || bid[0] == '\0') continue;
 char nameBuf[128];
-GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
-NSInteger tag = GHCFAppIndexForBundleID(bid);
+CFLYAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = CFLYAppIndexForBundleID(bid);
 if (tag < 0) continue;
 NSInteger row = placed / 4;
 NSInteger col = placed % 4;
@@ -9982,7 +9997,7 @@ sv.contentSize = CGSizeMake(screenW, rows * cellH);
 {
 char sbuf[96];
 snprintf(sbuf, sizeof(sbuf), "v43.19 drawer icons=%d size=%d rows=%d", (int)placed, (int)icon, (int)rows);
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 return panelH;
 }
@@ -9993,20 +10008,20 @@ if (!dragZone) return;
 UIView *panel = dragZone.superview;
 if (!panel) return;
 if (recognizer.state == UIGestureRecognizerStateBegan) {
-GHCFDrawerPanelBaseY = panel.frame.origin.y;
+CFLYDrawerPanelBaseY = panel.frame.origin.y;
 } else if (recognizer.state == UIGestureRecognizerStateChanged) {
 CGPoint t = [recognizer translationInView:panel.superview];
-CGFloat ny = GHCFDrawerPanelBaseY + t.y;
-if (ny < GHCFDrawerPanelBaseY) ny = GHCFDrawerPanelBaseY;
+CGFloat ny = CFLYDrawerPanelBaseY + t.y;
+if (ny < CFLYDrawerPanelBaseY) ny = CFLYDrawerPanelBaseY;
 panel.frame = CGRectMake(panel.frame.origin.x, ny, panel.frame.size.width, panel.frame.size.height);
 } else if (recognizer.state == UIGestureRecognizerStateEnded || recognizer.state == UIGestureRecognizerStateCancelled) {
 CGPoint v = [recognizer velocityInView:panel.superview];
-CGFloat dy = panel.frame.origin.y - GHCFDrawerPanelBaseY;
+CGFloat dy = panel.frame.origin.y - CFLYDrawerPanelBaseY;
 if (dy > 120.0 || v.y > 800.0) {
 [self dismissLauncher];
 } else {
 [UIView animateWithDuration:0.25 animations:^{
-panel.frame = CGRectMake(panel.frame.origin.x, GHCFDrawerPanelBaseY, panel.frame.size.width, panel.frame.size.height);
+panel.frame = CGRectMake(panel.frame.origin.x, CFLYDrawerPanelBaseY, panel.frame.size.width, panel.frame.size.height);
 }];
 }
 }
@@ -10040,9 +10055,9 @@ sv.showsHorizontalScrollIndicator = NO;
 sv.showsVerticalScrollIndicator = NO;
 sv.delegate = self;
 sv.contentSize = CGSizeMake(pageW * n, svH);
-[GHCFLauncherContentView addSubview:sv];
-GHCFCarouselScrollView = sv;
-GHCFCarouselPageWidth = pageW;
+[CFLYLauncherContentView addSubview:sv];
+CFLYCarouselScrollView = sv;
+CFLYCarouselPageWidth = pageW;
 NSMutableArray *cards = [NSMutableArray array];
 for (NSInteger i = 0; i < n; i++) {
 id item = [bids objectAtIndex:i];
@@ -10050,8 +10065,8 @@ if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
 if (!bid || bid[0] == '\0') continue;
 char nameBuf[128];
-GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
-NSInteger tag = GHCFAppIndexForBundleID(bid);
+CFLYAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = CFLYAppIndexForBundleID(bid);
 if (tag < 0) continue;
 CGFloat cx = pageW * i + pageW / 2.0;
 UIButton *card = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -10065,7 +10080,7 @@ card.layer.cornerRadius = 20.0;
 [card addTarget:self action:@selector(handleCarouselCardTouchUpInside:) forControlEvents:UIControlEventTouchUpInside];
 [card addTarget:self action:@selector(handleCarouselCardTouchCancelled:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
 CGFloat bigIcon = 96.0;
-UIImage *icon = GHCFAppIcon(bid);
+UIImage *icon = CFLYAppIcon(bid);
 UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake((cardW - bigIcon) / 2.0, 44.0, bigIcon, bigIcon)];
 if (icon) {
 iconView.image = icon;
@@ -10090,39 +10105,39 @@ hintLabel.textAlignment = NSTextAlignmentCenter;
 [sv addSubview:card];
 [cards addObject:card];
 }
-GHCFCarouselCards = cards;
+CFLYCarouselCards = cards;
 UIPageControl *pc = [[UIPageControl alloc] initWithFrame:CGRectMake(0, svY + svH + 8.0, screenW, 20.0)];
 pc.tag = 9105;
 pc.numberOfPages = n;
 pc.currentPage = 0;
 pc.userInteractionEnabled = NO;
-[GHCFLauncherContentView addSubview:pc];
-GHCFCarouselPageControl = pc;
+[CFLYLauncherContentView addSubview:pc];
+CFLYCarouselPageControl = pc;
 [self carouselUpdateForScrollView:sv];
 {
 char sbuf[96];
 snprintf(sbuf, sizeof(sbuf), "v43.19 carousel icons=%d cards=%d", (int)n, (int)[cards count]);
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 return cardH;
 }
 
 - (void)carouselUpdateForScrollView:(UIScrollView *)sv {
-if (!GHCFCarouselCards) return;
+if (!CFLYCarouselCards) return;
 CGFloat cx = sv.contentOffset.x + sv.bounds.size.width / 2.0;
 // v43.23 A Cover Flow 透視：中間卡正著最大、鑲金邊、底下有影子；
 // 左右卡斜著排（繞 Y 軸透視傾斜，越遠越斜、越小、越暗）；下面圓點保留。
 NSInteger centerIdx = -1;
 CGFloat bestD = 1e9;
-for (NSInteger ci = 0; ci < (NSInteger)[GHCFCarouselCards count]; ci++) {
-UIView *card = [GHCFCarouselCards objectAtIndex:ci];
+for (NSInteger ci = 0; ci < (NSInteger)[CFLYCarouselCards count]; ci++) {
+UIView *card = [CFLYCarouselCards objectAtIndex:ci];
 CGFloat d = fabs(card.center.x - cx);
 if (d < bestD) { bestD = d; centerIdx = ci; }
 }
-for (NSInteger ci = 0; ci < (NSInteger)[GHCFCarouselCards count]; ci++) {
-UIView *card = [GHCFCarouselCards objectAtIndex:ci];
+for (NSInteger ci = 0; ci < (NSInteger)[CFLYCarouselCards count]; ci++) {
+UIView *card = [CFLYCarouselCards objectAtIndex:ci];
 CGFloat d = fabs(card.center.x - cx);
-CGFloat t = d / GHCFCarouselPageWidth;
+CGFloat t = d / CFLYCarouselPageWidth;
 if (t > 1.0) t = 1.0;
 CATransform3D tr = CATransform3DIdentity;
 tr.m34 = -1.0 / 500.0;
@@ -10142,42 +10157,42 @@ card.layer.shadowRadius = isCenter ? 12.0 : 6.0;
 card.layer.shadowOffset = CGSizeMake(0, isCenter ? 8.0 : 4.0);
 card.layer.zPosition = isCenter ? 10.0 : 10.0 - t * 10.0;
 }
-if (GHCFCarouselPageControl) {
-NSInteger page = (NSInteger)lround(sv.contentOffset.x / GHCFCarouselPageWidth);
+if (CFLYCarouselPageControl) {
+NSInteger page = (NSInteger)lround(sv.contentOffset.x / CFLYCarouselPageWidth);
 if (page < 0) page = 0;
-if (page >= (NSInteger)[GHCFCarouselCards count]) page = (NSInteger)[GHCFCarouselCards count] - 1;
-GHCFCarouselPageControl.currentPage = page;
+if (page >= (NSInteger)[CFLYCarouselCards count]) page = (NSInteger)[CFLYCarouselCards count] - 1;
+CFLYCarouselPageControl.currentPage = page;
 }
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
-if (scrollView == GHCFCarouselScrollView) [self carouselUpdateForScrollView:scrollView];
+if (scrollView == CFLYCarouselScrollView) [self carouselUpdateForScrollView:scrollView];
 }
 
 // v43.23：第 5 件——輪盤按鍵反饋：點下卡片縮一下＋輕震一下，鬆手才打開；
 // 點左右卡片先滑到中間，滑到了再打開（scrollViewDidEndScrollingAnimation 接）。
 - (void)handleCarouselCardTouchDown:(UIButton *)sender {
 sender.transform = CGAffineTransformMakeScale(0.95, 0.95);
-GHCFLauncherTapFeedback();
+CFLYLauncherTapFeedback();
 }
 
 - (void)handleCarouselCardTouchUpInside:(UIButton *)sender {
 sender.transform = CGAffineTransformIdentity;
-if (!GHCFCarouselScrollView || !GHCFCarouselCards) return;
-NSInteger page = (NSInteger)lround(GHCFCarouselScrollView.contentOffset.x / GHCFCarouselPageWidth);
+if (!CFLYCarouselScrollView || !CFLYCarouselCards) return;
+NSInteger page = (NSInteger)lround(CFLYCarouselScrollView.contentOffset.x / CFLYCarouselPageWidth);
 if (page < 0) page = 0;
-if (page >= (NSInteger)[GHCFCarouselCards count]) page = (NSInteger)[GHCFCarouselCards count] - 1;
-NSInteger tapped = [GHCFCarouselCards indexOfObject:sender];
+if (page >= (NSInteger)[CFLYCarouselCards count]) page = (NSInteger)[CFLYCarouselCards count] - 1;
+NSInteger tapped = [CFLYCarouselCards indexOfObject:sender];
 if (tapped < 0) return;
 if (tapped == page) {
 [self handleAppButton:sender];
 return;
 }
-GHCFCarouselPendingOpenIdx = (int)tapped;
-[GHCFCarouselScrollView setContentOffset:CGPointMake(GHCFCarouselPageWidth * tapped, 0) animated:YES];
+CFLYCarouselPendingOpenIdx = (int)tapped;
+[CFLYCarouselScrollView setContentOffset:CGPointMake(CFLYCarouselPageWidth * tapped, 0) animated:YES];
 char buf[96];
 snprintf(buf, sizeof(buf), "v43.23 carousel side card %d centering first", (int)tapped);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
 
 - (void)handleCarouselCardTouchCancelled:(UIButton *)sender {
@@ -10185,17 +10200,17 @@ sender.transform = CGAffineTransformIdentity;
 }
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView {
-if (scrollView != GHCFCarouselScrollView) return;
-if (GHCFCarouselPendingOpenIdx < 0) return;
-int idx = GHCFCarouselPendingOpenIdx;
-GHCFCarouselPendingOpenIdx = -1;
-if (!GHCFCarouselCards || idx >= (NSInteger)[GHCFCarouselCards count]) return;
-UIButton *card = [GHCFCarouselCards objectAtIndex:idx];
+if (scrollView != CFLYCarouselScrollView) return;
+if (CFLYCarouselPendingOpenIdx < 0) return;
+int idx = CFLYCarouselPendingOpenIdx;
+CFLYCarouselPendingOpenIdx = -1;
+if (!CFLYCarouselCards || idx >= (NSInteger)[CFLYCarouselCards count]) return;
+UIButton *card = [CFLYCarouselCards objectAtIndex:idx];
 [self handleAppButton:card];
 }
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView {
-if (scrollView == GHCFCarouselScrollView) GHCFCarouselPendingOpenIdx = -1;
+if (scrollView == CFLYCarouselScrollView) CFLYCarouselPendingOpenIdx = -1;
 }
 
 // v43.19：磁貼式——深色大卡片裡大方塊（第一個 App，2×2）加小方塊拼著排，
@@ -10230,7 +10245,7 @@ card.tag = 9104;
 card.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
 card.layer.cornerRadius = 20.0;
 card.layer.masksToBounds = YES;
-[GHCFLauncherContentView addSubview:card];
+[CFLYLauncherContentView addSubview:card];
 CGFloat contentH = pad * 2.0 + rowH * rows;
 UIScrollView *tileSV = [[UIScrollView alloc] initWithFrame:card.bounds];
 tileSV.contentSize = CGSizeMake(cardW, contentH);
@@ -10244,8 +10259,8 @@ if (![item isKindOfClass:[NSString class]]) continue;
 const char *bid = [(NSString *)item UTF8String];
 if (!bid || bid[0] == '\0') continue;
 char nameBuf[128];
-GHCFAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
-NSInteger tag = GHCFAppIndexForBundleID(bid);
+CFLYAppNameForBundleID(bid, nameBuf, sizeof(nameBuf));
+NSInteger tag = CFLYAppIndexForBundleID(bid);
 if (tag < 0) continue;
 if (i == 0) {
 UIButton *bigBtn = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -10254,7 +10269,7 @@ bigBtn.tag = tag;
 [bigBtn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 [bigBtn addTarget:self action:@selector(handleLauncherIconTouchDown:) forControlEvents:UIControlEventTouchDown];
 [bigBtn addTarget:self action:@selector(handleLauncherIconTouchCancel:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
-UIImage *icon = GHCFAppIcon(bid);
+UIImage *icon = CFLYAppIcon(bid);
 UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, big, big)];
 if (icon) {
 iconView.image = icon;
@@ -10292,7 +10307,7 @@ placed++;
 {
 char sbuf[96];
 snprintf(sbuf, sizeof(sbuf), "v43.19 tile icons=%d small=%d rows=%d", (int)n, (int)placed, (int)rows);
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 }
 return cardH;
 }
@@ -10318,7 +10333,7 @@ return btn;
 
 - (void)handleARCRadialGearButton:(UIButton *)sender {
 (void)sender;
-GHCFLogLine("v43.2 arc gear tapped");
+CFLYLogLine("v43.2 arc gear tapped");
 [self dismissLauncher];
 NSString *urlStr = [NSString stringWithCString:"App-Prefs:root=ChinaFly" encoding:NSUTF8StringEncoding];
 NSURL *url = [NSURL URLWithString:urlStr];
@@ -10326,7 +10341,7 @@ if (!url) return;
 [[UIApplication sharedApplication] openURL:url options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
 char buf[64];
 snprintf(buf, sizeof(buf), "v43.2 gear open settings %s", success ? "success" : "failed");
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }];
 }
 
@@ -10343,10 +10358,10 @@ sender.transform = CGAffineTransformMakeScale(0.95, 0.95);
 // v43.37（1.0.110，扇形轉盤；v43.42 表盘启动器同）：trollfan／表盘上
 // 的圖標點下走轉盤專用 tick（震動強度＋水滴音各走各的開關）；其他
 // 五種樣式、轉盤關掉時走原來的共用點按反饋。
-if ((GHCFReadLauncherStyleTrollFan() || GHCFReadLauncherStyleDial()) && GHCFReadCarouselEnabled()) {
-GHCFDialTickFeedback();
+if ((CFLYReadLauncherStyleTrollFan() || CFLYReadLauncherStyleDial()) && CFLYReadCarouselEnabled()) {
+CFLYDialTickFeedback();
 } else {
-GHCFLauncherTapFeedback();
+CFLYLauncherTapFeedback();
 }
 }
 - (void)handleLauncherIconTouchCancel:(UIButton *)sender {
@@ -10360,41 +10375,41 @@ btn.tag = tag;
 [btn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 [btn addTarget:self action:@selector(handleLauncherIconTouchDown:) forControlEvents:UIControlEventTouchDown];
 [btn addTarget:self action:@selector(handleLauncherIconTouchCancel:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
-UIImage *icon = GHCFAppIcon(bid);
+UIImage *icon = CFLYAppIcon(bid);
 UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, size, size)];
 if (icon) {
 iconView.image = icon;
 } else {
 // ChinaFly（1.0.0）：表盤裡圖拿不到時底色走 dialIconDisabledColor，
 // 不再是灰；其餘啟動器樣式不動。
-iconView.backgroundColor = GHCFBuildingDialIcons ? GHCFReadDialIconDisabledColor() : [UIColor grayColor];
+iconView.backgroundColor = CFLYBuildingDialIcons ? [UIColor colorWithRed:142.0/255.0 green:142.0/255.0 blue:147.0/255.0 alpha:1.0] : [UIColor grayColor];
 }
 // ChinaFly（1.0.0，dialCropCircle）：表盤裡的圖標裁成圓形（開了才裁；
 // 其餘啟動器樣式不動）。
-if (GHCFBuildingDialIcons && GHCFReadDialCropCircle()) iconView.layer.cornerRadius = size / 2.0;
+if (CFLYBuildingDialIcons && CFLYReadDialCropCircle()) iconView.layer.cornerRadius = size / 2.0;
 else iconView.layer.cornerRadius = size * 0.22;
 iconView.layer.masksToBounds = YES;
 [btn addSubview:iconView];
-int slotIdx = (bid) ? GHCFAppIndexForBundleID(bid) : -1;
-BOOL isOpen = (slotIdx >= 0 && GHCFCacheWindows[slotIdx] && !GHCFCacheWindows[slotIdx].hidden);
-if (GHCFReadARCShowOpenDots() && isOpen) {
+int slotIdx = (bid) ? CFLYAppIndexForBundleID(bid) : -1;
+BOOL isOpen = (slotIdx >= 0 && CFLYCacheWindows[slotIdx] && !CFLYCacheWindows[slotIdx].hidden);
+if (CFLYReadARCShowOpenDots() && isOpen) {
 UIView *dot = [[UIView alloc] initWithFrame:CGRectMake(size - 12, 0, 12, 12)];
 dot.userInteractionEnabled = NO; // v55：狀態點不接手勢，點到點上也要開 App（不是收起啟動器）。
-BOOL isMain = (slotIdx == GHCFActiveAppIndex);
+BOOL isMain = (slotIdx == CFLYActiveAppIndex);
 dot.backgroundColor = isMain ? [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0] : [UIColor colorWithRed:0.2 green:0.8 blue:0.2 alpha:1.0];
 dot.layer.cornerRadius = 6.0;
 dot.layer.borderWidth = 1.5;
 dot.layer.borderColor = [UIColor whiteColor].CGColor;
 [btn addSubview:dot];
 }
-if (GHCFIsAppPinned(bid)) {
+if (CFLYIsAppPinned(bid)) {
 UILabel *pin = [[UILabel alloc] initWithFrame:CGRectMake(-4, -4, 16, 16)];
 pin.text = [NSString stringWithCString:"★" encoding:NSUTF8StringEncoding];
 pin.textColor = [UIColor colorWithRed:1.0 green:0.85 blue:0.0 alpha:1.0];
 pin.font = [UIFont boldSystemFontOfSize:12];
 [btn addSubview:pin];
 }
-if (withName && GHCFReadARCShowNames() && name && name[0] != '\0') {
+if (withName && CFLYReadARCShowNames() && name && name[0] != '\0') {
 UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(-8, size + 2, size + 16, 14)];
 nameLabel.text = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
 nameLabel.textColor = [UIColor whiteColor];
@@ -10409,7 +10424,7 @@ return btn;
 }
 
 // ChinaFly（1.0.2，表盤菜單）：菜單動作鈕——結構跟 arcIconButtonForBundleID
-// 一樣（iconView 是 subviews[0]，GHCFDialRefreshIconRings 描圈認它；
+// 一樣（iconView 是 subviews[0]，CFLYDialRefreshIconRings 描圈認它；
 // 名字標籤在下面，字 10pt）。圖標走 SF Symbol（白字、圓底）；符號拿不到
 // 就記一行日誌、用標籤前兩個字當圖（不留空白鈕）。不能用的（working=NO）
 // 灰掉：enabled=NO＋alpha 0.35，點不到。長按不裝（置頂只對 App 有意義）。
@@ -10420,7 +10435,7 @@ btn.tag = midx;
 [btn addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 [btn addTarget:self action:@selector(handleLauncherIconTouchDown:) forControlEvents:UIControlEventTouchDown];
 [btn addTarget:self action:@selector(handleLauncherIconTouchCancel:) forControlEvents:UIControlEventTouchUpOutside | UIControlEventTouchCancel];
-const GHCFMenuItemDef *def = (midx >= 0 && midx < 33) ? &GHCFMenuItems[midx] : NULL;
+const CFLYMenuItemDef *def = (midx >= 0 && midx < 47) ? &CFLYMenuItems[midx] : NULL;
 const char *label = (def && def->label) ? def->label : "";
 const char *symbol = (def && def->symbol) ? def->symbol : "";
 BOOL working = (def && def->working) ? YES : NO;
@@ -10439,7 +10454,7 @@ iconView.tintColor = [UIColor whiteColor];
 } else {
 char sbuf[160];
 snprintf(sbuf, sizeof(sbuf), "ChinaFly menu symbol %s nil, fallback to label", symbol);
-GHCFLogLine(sbuf);
+CFLYLogLine(sbuf);
 NSString *labelStr = [NSString stringWithCString:label encoding:NSUTF8StringEncoding];
 NSUInteger take = ([labelStr length] > 2) ? 2 : [labelStr length];
 UILabel *fallback = [[UILabel alloc] initWithFrame:iconView.bounds];
@@ -10472,11 +10487,11 @@ if (recognizer.state != UIGestureRecognizerStateBegan) return;
 UIButton *btn = (UIButton *)recognizer.view;
 if (!btn) return;
 NSInteger idx = btn.tag;
-if (idx < 0 || idx >= GHCFAppCount) return;
-const char *bid = GHCFAppBundleIDs[idx];
-BOOL pinned = !GHCFIsAppPinned(bid);
-GHCFSetAppPinned(bid, pinned);
-if (GHCFReadARCHaptics()) {
+if (idx < 0 || idx >= CFLYAppCount) return;
+const char *bid = CFLYAppBundleIDs[idx];
+BOOL pinned = !CFLYIsAppPinned(bid);
+CFLYSetAppPinned(bid, pinned);
+if (CFLYReadARCHaptics()) {
 @try {
 UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
 [haptic impactOccurred];
@@ -10501,10 +10516,10 @@ UIImpactFeedbackGenerator *haptic = [[UIImpactFeedbackGenerator alloc] initWithS
 BOOL captured = [UIScreen mainScreen].isCaptured;
 char buf[64];
 snprintf(buf, sizeof(buf), "v57 screen capture changed %d", captured ? 1 : 0);
-GHCFLogLine(buf);
-if (captured && GHCFReadARCHideOnScreenshot() && GHCFLauncherVisible) {
+CFLYLogLine(buf);
+if (captured && CFLYReadARCHideOnScreenshot() && CFLYLauncherVisible) {
 [self dismissLauncher];
-GHCFLogLine("v57 arc hidden for screen capture");
+CFLYLogLine("v57 arc hidden for screen capture");
 }
 }
 
@@ -10512,19 +10527,19 @@ GHCFLogLine("v57 arc hidden for screen capture");
 // 已安裝 App 清單；跟設定頁選擇器同一份鍵、同一份清單，
 // 兩邊改了都同步）。每次打開都重建
 // 清單（緩存可能更新了；開關狀態即時讀 prefs）。列舉在後台做、結果
-// 寫緩存檔，這裡只讀緩存（見 GHCFRefreshInstalledAppListInBackground）。
+// 寫緩存檔，這裡只讀緩存（見 CFLYRefreshInstalledAppListInBackground）。
 - (void)showAppPicker {
-if (GHCFAppPickerWindow && !GHCFAppPickerWindow.hidden) {
-GHCFLogLine("v57 app picker already open");
+if (CFLYAppPickerWindow && !CFLYAppPickerWindow.hidden) {
+CFLYLogLine("v57 app picker already open");
 return;
 }
 CGRect screenBounds = [UIScreen mainScreen].bounds;
-if (!GHCFAppPickerWindow) {
-GHCFAppPickerWindow = [[UIWindow alloc] initWithFrame:screenBounds];
-GHCFAppPickerWindow.windowLevel = UIWindowLevelAlert - 1.0;
-GHCFAppPickerWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *pickerScene = GHCFActiveWindowScene();
-if (pickerScene) GHCFAppPickerWindow.windowScene = pickerScene;
+if (!CFLYAppPickerWindow) {
+CFLYAppPickerWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+CFLYAppPickerWindow.windowLevel = UIWindowLevelAlert - 1.0;
+CFLYAppPickerWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *pickerScene = CFLYActiveWindowScene();
+if (pickerScene) CFLYAppPickerWindow.windowScene = pickerScene;
 UIViewController *vc = [[UIViewController alloc] init];
 UIView *root = [[UIView alloc] initWithFrame:screenBounds];
 root.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.85];
@@ -10549,16 +10564,16 @@ done.frame = CGRectMake(0, screenBounds.size.height - 56, screenBounds.size.widt
 done.titleLabel.font = [UIFont boldSystemFontOfSize:17];
 [done addTarget:self action:@selector(handleAppPickerDone:) forControlEvents:UIControlEventTouchUpInside];
 [root addSubview:done];
-GHCFAppPickerWindow.rootViewController = vc;
+CFLYAppPickerWindow.rootViewController = vc;
 }
-UIScrollView *scroll = (UIScrollView *)[GHCFAppPickerWindow.rootViewController.view viewWithTag:77];
+UIScrollView *scroll = (UIScrollView *)[CFLYAppPickerWindow.rootViewController.view viewWithTag:77];
 for (UIView *sub in [scroll.subviews copy]) [sub removeFromSuperview];
-NSArray *installed = GHCFCachedInstalledAppList();
+NSArray *installed = CFLYCachedInstalledAppList();
 NSString *bidKey = [NSString stringWithCString:"bundleID" encoding:NSUTF8StringEncoding];
 NSString *nameKey = [NSString stringWithCString:"name" encoding:NSUTF8StringEncoding];
 CGFloat y = 0;
 CGFloat rowH = 52.0;
-GHCFAppPickerCount = 0;
+CFLYAppPickerCount = 0;
 if (!installed || [installed count] == 0) {
 UILabel *empty = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, screenBounds.size.width - 32, 40)];
 empty.text = [NSString stringWithCString:"还没有已安装 App 清单（后台列举中，稍后再开）" encoding:NSUTF8StringEncoding];
@@ -10569,15 +10584,15 @@ empty.numberOfLines = 2;
 y = 48.0;
 } else {
 for (id item in installed) {
-if (GHCFAppPickerCount >= 256) break;
+if (CFLYAppPickerCount >= 256) break;
 if (![item isKindOfClass:[NSDictionary class]]) continue;
 NSString *itemBid = [(NSDictionary *)item objectForKey:bidKey];
 NSString *itemName = [(NSDictionary *)item objectForKey:nameKey];
 if (!itemBid || [itemBid length] == 0) continue;
 const char *bid = [itemBid UTF8String];
-strncpy(GHCFAppPickerBids[GHCFAppPickerCount], bid, sizeof(GHCFAppPickerBids[0]) - 1);
-GHCFAppPickerBids[GHCFAppPickerCount][sizeof(GHCFAppPickerBids[0]) - 1] = '\0';
-UIImage *icon = GHCFAppIcon(bid);
+strncpy(CFLYAppPickerBids[CFLYAppPickerCount], bid, sizeof(CFLYAppPickerBids[0]) - 1);
+CFLYAppPickerBids[CFLYAppPickerCount][sizeof(CFLYAppPickerBids[0]) - 1] = '\0';
+UIImage *icon = CFLYAppIcon(bid);
 UIImageView *iconView = [[UIImageView alloc] initWithFrame:CGRectMake(16, y + 8, 36, 36)];
 if (icon) {
 iconView.image = icon;
@@ -10594,26 +10609,26 @@ nameLabel.font = [UIFont systemFontOfSize:15];
 [scroll addSubview:nameLabel];
 UISwitch *sw = [[UISwitch alloc] init];
 sw.frame = CGRectMake(screenBounds.size.width - 16 - 51, y + 10, 51, 31);
-sw.on = GHCFIsAppInLauncher(bid);
-sw.tag = GHCFAppPickerCount;
+sw.on = CFLYIsAppInLauncher(bid);
+sw.tag = CFLYAppPickerCount;
 [sw addTarget:self action:@selector(handleAppPickerToggle:) forControlEvents:UIControlEventValueChanged];
 [scroll addSubview:sw];
 y += rowH;
-GHCFAppPickerCount++;
+CFLYAppPickerCount++;
 }
 }
 scroll.contentSize = CGSizeMake(screenBounds.size.width, y);
-GHCFAppPickerWindow.hidden = NO;
+CFLYAppPickerWindow.hidden = NO;
 char buf[128];
-snprintf(buf, sizeof(buf), "v57 app picker opened %d apps", GHCFAppPickerCount);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "v57 app picker opened %d apps", CFLYAppPickerCount);
+CFLYLogLine(buf);
 }
 
 // v41：選 App 頁關掉（ARC 內容重建，剛勾的立刻生效）。
 - (void)dismissAppPicker {
-if (GHCFAppPickerWindow) GHCFAppPickerWindow.hidden = YES;
+if (CFLYAppPickerWindow) CFLYAppPickerWindow.hidden = YES;
 [self rebuildARCContent];
-GHCFLogLine("v57 app picker closed");
+CFLYLogLine("v57 app picker closed");
 }
 
 // v41：選 App 頁的完成鈕。
@@ -10627,12 +10642,12 @@ GHCFLogLine("v57 app picker closed");
 // 窗留著（只從啟動器拿掉，下次打不開而已）。
 - (void)handleAppPickerToggle:(UISwitch *)sender {
 NSInteger row = sender.tag;
-if (row < 0 || row >= GHCFAppPickerCount) return;
-const char *bid = GHCFAppPickerBids[row];
+if (row < 0 || row >= CFLYAppPickerCount) return;
+const char *bid = CFLYAppPickerBids[row];
 BOOL on = sender.on;
-if (!GHCFSetAppInLauncher(bid, on)) {
+if (!CFLYSetAppInLauncher(bid, on)) {
 sender.on = NO;
-GHCFLogLine("v57 app picker full, switch reverted");
+CFLYLogLine("v57 app picker full, switch reverted");
 return;
 }
 [self rebuildARCContent];
@@ -10640,10 +10655,10 @@ return;
 
 @end
 
-static void GHCFDeferredSetupRun(void);
-static void GHCFActivationCheckStart(void);
+static void CFLYDeferredSetupRun(void);
+static void CFLYActivationCheckStart(void);
 
-static BOOL GHCFSetupRan = NO; // 延后 setup 跑过一次（重复跑会建两套窗／重复登记通知）。
+static BOOL CFLYSetupRan = NO; // 延后 setup 跑过一次（重复跑会建两套窗／重复登记通知）。
 
 %ctor {
 // v25 的 %ctor 和 v21/v22/v23/v24 一模一样，只做一行纯 C 调用：
@@ -10651,9 +10666,9 @@ static BOOL GHCFSetupRan = NO; // 延后 setup 跑过一次（重复跑会建两
 // 不调系统日志、不建窗、不 hook。
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)),
 dispatch_get_main_queue(), ^{
-if (!GHCFSetupRan) {
-GHCFSetupRan = YES;
-GHCFDeferredSetupRun();
+if (!CFLYSetupRan) {
+CFLYSetupRan = YES;
+CFLYDeferredSetupRun();
 }
 });
 }
@@ -10665,7 +10680,7 @@ GHCFDeferredSetupRun();
 // 码只放名单文件，不要写死在代码里。名单是异步抓的（NSURLSession，
 // 3 秒超时），抓不到不锁死；判断只在 setup 跑起来之后做，绝不在
 // %ctor 里同步跑（1.0.102 就是 %ctor 同步跑 setup 进的安全模式）。
-// 锁法：复用 GHCFApplyEnabledState——锁住时分屏开关就当关着，
+// 锁法：复用 CFLYApplyEnabledState——锁住时分屏开关就当关着，
 // 感应带／触发钮／已开浮窗全藏、启动器关掉；解锁时恢复。
 // 锁不是死的：设置页输码＋发重查就能解；名单抓不到时不锁（维持原状）。
 // 除了共用这份码表，China Fly 别的什么都不碰旧分屏（皇上 21:36 定）。
@@ -10673,34 +10688,34 @@ GHCFDeferredSetupRun();
 // ChinaFly 1.0.0：激活状态写 prefs（设置页状态行读这个键）：
 // authorized 已激活、locked 未激活（码不对或没输）、checkFailed 名单
 // 读不到（暂不锁）。只写状态字，不写码本身。
-static void GHCFActivationSetState(const char *state) {
+static void CFLYActivationSetState(const char *state) {
 if (!state) return;
-GHCFWritePrefsCString("activationState", state);
+CFLYWritePrefsCString("activationState", state);
 }
 
-static void GHCFActivationApplyLock(void) {
-if (!GHCFActivationLocked) {
-GHCFActivationLocked = YES;
-GHCFActivationSetState("locked");
-GHCFLogLine("ChinaFly activation locked");
+static void CFLYActivationApplyLock(void) {
+if (!CFLYActivationLocked) {
+CFLYActivationLocked = YES;
+CFLYActivationSetState("locked");
+CFLYLogLine("ChinaFly activation locked");
 }
-GHCFApplyEnabledState();
+CFLYApplyEnabledState();
 }
 
-static void GHCFActivationApplyUnlock(void) {
-if (GHCFActivationLocked) {
-GHCFActivationLocked = NO;
-GHCFActivationSetState("authorized");
-GHCFLogLine("ChinaFly activation authorized");
+static void CFLYActivationApplyUnlock(void) {
+if (CFLYActivationLocked) {
+CFLYActivationLocked = NO;
+CFLYActivationSetState("authorized");
+CFLYLogLine("ChinaFly activation authorized");
 }
-GHCFApplyEnabledState();
+CFLYApplyEnabledState();
 }
 
 // ChinaFly 1.0.0：异步抓名单对码。结果：1 码在名单、0 码不在名单／没输码、
 // -1 抓不到／解不开（网络、超时、JSON 坏掉——这种不锁死，维持原状）。
 // 回调一定在主队列跑。码只放内存比对，绝不写日志。
-static void GHCFActivationFetchAndCheck(void (^completion)(int result)) {
-char *code = GHCFReadPrefsCString("activationCode");
+static void CFLYActivationFetchAndCheck(void (^completion)(int result)) {
+char *code = CFLYReadPrefsCString("activationCode");
 if (!code) {
 if (completion) completion(0);
 return;
@@ -10765,32 +10780,32 @@ if (completion) completion(finalResult);
 
 // ChinaFly 1.0.0：启动时／点「检查激活码」时跑一次对码（异步，不卡 SpringBoard）。
 // -1（抓不到名单）不锁死：只记日志、状态写 checkFailed，锁保持原状。
-static BOOL GHCFActivationCheckInFlight = NO;
-static BOOL GHCFActivationRecheckRegistered = NO;
+static BOOL CFLYActivationCheckInFlight = NO;
+static BOOL CFLYActivationRecheckRegistered = NO;
 
-static void GHCFActivationCheckStart(void) {
-if (GHCFActivationCheckInFlight) return;
-if (!GHCFActivationRecheckRegistered) {
-GHCFActivationRecheckRegistered = YES;
+static void CFLYActivationCheckStart(void) {
+if (CFLYActivationCheckInFlight) return;
+if (!CFLYActivationRecheckRegistered) {
+CFLYActivationRecheckRegistered = YES;
 int recheckToken = 0;
-int recheckResult = notify_register_dispatch("com.guhailong.fly.activationRecheck", &recheckToken, dispatch_get_main_queue(), ^(int token) {
+int recheckResult = notify_register_dispatch("com.chinafly.fly.activationRecheck", &recheckToken, dispatch_get_main_queue(), ^(int token) {
 (void)token;
-GHCFActivationCheckStart();
+CFLYActivationCheckStart();
 });
 if (recheckResult != 0) {
-GHCFLogLine("ChinaFly activation recheck notify register failed");
+CFLYLogLine("ChinaFly activation recheck notify register failed");
 }
 }
-GHCFActivationCheckInFlight = YES;
-GHCFActivationFetchAndCheck(^(int result) {
-GHCFActivationCheckInFlight = NO;
+CFLYActivationCheckInFlight = YES;
+CFLYActivationFetchAndCheck(^(int result) {
+CFLYActivationCheckInFlight = NO;
 if (result == 1) {
-GHCFActivationApplyUnlock();
+CFLYActivationApplyUnlock();
 } else if (result == 0) {
-GHCFActivationApplyLock();
+CFLYActivationApplyLock();
 } else {
-GHCFActivationSetState("checkFailed");
-GHCFLogLine("ChinaFly activation check failed, lock unchanged");
+CFLYActivationSetState("checkFailed");
+CFLYLogLine("ChinaFly activation check failed, lock unchanged");
 }
 });
 }
@@ -10801,70 +10816,70 @@ GHCFLogLine("ChinaFly activation check failed, lock unchanged");
 // 其餘 23 項只有設置頁、沒有對應的 dylib 鉤子：先只讀值記一行日誌
 //（行為未接），不硬編假行為。主設置那幾個行為開關也一樣記在這裡。
 // longPressDuration 不在這裡——它本來就讀同名鍵、已接觸發鈕長按。
-static void GHCFLogChinaFlyUnwiredBool(const char *key, BOOL def) {
+static void CFLYLogChinaFlyUnwiredBool(const char *key, BOOL def) {
 char buf[192];
-snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%d behavior-not-wired", key, GHCFReadPrefsBool(key, def) ? 1 : 0);
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%d behavior-not-wired", key, CFLYReadPrefsBool(key, def) ? 1 : 0);
+CFLYLogLine(buf);
 }
-static void GHCFLogChinaFlyUnwiredDouble(const char *key, double def) {
+static void CFLYLogChinaFlyUnwiredDouble(const char *key, double def) {
 char buf[192];
-snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%.2f behavior-not-wired", key, GHCFReadPrefsDouble(key, def));
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%.2f behavior-not-wired", key, CFLYReadPrefsDouble(key, def));
+CFLYLogLine(buf);
 }
-static void GHCFLogChinaFlyUnwiredString(const char *key, const char *def) {
-char *v = GHCFReadPrefsCString(key);
+static void CFLYLogChinaFlyUnwiredString(const char *key, const char *def) {
+char *v = CFLYReadPrefsCString(key);
 char buf[256];
 snprintf(buf, sizeof(buf), "ChinaFly split setting %s=%s behavior-not-wired", key, v ? v : def);
 if (v) free(v);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
-static void GHCFLogChinaFlyUnwiredSettings(void) {
+static void CFLYLogChinaFlyUnwiredSettings(void) {
 // 基本設置：singleWindowMode 只存值（我們本來就嚴格單主窗，行為就是現況）。
-GHCFLogChinaFlyUnwiredBool("singleWindowMode", NO);
-GHCFLogChinaFlyUnwiredBool("reverseLongPress", NO);
-GHCFLogChinaFlyUnwiredBool("longPressReleaseTrigger", YES);
-GHCFLogChinaFlyUnwiredDouble("topMarginSmallWindow", 30.0);
+CFLYLogChinaFlyUnwiredBool("singleWindowMode", NO);
+CFLYLogChinaFlyUnwiredBool("reverseLongPress", NO);
+CFLYLogChinaFlyUnwiredBool("longPressReleaseTrigger", YES);
+CFLYLogChinaFlyUnwiredDouble("topMarginSmallWindow", 30.0);
 // 鍵盤：kbBackgroundTap（點窗外動作選項不同，沒法對上）；
 // floatingAvoidance（鍵盤為非分屏應用打開時藏分屏——SpringBoard 側
 // 收不到別家 App 的鍵盤通知，沒有鉤子）。
-GHCFLogChinaFlyUnwiredString("kbBackgroundTap", "unset");
-GHCFLogChinaFlyUnwiredBool("floatingAvoidance", NO);
+CFLYLogChinaFlyUnwiredString("kbBackgroundTap", "unset");
+CFLYLogChinaFlyUnwiredBool("floatingAvoidance", NO);
 // 外觀：沒有對應的鉤子（我們只有浮窗陰影，不是光圈／光暈；
 // peek 是固定 112x242，沒有小窗縮放；手勢區是觸發區矩形那套）。
-GHCFLogChinaFlyUnwiredBool("showGestureArea", NO);
-GHCFLogChinaFlyUnwiredBool("haloFrame", YES);
-GHCFLogChinaFlyUnwiredBool("windowGlow", YES);
-GHCFLogChinaFlyUnwiredBool("edgeIcons", YES);
-GHCFLogChinaFlyUnwiredDouble("windowHalo", 30.0);
-GHCFLogChinaFlyUnwiredDouble("smallWindowScale", 0.20);
-GHCFLogChinaFlyUnwiredDouble("gestureAreaSize", 2.0);
+CFLYLogChinaFlyUnwiredBool("showGestureArea", NO);
+CFLYLogChinaFlyUnwiredBool("haloFrame", YES);
+CFLYLogChinaFlyUnwiredBool("windowGlow", YES);
+CFLYLogChinaFlyUnwiredBool("edgeIcons", YES);
+CFLYLogChinaFlyUnwiredDouble("windowHalo", 30.0);
+CFLYLogChinaFlyUnwiredDouble("smallWindowScale", 0.20);
+CFLYLogChinaFlyUnwiredDouble("gestureAreaSize", 2.0);
 // 跳轉分屏：沒有鉤子（從別處跳轉過來時分屏——沒有攔截點）。
-GHCFLogChinaFlyUnwiredBool("jumpSplit", NO);
-GHCFLogChinaFlyUnwiredBool("jumpSpotlight", NO);
-GHCFLogChinaFlyUnwiredBool("jumpSpringBoard", NO);
-GHCFLogChinaFlyUnwiredBool("callbackClose", NO);
-// 通知分屏：bannerTap 已接（見 GHCFReadBannerOpensFloatingWindow）；
+CFLYLogChinaFlyUnwiredBool("jumpSplit", NO);
+CFLYLogChinaFlyUnwiredBool("jumpSpotlight", NO);
+CFLYLogChinaFlyUnwiredBool("jumpSpringBoard", NO);
+CFLYLogChinaFlyUnwiredBool("callbackClose", NO);
+// 通知分屏：bannerTap 已接（見 CFLYReadBannerOpensFloatingWindow）；
 // 其餘沒有鉤子。
-GHCFLogChinaFlyUnwiredBool("bannerLongPressSwipe", NO);
-GHCFLogChinaFlyUnwiredBool("notificationCenterSplit", NO);
+CFLYLogChinaFlyUnwiredBool("bannerLongPressSwipe", NO);
+CFLYLogChinaFlyUnwiredBool("notificationCenterSplit", NO);
 // APP 切換器：沒有鉤子（我們不注入 App 切換器）。
-GHCFLogChinaFlyUnwiredBool("addToAppSwitcher", YES);
-GHCFLogChinaFlyUnwiredBool("swipeCardSplit", YES);
+CFLYLogChinaFlyUnwiredBool("addToAppSwitcher", YES);
+CFLYLogChinaFlyUnwiredBool("swipeCardSplit", YES);
 // 桌面圖標：沒有鉤子（桌面圖標手勢是 SpringBoard 的，不攔截）。
-GHCFLogChinaFlyUnwiredString("desktopSwipeSplit", "unset");
-GHCFLogChinaFlyUnwiredBool("desktopLongPressSplitButton", YES);
+CFLYLogChinaFlyUnwiredString("desktopSwipeSplit", "unset");
+CFLYLogChinaFlyUnwiredBool("desktopLongPressSplitButton", YES);
 // 主設置行為開關：hideScreenshotRecording 跟舊的 arcHideOnScreenshot
 // 不是一回事（舊的預設開、只藏錄屏開始時；新的預設關、還要求截圖通知
 // 到時也藏——截圖通知在截圖完成後才發，藏了也來不及進那一張，見
 // handleScreenCaptureChanged），所以不借舊機制、只記未接；其餘沒有鉤子。
-GHCFLogChinaFlyUnwiredBool("hideScreenshotRecording", NO);
-GHCFLogChinaFlyUnwiredBool("delayedScreenshot", NO);
-GHCFLogChinaFlyUnwiredBool("doubleTapLock", NO);
-GHCFLogChinaFlyUnwiredBool("hideDockBackground", NO);
-GHCFLogChinaFlyUnwiredBool("ipadAppSwitcherAnim", YES);
-GHCFLogChinaFlyUnwiredString("actionButtonTapAction", "none");
-GHCFLogChinaFlyUnwiredString("actionButtonLongPressAction", "none");
-GHCFLogChinaFlyUnwiredBool("splitTranslation", YES);
+CFLYLogChinaFlyUnwiredBool("hideScreenshotRecording", NO);
+CFLYLogChinaFlyUnwiredBool("delayedScreenshot", NO);
+CFLYLogChinaFlyUnwiredBool("doubleTapLock", NO);
+CFLYLogChinaFlyUnwiredBool("hideDockBackground", NO);
+CFLYLogChinaFlyUnwiredBool("ipadAppSwitcherAnim", YES);
+CFLYLogChinaFlyUnwiredString("actionButtonTapAction", "none");
+CFLYLogChinaFlyUnwiredString("actionButtonLongPressAction", "none");
+CFLYLogChinaFlyUnwiredBool("splitTranslation", YES);
 }
 
 // ── ChinaFly（1.0.0）菜單動作分發器 ──
@@ -10874,83 +10889,83 @@ GHCFLogChinaFlyUnwiredBool("splitTranslation", YES);
 // AVCaptureDevice／MPVolumeView 都走 NSClassFromString＋objc_msgSend
 // 運行時拿；鎖屏走 dlsym 找 GSEventLockDevice，找不到就只記日誌。
 // ChinaFly（1.0.2）：表盤菜單已接線——handleDialMenuActionButton:
-// 調 GHCFMenuActionPerform（灰掉的按鈕 enabled=NO，點不到，
+// 調 CFLYMenuActionPerform（灰掉的按鈕 enabled=NO，點不到，
 // 這裡也再守一道 working 判斷）。
-// ChinaFly（1.0.2，表盤菜單）：33 個菜單項的表 GHCFMenuItems 定義在
+// ChinaFly（1.0.2，表盤菜單）：33 個菜單項的表 CFLYMenuItems 定義在
 // 表盤靜態區前面（const 陣列不能先暫定定義再定義）；下面只留兩個 helper。
-static BOOL GHCFMenuToggleEnabled(const char *identifier) {
+static BOOL CFLYMenuToggleEnabled(const char *identifier) {
 if (!identifier || identifier[0] == '\0') return NO;
 char key[96];
 snprintf(key, sizeof(key), "menuToggle_%s", identifier);
-return GHCFReadPrefsBool(key, YES);
+return CFLYReadPrefsBool(key, YES);
 }
-static int GHCFMenuItemIndexForIdentifier(const char *identifier) {
+static int CFLYMenuItemIndexForIdentifier(const char *identifier) {
 if (!identifier || identifier[0] == '\0') return -1;
-for (int i = 0; i < 33; i++) {
-if (strcmp(identifier, GHCFMenuItems[i].identifier) == 0) return i;
+for (int i = 0; i < 47; i++) {
+if (strcmp(identifier, CFLYMenuItems[i].identifier) == 0) return i;
 }
 return -1;
 }
-// 表盤菜單要排的 identifier 清單（按 MenuEdit.plist 順序，只留開關開著的；
-// 開關的真正作用就是這一項出不出現在菜單裡，預設全開就是 33 個全列）。
-static NSArray *GHCFEnabledMenuIdentifiers(void) {
+// 表盤菜單要排的 identifier 清單（按菜單編輯頁順序，只留開關開著的；
+// 開關的真正作用就是這一項出不出現在菜單裡，預設全開就是 47 個全列）。
+static NSArray *CFLYEnabledMenuIdentifiers(void) {
 NSMutableArray *out = [NSMutableArray array];
-for (int i = 0; i < 33; i++) {
-if (GHCFMenuToggleEnabled(GHCFMenuItems[i].identifier)) {
-[out addObject:[NSString stringWithCString:GHCFMenuItems[i].identifier encoding:NSUTF8StringEncoding]];
+for (int i = 0; i < 47; i++) {
+if (CFLYMenuToggleEnabled(CFLYMenuItems[i].identifier)) {
+[out addObject:[NSString stringWithCString:CFLYMenuItems[i].identifier encoding:NSUTF8StringEncoding]];
 }
 }
 return out;
 }
-static void GHCFMenuActionLogOnly(const char *identifier) {
+static void CFLYMenuActionLogOnly(const char *identifier) {
 char buf[192];
 snprintf(buf, sizeof(buf), "ChinaFly menu %s stored-only, no safe hook", identifier);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 }
-static void GHCFMenuAction_ToggleBluetooth(void) { GHCFMenuActionLogOnly("ToggleBluetooth"); }
-static void GHCFMenuAction_ToggleWiFi(void) { GHCFMenuActionLogOnly("ToggleWiFi"); }
-static void GHCFMenuAction_ToggleVPN(void) { GHCFMenuActionLogOnly("ToggleVPN"); }
-static void GHCFMenuAction_ToggleCellularData(void) { GHCFMenuActionLogOnly("ToggleCellularData"); }
-static void GHCFMenuAction_ToggleTrueTone(void) { GHCFMenuActionLogOnly("ToggleTrueTone"); }
-static void GHCFMenuAction_ToggleAirplaneMode(void) { GHCFMenuActionLogOnly("ToggleAirplaneMode"); }
-static void GHCFMenuAction_TogglePersonalHotspot(void) { GHCFMenuActionLogOnly("TogglePersonalHotspot"); }
-static void GHCFMenuAction_ToggleLowPowerMode(void) { GHCFMenuActionLogOnly("ToggleLowPowerMode"); }
-static void GHCFMenuAction_ToggleNightShift(void) { GHCFMenuActionLogOnly("ToggleNightShift"); }
-static void GHCFMenuAction_ToggleSmartInvert(void) { GHCFMenuActionLogOnly("_toggleSmartInvert"); }
-static void GHCFMenuAction_ActivateSiri(void) { GHCFMenuActionLogOnly("activateSiri"); }
-static void GHCFMenuAction_ToggleAppLibrary(void) { GHCFMenuActionLogOnly("toggleAppLibrary"); }
-static void GHCFMenuAction_ToggleAppSwitcher(void) { GHCFMenuActionLogOnly("toggleAppSwitcher"); }
-static void GHCFMenuAction_ToggleCommandAndControl(void) { GHCFMenuActionLogOnly("toggleCommandAndControl"); }
-static void GHCFMenuAction_ToggleControlCenter(void) { GHCFMenuActionLogOnly("toggleControlCenter"); }
-static void GHCFMenuAction_ToggleLiveSpeech(void) { GHCFMenuActionLogOnly("toggleLiveSpeech"); }
-static void GHCFMenuAction_ToggleMute(void) { GHCFMenuActionLogOnly("toggleMute"); }
-static void GHCFMenuAction_ToggleNearbyDeviceControlPicker(void) { GHCFMenuActionLogOnly("toggleNearbyDeviceControlPicker"); }
-static void GHCFMenuAction_ToggleNotificationCenter(void) { GHCFMenuActionLogOnly("toggleNotificationCenter"); }
-static void GHCFMenuAction_ToggleWatchRemoteScreen(void) { GHCFMenuActionLogOnly("toggleWatchRemoteScreen"); }
-static void GHCFMenuAction_ToggleQuickNote(void) { GHCFMenuActionLogOnly("toggleQuickNote"); }
-static void GHCFMenuAction_ToggleDock(void) { GHCFMenuActionLogOnly("toggleDock"); }
-static void GHCFMenuAction_ToggleLocation(void) { GHCFMenuActionLogOnly("ToggleLocation"); }
-static void GHCFMenuAction_ToggleAutoBrightness(void) { GHCFMenuActionLogOnly("ToggleAutoBrightness"); }
-static void GHCFMenuAction_ToggleDND(void) { GHCFMenuActionLogOnly("ToggleDND"); }
-static void GHCFMenuAction_ScreenshotRegion(void) { GHCFMenuActionLogOnly("screenshotRegion"); }
+static void CFLYMenuAction_Bluetooth(void) { CFLYMenuActionLogOnly("bluetooth"); }
+static void CFLYMenuAction_WiFi(void) { CFLYMenuActionLogOnly("wifi"); }
+static void CFLYMenuAction_VPN(void) { CFLYMenuActionLogOnly("vpn"); }
+static void CFLYMenuAction_Cellular(void) { CFLYMenuActionLogOnly("cellular"); }
+static void CFLYMenuAction_TrueTone(void) { CFLYMenuActionLogOnly("trueTone"); }
+static void CFLYMenuAction_Airplane(void) { CFLYMenuActionLogOnly("airplane"); }
+static void CFLYMenuAction_Hotspot(void) { CFLYMenuActionLogOnly("hotspot"); }
+static void CFLYMenuAction_LowPower(void) { CFLYMenuActionLogOnly("lowPower"); }
+static void CFLYMenuAction_NightShift(void) { CFLYMenuActionLogOnly("nightShift"); }
+static void CFLYMenuAction_SmartInvert(void) { CFLYMenuActionLogOnly("smartInvert"); }
+static void CFLYMenuAction_Siri(void) { CFLYMenuActionLogOnly("siri"); }
+static void CFLYMenuAction_AppLibrary(void) { CFLYMenuActionLogOnly("appLibrary"); }
+static void CFLYMenuAction_AppSwitcher(void) { CFLYMenuActionLogOnly("appSwitcher"); }
+static void CFLYMenuAction_VoiceControl(void) { CFLYMenuActionLogOnly("voiceControl"); }
+static void CFLYMenuAction_ControlCenter(void) { CFLYMenuActionLogOnly("controlCenter"); }
+static void CFLYMenuAction_LiveSpeech(void) { CFLYMenuActionLogOnly("liveSpeech"); }
+static void CFLYMenuAction_Mute(void) { CFLYMenuActionLogOnly("mute"); }
+static void CFLYMenuAction_NearbyDevices(void) { CFLYMenuActionLogOnly("nearbyDevices"); }
+static void CFLYMenuAction_NotificationCenter(void) { CFLYMenuActionLogOnly("notificationCenter"); }
+static void CFLYMenuAction_WatchRemote(void) { CFLYMenuActionLogOnly("watchRemote"); }
+static void CFLYMenuAction_QuickNote(void) { CFLYMenuActionLogOnly("quickNote"); }
+static void CFLYMenuAction_Dock(void) { CFLYMenuActionLogOnly("dock"); }
+static void CFLYMenuAction_Location(void) { CFLYMenuActionLogOnly("location"); }
+static void CFLYMenuAction_AutoBrightness(void) { CFLYMenuActionLogOnly("autoBrightness"); }
+static void CFLYMenuAction_DND(void) { CFLYMenuActionLogOnly("dnd"); }
+static void CFLYMenuAction_ScreenshotRegion(void) { CFLYMenuActionLogOnly("screenshotRegion"); }
 // 手電筒：AVCaptureDevice torch（運行時拿類，不連結 AVFoundation）。
-static void GHCFMenuAction_ToggleFlashlight(void) {
+static void CFLYMenuAction_Flashlight(void) {
 @try {
 Class capClass = NSClassFromString([NSString stringWithCString:"AVCaptureDevice" encoding:NSUTF8StringEncoding]);
-if (!capClass) { GHCFLogLine("ChinaFly menu ToggleFlashlight no AVCaptureDevice"); return; }
+if (!capClass) { CFLYLogLine("ChinaFly menu flashlight no AVCaptureDevice"); return; }
 SEL defaultSel = sel_registerName("defaultDeviceWithMediaType:");
 SEL hasTorchSel = sel_registerName("hasTorch");
 SEL torchModeSel = sel_registerName("torchMode");
 SEL lockSel = sel_registerName("lockForConfiguration:");
 SEL setTorchSel = sel_registerName("setTorchMode:");
 SEL unlockSel = sel_registerName("unlockForConfiguration");
-if (![capClass respondsToSelector:defaultSel]) { GHCFLogLine("ChinaFly menu ToggleFlashlight no default device"); return; }
+if (![capClass respondsToSelector:defaultSel]) { CFLYLogLine("ChinaFly menu flashlight no default device"); return; }
 id (*msgSendDefault)(id, SEL, id) = (id (*)(id, SEL, id))objc_msgSend;
 NSString *mediaType = [NSString stringWithCString:"vide" encoding:NSUTF8StringEncoding];
 id device = msgSendDefault(capClass, defaultSel, mediaType);
-if (!device) { GHCFLogLine("ChinaFly menu ToggleFlashlight no video device"); return; }
+if (!device) { CFLYLogLine("ChinaFly menu flashlight no video device"); return; }
 BOOL (*msgSendBool)(id, SEL) = (BOOL (*)(id, SEL))objc_msgSend;
-if (![device respondsToSelector:hasTorchSel] || !msgSendBool(device, hasTorchSel)) { GHCFLogLine("ChinaFly menu ToggleFlashlight no torch"); return; }
+if (![device respondsToSelector:hasTorchSel] || !msgSendBool(device, hasTorchSel)) { CFLYLogLine("ChinaFly menu flashlight no torch"); return; }
 long (*msgSendLong)(id, SEL) = (long (*)(id, SEL))objc_msgSend;
 long mode = [device respondsToSelector:torchModeSel] ? msgSendLong(device, torchModeSel) : 0;
 long want = (mode == 0) ? 1 : 0;
@@ -10958,7 +10973,7 @@ BOOL (*msgSendLock)(id, SEL, id *) = (BOOL (*)(id, SEL, id *))objc_msgSend;
 NSError *lockErr = nil;
 BOOL locked = NO;
 if ([device respondsToSelector:lockSel]) locked = msgSendLock(device, lockSel, &lockErr);
-if (!locked) { GHCFLogLine("ChinaFly menu ToggleFlashlight lock failed"); return; }
+if (!locked) { CFLYLogLine("ChinaFly menu flashlight lock failed"); return; }
 if ([device respondsToSelector:setTorchSel]) {
 void (*msgSendSetLong)(id, SEL, long) = (void (*)(id, SEL, long))objc_msgSend;
 msgSendSetLong(device, setTorchSel, want);
@@ -10968,21 +10983,21 @@ void (*msgSendVoid)(id, SEL) = (void (*)(id, SEL))objc_msgSend;
 msgSendVoid(device, unlockSel);
 }
 char buf[96];
-snprintf(buf, sizeof(buf), "ChinaFly menu ToggleFlashlight torch=%s", want == 1 ? "on" : "off");
-GHCFLogLine(buf);
+snprintf(buf, sizeof(buf), "ChinaFly menu flashlight torch=%s", want == 1 ? "on" : "off");
+CFLYLogLine(buf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("ChinaFly menu ToggleFlashlight exception");
+CFLYLogLine("ChinaFly menu flashlight exception");
 }
 }
 // 音量：MPVolumeView 的滑桿（運行時拿類，不連結 MediaPlayer；
 // 滑桿要掛進一個窗才生效，借觸發鈕／感應帶的窗掛一下、用完就拆）。
-static void GHCFMenuActionAdjustVolume(BOOL up) {
+static void CFLYMenuActionAdjustVolume(BOOL up) {
 @try {
 Class volClass = NSClassFromString([NSString stringWithCString:"MPVolumeView" encoding:NSUTF8StringEncoding]);
-if (!volClass) { GHCFLogLine("ChinaFly menu volume no MPVolumeView"); return; }
-UIWindow *host = GHCFFlyTriggerButtonWindow ? GHCFFlyTriggerButtonWindow : GHCFStripWindow;
-if (!host) { GHCFLogLine("ChinaFly menu volume no host window"); return; }
+if (!volClass) { CFLYLogLine("ChinaFly menu volume no MPVolumeView"); return; }
+UIWindow *host = CFLYFlyTriggerButtonWindow ? CFLYFlyTriggerButtonWindow : CFLYStripWindow;
+if (!host) { CFLYLogLine("ChinaFly menu volume no host window"); return; }
 UIView *volView = [[volClass alloc] initWithFrame:CGRectMake(0, 0, 1, 1)];
 if (!volView) return;
 volView.hidden = YES;
@@ -10991,7 +11006,7 @@ UISlider *slider = nil;
 for (UIView *sub in volView.subviews) {
 if ([sub isKindOfClass:[UISlider class]]) { slider = (UISlider *)sub; break; }
 }
-if (!slider) { [volView removeFromSuperview]; GHCFLogLine("ChinaFly menu volume no slider"); return; }
+if (!slider) { [volView removeFromSuperview]; CFLYLogLine("ChinaFly menu volume no slider"); return; }
 float v = slider.value + (up ? 0.1f : -0.1f);
 if (v < 0.0f) v = 0.0f;
 if (v > 1.0f) v = 1.0f;
@@ -11000,31 +11015,31 @@ if (v > 1.0f) v = 1.0f;
 [volView removeFromSuperview];
 char buf[96];
 snprintf(buf, sizeof(buf), "ChinaFly menu volume %s to %.2f", up ? "up" : "down", (double)v);
-GHCFLogLine(buf);
+CFLYLogLine(buf);
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("ChinaFly menu volume exception");
+CFLYLogLine("ChinaFly menu volume exception");
 }
 }
-static void GHCFMenuAction_DecreaseVolume(void) { GHCFMenuActionAdjustVolume(NO); }
-static void GHCFMenuAction_IncreaseVolume(void) { GHCFMenuActionAdjustVolume(YES); }
+static void CFLYMenuAction_VolumeDown(void) { CFLYMenuActionAdjustVolume(NO); }
+static void CFLYMenuAction_VolumeUp(void) { CFLYMenuActionAdjustVolume(YES); }
 // 鎖屏：GSEventLockDevice（dlsym 找，找不到就只記日誌不做事）。
-static void GHCFMenuAction_ActivateLockButton(void) {
+static void CFLYMenuAction_Lock(void) {
 @try {
 void (*lockDevice)(void) = (void (*)(void))dlsym(RTLD_DEFAULT, "GSEventLockDevice");
 if (lockDevice) {
 lockDevice();
-GHCFLogLine("ChinaFly menu activateLockButton locked");
+CFLYLogLine("ChinaFly menu lock locked");
 } else {
-GHCFLogLine("ChinaFly menu activateLockButton no safe hook, stored only");
+CFLYLogLine("ChinaFly menu lock no safe hook, stored only");
 }
 } @catch (NSException *e) {
 (void)e;
-GHCFLogLine("ChinaFly menu activateLockButton exception");
+CFLYLogLine("ChinaFly menu lock exception");
 }
 }
 // 截圖：抓當前屏幕快照（snapshotView＋renderInContext，UIKit 自帶）。
-static UIImage *GHCFMenuSnapshotScreenImage(void) {
+static UIImage *CFLYMenuSnapshotScreenImage(void) {
 UIImage *shot = nil;
 @try {
 CGRect sb = [UIScreen mainScreen].bounds;
@@ -11044,97 +11059,446 @@ shot = nil;
 }
 return shot;
 }
-static void GHCFMenuAction_TakeScreenshot(void) {
-UIImage *shot = GHCFMenuSnapshotScreenImage();
-if (!shot) { GHCFLogLine("ChinaFly menu takeScreenshot snapshot failed"); return; }
+static void CFLYMenuAction_Screenshot(void) {
+UIImage *shot = CFLYMenuSnapshotScreenImage();
+if (!shot) { CFLYLogLine("ChinaFly menu screenshot snapshot failed"); return; }
 @try { UIImageWriteToSavedPhotosAlbum(shot, nil, NULL, NULL); } @catch (NSException *e) { (void)e; }
-GHCFLogLine("ChinaFly menu takeScreenshot saved to album");
+CFLYLogLine("ChinaFly menu screenshot saved to album");
 }
-static void GHCFMenuAction_TakeScreenshotAndEdit(void) {
-UIImage *shot = GHCFMenuSnapshotScreenImage();
-if (!shot) { GHCFLogLine("ChinaFly menu takeScreenshotAndEdit snapshot failed"); return; }
+static void CFLYMenuAction_ScreenshotEdit(void) {
+UIImage *shot = CFLYMenuSnapshotScreenImage();
+if (!shot) { CFLYLogLine("ChinaFly menu screenshotAndEdit snapshot failed"); return; }
 @try { UIImageWriteToSavedPhotosAlbum(shot, nil, NULL, NULL); } @catch (NSException *e) { (void)e; }
-GHCFLogLine("ChinaFly menu takeScreenshotAndEdit saved to album, edit UI not available");
+CFLYLogLine("ChinaFly menu screenshotAndEdit saved to album, edit UI not available");
 }
-static void GHCFMenuAction_ScreenshotToPasteboard(void) {
-UIImage *shot = GHCFMenuSnapshotScreenImage();
-if (!shot) { GHCFLogLine("ChinaFly menu screenshotToPasteboard snapshot failed"); return; }
+static void CFLYMenuAction_ScreenshotCopy(void) {
+UIImage *shot = CFLYMenuSnapshotScreenImage();
+if (!shot) { CFLYLogLine("ChinaFly menu screenshotCopy snapshot failed"); return; }
 @try {
 UIPasteboard *pb = [UIPasteboard generalPasteboard];
 pb.image = shot;
 } @catch (NSException *e) { (void)e; }
-GHCFLogLine("ChinaFly menu screenshotToPasteboard copied");
+CFLYLogLine("ChinaFly menu screenshotCopy copied");
 }
 // 分發器：33 個 identifier 各走自己的處理函數；未知 identifier 只記日誌。
 // 整個分發包在 @try/@catch 裡，任何一個動作都不能閃退 SpringBoard。
 // 非 static（對外 API）：1.0.2 起表盤菜單調它（handleDialMenuActionButton:）。
-void GHCFMenuActionPerform(const char *identifier) {
+// ── ChinaFly（1.0.4）：12 個新接真做的動作＋2 個嘗試（未承諾）。
+// 嘗試的兩個（靜音切換、Siri 語音播報）是盡力接，真機驗證決定去留；
+// 試了沒效果就從表裡刪掉，絕不留灰的。其他 12 個是承諾接的。
+// 類名／方法名一律運行時現找（字串），找不到就只記日誌、不崩不卡。
+// Spotlight：SBSearchController（SpringBoard 自己的搜尋控制器）。
+static void CFLYMenuAction_Spotlight(void) {
+@try {
+Class scClass = NSClassFromString([NSString stringWithCString:"SBSearchController" encoding:NSUTF8StringEncoding]);
+if (!scClass) { CFLYLogLine("ChinaFly menu spotlight no SBSearchController"); return; }
+id (*msgSendClass)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+id sc = msgSendClass(scClass, sel_registerName("sharedInstance"));
+if (!sc) { CFLYLogLine("ChinaFly menu spotlight no shared instance"); return; }
+SEL presentSel = sel_registerName("presentSearch");
+SEL visibleSel = sel_registerName("setSearchVisible:animated:");
+if ([sc respondsToSelector:presentSel]) {
+((void (*)(id, SEL))objc_msgSend)(sc, presentSel);
+CFLYLogLine("ChinaFly menu spotlight presented");
+} else if ([sc respondsToSelector:visibleSel]) {
+((void (*)(id, SEL, BOOL, BOOL))objc_msgSend)(sc, visibleSel, YES, YES);
+CFLYLogLine("ChinaFly menu spotlight set visible");
+} else {
+CFLYLogLine("ChinaFly menu spotlight no present hook");
+}
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu spotlight exception");
+}
+}
+// 控制台：開設定到 China Fly 頁（查看日誌就在那頁，一點就到）。
+static void CFLYMenuAction_Console(void) {
+@try {
+NSString *urlStr = [NSString stringWithCString:"App-Prefs:root=ChinaFly" encoding:NSUTF8StringEncoding];
+NSURL *url = [NSURL URLWithString:urlStr];
+if (!url) { CFLYLogLine("ChinaFly menu console bad url"); return; }
+[[UIApplication sharedApplication] openURL:url options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly menu console open settings %s", success ? "success" : "failed");
+CFLYLogLine(buf);
+}];
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu console exception");
+}
+}
+// 錄屏：SBScreenRecordingController（控制中心錄屏那條路）；沒有就走 ReplayKit。
+static void CFLYMenuAction_StartScreenRecording(BOOL withMic) {
+@try {
+Class rcClass = NSClassFromString([NSString stringWithCString:"SBScreenRecordingController" encoding:NSUTF8StringEncoding]);
+if (rcClass) {
+id (*msgSendClass)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+id rc = msgSendClass(rcClass, sel_registerName("sharedInstance"));
+if (rc) {
+SEL startSel = sel_registerName("startRecording");
+SEL toggleSel = sel_registerName("toggleRecording");
+SEL micSel = sel_registerName("setMicrophoneEnabled:");
+if (withMic && [rc respondsToSelector:micSel]) {
+((void (*)(id, SEL, BOOL))objc_msgSend)(rc, micSel, YES);
+}
+if ([rc respondsToSelector:startSel]) {
+((void (*)(id, SEL))objc_msgSend)(rc, startSel);
+CFLYLogLine("ChinaFly menu screenRecord started via SBScreenRecordingController");
+return;
+}
+if ([rc respondsToSelector:toggleSel]) {
+((void (*)(id, SEL))objc_msgSend)(rc, toggleSel);
+CFLYLogLine("ChinaFly menu screenRecord toggled via SBScreenRecordingController");
+return;
+}
+}
+}
+// 退路：ReplayKit（公開框架，運行時拿，不連結）。
+Class rpClass = NSClassFromString([NSString stringWithCString:"RPScreenRecorder" encoding:NSUTF8StringEncoding]);
+if (!rpClass) { CFLYLogLine("ChinaFly menu screenRecord no recorder"); return; }
+id (*msgSendClass2)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+id rp = msgSendClass2(rpClass, sel_registerName("sharedRecorder"));
+if (!rp) { CFLYLogLine("ChinaFly menu screenRecord no shared recorder"); return; }
+SEL micSel2 = sel_registerName("setMicrophoneEnabled:");
+if ([rp respondsToSelector:micSel2]) {
+((void (*)(id, SEL, BOOL))objc_msgSend)(rp, micSel2, withMic);
+}
+SEL availSel = sel_registerName("isAvailable");
+BOOL (*msgSendBool)(id, SEL) = (BOOL (*)(id, SEL))objc_msgSend;
+if ([rp respondsToSelector:availSel] && !msgSendBool(rp, availSel)) {
+CFLYLogLine("ChinaFly menu screenRecord not available");
+return;
+}
+SEL startSel2 = sel_registerName("startRecordingWithHandler:");
+if (![rp respondsToSelector:startSel2]) { CFLYLogLine("ChinaFly menu screenRecord no start hook"); return; }
+void (^handler)(NSError *) = ^(NSError *error) {
+char buf[96];
+snprintf(buf, sizeof(buf), "ChinaFly menu screenRecord start %s", error ? "failed" : "ok");
+CFLYLogLine(buf);
+};
+((void (*)(id, SEL, id))objc_msgSend)(rp, startSel2, handler);
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu screenRecord exception");
+}
+}
+static void CFLYMenuAction_ScreenRecord(void) { CFLYMenuAction_StartScreenRecording(NO); }
+static void CFLYMenuAction_ScreenRecordMic(void) { CFLYMenuAction_StartScreenRecording(YES); }
+// 靜音切換（嘗試，未承諾）：SBVolumeControl 沒有穩定公開寫法，
+// 先試 ringer 靜音那幾個方法；都沒有就只記日誌（真機驗證決定去留）。
+static void CFLYMenuAction_Silent(void) {
+@try {
+Class vcClass = NSClassFromString([NSString stringWithCString:"SBVolumeControl" encoding:NSUTF8StringEncoding]);
+if (!vcClass) { CFLYLogLine("ChinaFly menu silent no SBVolumeControl"); return; }
+id (*msgSendClass)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+id vc = msgSendClass(vcClass, sel_registerName("sharedInstance"));
+if (!vc) { CFLYLogLine("ChinaFly menu silent no shared instance"); return; }
+SEL muteSel = sel_registerName("setRingerMuted:");
+SEL silentSel = sel_registerName("setSilentMode:");
+BOOL (*msgSendBool)(id, SEL) = (BOOL (*)(id, SEL))objc_msgSend;
+if ([vc respondsToSelector:muteSel]) {
+SEL getSel = sel_registerName("isRingerMuted");
+BOOL cur = [vc respondsToSelector:getSel] ? msgSendBool(vc, getSel) : NO;
+((void (*)(id, SEL, BOOL))objc_msgSend)(vc, muteSel, !cur);
+CFLYLogLine("ChinaFly menu silent toggled ringer");
+} else if ([vc respondsToSelector:silentSel]) {
+((void (*)(id, SEL, BOOL))objc_msgSend)(vc, silentSel, YES);
+CFLYLogLine("ChinaFly menu silent set silent mode");
+} else {
+CFLYLogLine("ChinaFly menu silent no mute hook");
+}
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu silent exception");
+}
+}
+// 重啟桌面：exit(0)——SpringBoard 退出後 launchd 會重拉，就是 respring。
+// 日誌先寫（CFLYLogLine 寫檔即刷，不怕 exit 丟行）。
+static void CFLYMenuAction_Respring(void) {
+CFLYLogLine("ChinaFly menu respring exit");
+exit(0);
+}
+// 重新開機：FBSystemService（SpringBoard 自己的系統服務）。
+static void CFLYMenuAction_Reboot(void) {
+@try {
+Class fsClass = NSClassFromString([NSString stringWithCString:"FBSystemService" encoding:NSUTF8StringEncoding]);
+if (!fsClass) { CFLYLogLine("ChinaFly menu reboot no FBSystemService"); return; }
+id (*msgSendClass)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+id fs = msgSendClass(fsClass, sel_registerName("sharedService"));
+if (!fs) { CFLYLogLine("ChinaFly menu reboot no shared service"); return; }
+SEL rebootSel = sel_registerName("reboot");
+SEL shutdownSel = sel_registerName("shutdownWithOptions:");
+if ([fs respondsToSelector:rebootSel]) {
+((void (*)(id, SEL))objc_msgSend)(fs, rebootSel);
+CFLYLogLine("ChinaFly menu reboot called");
+} else if ([fs respondsToSelector:shutdownSel]) {
+((void (*)(id, SEL, unsigned long long))objc_msgSend)(fs, shutdownSel, (unsigned long long)0);
+CFLYLogLine("ChinaFly menu reboot shutdown called");
+} else {
+CFLYLogLine("ChinaFly menu reboot no reboot hook");
+}
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu reboot exception");
+}
+}
+// 鎖定方向：SBOrientationLockManager（SpringBoard 的方向鎖）。
+static void CFLYMenuAction_Orientation(void) {
+@try {
+Class olClass = NSClassFromString([NSString stringWithCString:"SBOrientationLockManager" encoding:NSUTF8StringEncoding]);
+if (!olClass) { CFLYLogLine("ChinaFly menu orientation no SBOrientationLockManager"); return; }
+id (*msgSendClass)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+id ol = msgSendClass(olClass, sel_registerName("sharedInstance"));
+if (!ol) { CFLYLogLine("ChinaFly menu orientation no shared instance"); return; }
+SEL lockedSel = sel_registerName("isOrientationLocked");
+SEL setSel = sel_registerName("setOrientationLocked:");
+SEL lockSel = sel_registerName("lockOrientation:");
+BOOL (*msgSendBool)(id, SEL) = (BOOL (*)(id, SEL))objc_msgSend;
+if ([ol respondsToSelector:lockedSel] && [ol respondsToSelector:setSel]) {
+BOOL cur = msgSendBool(ol, lockedSel);
+((void (*)(id, SEL, BOOL))objc_msgSend)(ol, setSel, !cur);
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly menu orientation %s", !cur ? "locked" : "unlocked");
+CFLYLogLine(buf);
+} else if ([ol respondsToSelector:lockSel]) {
+((void (*)(id, SEL, long))objc_msgSend)(ol, lockSel, (long)1);
+CFLYLogLine("ChinaFly menu orientation locked");
+} else {
+CFLYLogLine("ChinaFly menu orientation no lock hook");
+}
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu orientation exception");
+}
+}
+// 日夜切換：寫 AppleInterfaceStyle 全域鍵＋發通知（系統跟著切）。
+// 不用 @""/CFSTR（會產生 __cfstring 段）——字串一律運行時現做。
+static void CFLYMenuAction_Appearance(void) {
+@try {
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.apple.uikit", kCFStringEncodingUTF8);
+CFStringRef key = CFStringCreateWithCString(NULL, "AppleInterfaceStyle", kCFStringEncodingUTF8);
+CFPropertyListRef cur = CFPreferencesCopyAppValue(key, domain);
+NSString *curStr = cur ? (__bridge_transfer NSString *)cur : nil;
+NSString *darkStr = [NSString stringWithCString:"Dark" encoding:NSUTF8StringEncoding];
+NSString *lightStr = [NSString stringWithCString:"Light" encoding:NSUTF8StringEncoding];
+NSString *next = [curStr isEqualToString:darkStr] ? lightStr : darkStr;
+CFPreferencesSetAppValue(key, (__bridge CFPropertyListRef)next, domain);
+CFPreferencesAppSynchronize(domain);
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly menu appearance -> %s", [next UTF8String]);
+CFLYLogLine(buf);
+CFStringRef note = CFStringCreateWithCString(NULL, "AppleInterfaceStyleChangedNotification", kCFStringEncodingUTF8);
+CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), note, NULL, NULL, true);
+CFRelease(note);
+CFRelease(domain);
+CFRelease(key);
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu appearance exception");
+}
+}
+// Siri 語音播報（嘗試，未承諾）：寫播報通知偏好＋發通知；
+// 設了不一定即時生效（可能要重進設定才看到），真機驗證決定去留。
+static void CFLYMenuAction_Announce(void) {
+@try {
+CFStringRef domain = CFStringCreateWithCString(NULL, "com.apple.siri", kCFStringEncodingUTF8);
+CFStringRef key = CFStringCreateWithCString(NULL, "AnnounceNotifications", kCFStringEncodingUTF8);
+CFPropertyListRef cur = CFPreferencesCopyAppValue(key, domain);
+BOOL curVal = cur ? CFBooleanGetValue((CFBooleanRef)cur) : NO;
+if (cur) CFRelease(cur);
+CFPreferencesSetAppValue(key, curVal ? kCFBooleanFalse : kCFBooleanTrue, domain);
+CFPreferencesAppSynchronize(domain);
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly menu announce %s", curVal ? "off" : "on");
+CFLYLogLine(buf);
+CFRelease(domain);
+CFRelease(key);
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu announce exception");
+}
+}
+// 把前景變浮窗：SBMainWorkspace 拿前景 App，launchHostedApp 開浮窗。
+static void CFLYMenuAction_FloatForeground(void) {
+@try {
+if (!CFLYLauncherShared) { CFLYLogLine("ChinaFly menu floatForeground no launcher"); return; }
+Class wsClass = NSClassFromString([NSString stringWithCString:"SBMainWorkspace" encoding:NSUTF8StringEncoding]);
+if (!wsClass) { CFLYLogLine("ChinaFly menu floatForeground no SBMainWorkspace"); return; }
+id (*msgSendClass)(id, SEL) = (id (*)(id, SEL))objc_msgSend;
+id ws = msgSendClass(wsClass, sel_registerName("sharedInstance"));
+if (!ws) { CFLYLogLine("ChinaFly menu floatForeground no workspace"); return; }
+SEL frontSel = sel_registerName("frontmostApplication");
+if (![ws respondsToSelector:frontSel]) { CFLYLogLine("ChinaFly menu floatForeground no frontmost hook"); return; }
+id frontApp = ((id (*)(id, SEL))objc_msgSend)(ws, frontSel);
+if (!frontApp) { CFLYLogLine("ChinaFly menu floatForeground no front app"); return; }
+SEL bidSel = sel_registerName("bundleIdentifier");
+if (![frontApp respondsToSelector:bidSel]) { CFLYLogLine("ChinaFly menu floatForeground no bundle id hook"); return; }
+NSString *bid = ((id (*)(id, SEL))objc_msgSend)(frontApp, bidSel);
+if (!bid || [bid length] == 0) { CFLYLogLine("ChinaFly menu floatForeground empty bundle id"); return; }
+const char *bidC = [bid UTF8String];
+if (!bidC || bidC[0] == '\0') return;
+char buf[128];
+snprintf(buf, sizeof(buf), "ChinaFly menu floatForeground %s", bidC);
+CFLYLogLine(buf);
+[CFLYLauncherShared dismissLauncher];
+NSString *name = bid;
+[CFLYLauncherShared launchHostedApp:bidC name:[name UTF8String]];
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu floatForeground exception");
+}
+}
+// 只留一個浮窗：切 singleWindowMode；開時關掉除活動窗外的全部，
+// 關時把上限放回 5。開關狀態存在 prefs（singleWindowMode）。
+static void CFLYMenuAction_SingleWindow(void) {
+@try {
+if (!CFLYLauncherShared) { CFLYLogLine("ChinaFly menu singleWindow no launcher"); return; }
+BOOL cur = CFLYReadPrefsBool("singleWindowMode", NO);
+BOOL next = !cur;
+CFLYWritePrefsBool("singleWindowMode", next);
+if (next) {
+int kept = 0;
+for (int i = 0; i < CFLYAppCount; i++) {
+UIWindow *w = CFLYCacheWindows[i];
+if (!w || w.hidden) continue;
+if (i == CFLYActiveAppIndex) { kept++; continue; }
+CFLYLoadCacheToActive(i);
+[CFLYLauncherShared closeHostedWindow];
+}
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly menu singleWindow on, kept %d", kept);
+CFLYLogLine(buf);
+} else {
+CFLYLogLine("ChinaFly menu singleWindow off");
+}
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu singleWindow exception");
+}
+}
+// 收起全部浮窗：逐個設為活動窗再最小化（走現成最小化路，peek 照常）。
+static void CFLYMenuAction_MinimizeAll(void) {
+@try {
+if (!CFLYLauncherShared) { CFLYLogLine("ChinaFly menu minimizeAll no launcher"); return; }
+int n = 0;
+for (int i = 0; i < CFLYAppCount; i++) {
+UIWindow *w = CFLYCacheWindows[i];
+if (!w || w.hidden) continue;
+if (CFLYCacheMinimized[i]) continue;
+CFLYLoadCacheToActive(i);
+[CFLYLauncherShared minimizeHostedWindow];
+n++;
+}
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly menu minimizeAll %d", n);
+CFLYLogLine(buf);
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu minimizeAll exception");
+}
+}
+// 關掉全部浮窗：逐個設為活動窗再關（走現成關窗路，scene 留著）。
+static void CFLYMenuAction_CloseAll(void) {
+@try {
+if (!CFLYLauncherShared) { CFLYLogLine("ChinaFly menu closeAll no launcher"); return; }
+int n = 0;
+for (int i = 0; i < CFLYAppCount; i++) {
+UIWindow *w = CFLYCacheWindows[i];
+if (!w || w.hidden) continue;
+CFLYLoadCacheToActive(i);
+[CFLYLauncherShared closeHostedWindow];
+n++;
+}
+char buf[64];
+snprintf(buf, sizeof(buf), "ChinaFly menu closeAll %d", n);
+CFLYLogLine(buf);
+} @catch (NSException *e) {
+(void)e;
+CFLYLogLine("ChinaFly menu closeAll exception");
+}
+}
+
+void CFLYMenuActionPerform(const char *identifier) {
 if (!identifier || identifier[0] == '\0') return;
 @try {
 char buf[160];
-snprintf(buf, sizeof(buf), "ChinaFly menu action %s toggle=%d", identifier, GHCFMenuToggleEnabled(identifier) ? 1 : 0);
-GHCFLogLine(buf);
-if (strcmp(identifier, "ToggleBluetooth") == 0) GHCFMenuAction_ToggleBluetooth();
-else if (strcmp(identifier, "ToggleWiFi") == 0) GHCFMenuAction_ToggleWiFi();
-else if (strcmp(identifier, "ToggleVPN") == 0) GHCFMenuAction_ToggleVPN();
-else if (strcmp(identifier, "ToggleCellularData") == 0) GHCFMenuAction_ToggleCellularData();
-else if (strcmp(identifier, "ToggleTrueTone") == 0) GHCFMenuAction_ToggleTrueTone();
-else if (strcmp(identifier, "ToggleAirplaneMode") == 0) GHCFMenuAction_ToggleAirplaneMode();
-else if (strcmp(identifier, "TogglePersonalHotspot") == 0) GHCFMenuAction_TogglePersonalHotspot();
-else if (strcmp(identifier, "ToggleLowPowerMode") == 0) GHCFMenuAction_ToggleLowPowerMode();
-else if (strcmp(identifier, "ToggleFlashlight") == 0) GHCFMenuAction_ToggleFlashlight();
-else if (strcmp(identifier, "ToggleNightShift") == 0) GHCFMenuAction_ToggleNightShift();
-else if (strcmp(identifier, "_toggleSmartInvert") == 0) GHCFMenuAction_ToggleSmartInvert();
-else if (strcmp(identifier, "activateLockButton") == 0) GHCFMenuAction_ActivateLockButton();
-else if (strcmp(identifier, "activateSiri") == 0) GHCFMenuAction_ActivateSiri();
-else if (strcmp(identifier, "decreaseVolume") == 0) GHCFMenuAction_DecreaseVolume();
-else if (strcmp(identifier, "increaseVolume") == 0) GHCFMenuAction_IncreaseVolume();
-else if (strcmp(identifier, "toggleAppLibrary") == 0) GHCFMenuAction_ToggleAppLibrary();
-else if (strcmp(identifier, "toggleAppSwitcher") == 0) GHCFMenuAction_ToggleAppSwitcher();
-else if (strcmp(identifier, "toggleCommandAndControl") == 0) GHCFMenuAction_ToggleCommandAndControl();
-else if (strcmp(identifier, "toggleControlCenter") == 0) GHCFMenuAction_ToggleControlCenter();
-else if (strcmp(identifier, "toggleLiveSpeech") == 0) GHCFMenuAction_ToggleLiveSpeech();
-else if (strcmp(identifier, "toggleMute") == 0) GHCFMenuAction_ToggleMute();
-else if (strcmp(identifier, "toggleNearbyDeviceControlPicker") == 0) GHCFMenuAction_ToggleNearbyDeviceControlPicker();
-else if (strcmp(identifier, "toggleNotificationCenter") == 0) GHCFMenuAction_ToggleNotificationCenter();
-else if (strcmp(identifier, "toggleWatchRemoteScreen") == 0) GHCFMenuAction_ToggleWatchRemoteScreen();
-else if (strcmp(identifier, "toggleQuickNote") == 0) GHCFMenuAction_ToggleQuickNote();
-else if (strcmp(identifier, "toggleDock") == 0) GHCFMenuAction_ToggleDock();
-else if (strcmp(identifier, "ToggleLocation") == 0) GHCFMenuAction_ToggleLocation();
-else if (strcmp(identifier, "takeScreenshot") == 0) GHCFMenuAction_TakeScreenshot();
-else if (strcmp(identifier, "takeScreenshotAndEdit") == 0) GHCFMenuAction_TakeScreenshotAndEdit();
-else if (strcmp(identifier, "ToggleAutoBrightness") == 0) GHCFMenuAction_ToggleAutoBrightness();
-else if (strcmp(identifier, "ToggleDND") == 0) GHCFMenuAction_ToggleDND();
-else if (strcmp(identifier, "screenshotToPasteboard") == 0) GHCFMenuAction_ScreenshotToPasteboard();
-else if (strcmp(identifier, "screenshotRegion") == 0) GHCFMenuAction_ScreenshotRegion();
+snprintf(buf, sizeof(buf), "ChinaFly menu action %s toggle=%d", identifier, CFLYMenuToggleEnabled(identifier) ? 1 : 0);
+CFLYLogLine(buf);
+if (strcmp(identifier, "spotlight") == 0) CFLYMenuAction_Spotlight();
+else if (strcmp(identifier, "console") == 0) CFLYMenuAction_Console();
+else if (strcmp(identifier, "screenRecord") == 0) CFLYMenuAction_ScreenRecord();
+else if (strcmp(identifier, "screenRecordMic") == 0) CFLYMenuAction_ScreenRecordMic();
+else if (strcmp(identifier, "silent") == 0) CFLYMenuAction_Silent();
+else if (strcmp(identifier, "respring") == 0) CFLYMenuAction_Respring();
+else if (strcmp(identifier, "reboot") == 0) CFLYMenuAction_Reboot();
+else if (strcmp(identifier, "orientation") == 0) CFLYMenuAction_Orientation();
+else if (strcmp(identifier, "appearance") == 0) CFLYMenuAction_Appearance();
+else if (strcmp(identifier, "announce") == 0) CFLYMenuAction_Announce();
+else if (strcmp(identifier, "bluetooth") == 0) CFLYMenuAction_Bluetooth();
+else if (strcmp(identifier, "wifi") == 0) CFLYMenuAction_WiFi();
+else if (strcmp(identifier, "vpn") == 0) CFLYMenuAction_VPN();
+else if (strcmp(identifier, "cellular") == 0) CFLYMenuAction_Cellular();
+else if (strcmp(identifier, "trueTone") == 0) CFLYMenuAction_TrueTone();
+else if (strcmp(identifier, "airplane") == 0) CFLYMenuAction_Airplane();
+else if (strcmp(identifier, "hotspot") == 0) CFLYMenuAction_Hotspot();
+else if (strcmp(identifier, "lowPower") == 0) CFLYMenuAction_LowPower();
+else if (strcmp(identifier, "flashlight") == 0) CFLYMenuAction_Flashlight();
+else if (strcmp(identifier, "nightShift") == 0) CFLYMenuAction_NightShift();
+else if (strcmp(identifier, "smartInvert") == 0) CFLYMenuAction_SmartInvert();
+else if (strcmp(identifier, "lock") == 0) CFLYMenuAction_Lock();
+else if (strcmp(identifier, "siri") == 0) CFLYMenuAction_Siri();
+else if (strcmp(identifier, "volumeDown") == 0) CFLYMenuAction_VolumeDown();
+else if (strcmp(identifier, "volumeUp") == 0) CFLYMenuAction_VolumeUp();
+else if (strcmp(identifier, "appLibrary") == 0) CFLYMenuAction_AppLibrary();
+else if (strcmp(identifier, "appSwitcher") == 0) CFLYMenuAction_AppSwitcher();
+else if (strcmp(identifier, "voiceControl") == 0) CFLYMenuAction_VoiceControl();
+else if (strcmp(identifier, "controlCenter") == 0) CFLYMenuAction_ControlCenter();
+else if (strcmp(identifier, "liveSpeech") == 0) CFLYMenuAction_LiveSpeech();
+else if (strcmp(identifier, "mute") == 0) CFLYMenuAction_Mute();
+else if (strcmp(identifier, "nearbyDevices") == 0) CFLYMenuAction_NearbyDevices();
+else if (strcmp(identifier, "notificationCenter") == 0) CFLYMenuAction_NotificationCenter();
+else if (strcmp(identifier, "watchRemote") == 0) CFLYMenuAction_WatchRemote();
+else if (strcmp(identifier, "quickNote") == 0) CFLYMenuAction_QuickNote();
+else if (strcmp(identifier, "dock") == 0) CFLYMenuAction_Dock();
+else if (strcmp(identifier, "location") == 0) CFLYMenuAction_Location();
+else if (strcmp(identifier, "screenshot") == 0) CFLYMenuAction_Screenshot();
+else if (strcmp(identifier, "screenshotEdit") == 0) CFLYMenuAction_ScreenshotEdit();
+else if (strcmp(identifier, "autoBrightness") == 0) CFLYMenuAction_AutoBrightness();
+else if (strcmp(identifier, "dnd") == 0) CFLYMenuAction_DND();
+else if (strcmp(identifier, "screenshotCopy") == 0) CFLYMenuAction_ScreenshotCopy();
+else if (strcmp(identifier, "screenshotRegion") == 0) CFLYMenuAction_ScreenshotRegion();
+else if (strcmp(identifier, "floatForeground") == 0) CFLYMenuAction_FloatForeground();
+else if (strcmp(identifier, "singleWindow") == 0) CFLYMenuAction_SingleWindow();
+else if (strcmp(identifier, "minimizeAll") == 0) CFLYMenuAction_MinimizeAll();
+else if (strcmp(identifier, "closeAll") == 0) CFLYMenuAction_CloseAll();
 else {
 char ubuf[160];
 snprintf(ubuf, sizeof(ubuf), "ChinaFly menu action %s unknown identifier", identifier);
-GHCFLogLine(ubuf);
+CFLYLogLine(ubuf);
 }
 } @catch (NSException *e) {
 (void)e;
 char ebuf[160];
 snprintf(ebuf, sizeof(ebuf), "ChinaFly menu action %s exception", identifier);
-GHCFLogLine(ebuf);
+CFLYLogLine(ebuf);
 }
 }
 
 // ── ChinaFly（1.0.0）百度翻譯架子 ──
-// GHCFBaiduTranslate(text, from, to, completion)：讀 translateAppID／
+// CFLYBaiduTranslate(text, from, to, completion)：讀 translateAppID／
 // translateSecretKey／translateDirection；空 Key 時什麼都不做只記日誌；
 // 有 Key 時調百度翻譯 API（POST＋MD5 簽名）回翻譯文本。
 // 不自動翻譯任何應用內容（沒有觸發點）；splitTranslation 開關先只存值。
 // Key 由皇上自己填，絕不寫死、絕不問他要。非 static（對外 API）。
-void GHCFBaiduTranslate(NSString *text, NSString *from, NSString *to, void (^completion)(NSString *translated)) {
+void CFLYBaiduTranslate(NSString *text, NSString *from, NSString *to, void (^completion)(NSString *translated)) {
 if (!text || [text length] == 0) {
 if (completion) completion(nil);
 return;
 }
-char *appID = GHCFReadPrefsCString("translateAppID");
-char *secret = GHCFReadPrefsCString("translateSecretKey");
+char *appID = CFLYReadPrefsCString("translateAppID");
+char *secret = CFLYReadPrefsCString("translateSecretKey");
 if (!appID || appID[0] == '\0' || !secret || secret[0] == '\0') {
-GHCFLogLine("ChinaFly translate no key, skipped");
+CFLYLogLine("ChinaFly translate no key, skipped");
 if (appID) free(appID);
 if (secret) free(secret);
 if (completion) completion(nil);
@@ -11144,7 +11508,7 @@ return;
 NSString *fromStr = from;
 NSString *toStr = to;
 if (!fromStr || !toStr) {
-char *dir = GHCFReadPrefsCString("translateDirection");
+char *dir = CFLYReadPrefsCString("translateDirection");
 NSString *dirStr = dir ? [NSString stringWithCString:dir encoding:NSUTF8StringEncoding] : nil;
 if (dir) free(dir);
 NSString *sep = [NSString stringWithCString:"-" encoding:NSUTF8StringEncoding];
@@ -11229,7 +11593,7 @@ id errCode = [(NSDictionary *)parsed objectForKey:errKey];
 if (errCode) {
 char ebuf[128];
 snprintf(ebuf, sizeof(ebuf), "ChinaFly translate api error %s", [[errCode description] UTF8String]);
-GHCFLogLine(ebuf);
+CFLYLogLine(ebuf);
 }
 }
 }
@@ -11238,7 +11602,7 @@ GHCFLogLine(ebuf);
 translated = nil;
 }
 } else {
-GHCFLogLine("ChinaFly translate request failed");
+CFLYLogLine("ChinaFly translate request failed");
 }
 NSString *finalTranslated = translated;
 dispatch_async(dispatch_get_main_queue(), ^{
@@ -11248,18 +11612,18 @@ if (completion) completion(finalTranslated);
 [task resume];
 }
 
-static void GHCFDeferredSetupRun(void) {
+static void CFLYDeferredSetupRun(void) {
 // ChinaFly（1.0.0，防撞；1.0.3 改成開關開著 AND 舊 dylib 文件還在才休眠）：
-// 舊 SeaDragon Split 開著就休眠——只寫一行日誌，不建鈕、不接手勢、
+// 舊 舊分屏 開著就休眠——只寫一行日誌，不建鈕、不接手勢、
 // 不注入行為；舊插件那邊不動。檢查放在 deferred setup 裡建東西之前，
 // 絕不在 %ctor 裡同步跑（1.0.102 安全模式循環的教訓）。
-if (GHCFShouldDormantForOldSplitscreen()) {
-GHCFLogLine("ChinaFly dormant, old SeaDragon Split enabled");
+if (CFLYShouldDormantForOldSplitscreen()) {
+CFLYLogLine("ChinaFly dormant, old splitscreen enabled");
 return;
 }
 // ChinaFly（1.0.0）：行為未接的設置鍵讀一遍記日誌（見
-// GHCFLogChinaFlyUnwiredSettings），不硬編假行為。
-GHCFLogChinaFlyUnwiredSettings();
+// CFLYLogChinaFlyUnwiredSettings），不硬編假行為。
+CFLYLogChinaFlyUnwiredSettings();
 // 延后步骤（启动完成 5 秒后，主队列）：
 // 1) 寫日誌（v57：開關加回來，讀 enabled 鍵；預設關——裝完要自己去開）；
 // 2) 建右边缘感应带（24pt 宽透明窗），带子是自己写的普通视图，
@@ -11269,205 +11633,104 @@ GHCFLogChinaFlyUnwiredSettings();
 // 不登记通知、不建 FBScene、不 hook。
 {
 char dbuf[64];
-snprintf(dbuf, sizeof(dbuf), "v57 deferred setup ran, enabled=%d", (int)GHCFReadEnabled());
-GHCFLogLine(dbuf);
+snprintf(dbuf, sizeof(dbuf), "v57 deferred setup ran, enabled=%d", (int)CFLYReadEnabled());
+CFLYLogLine(dbuf);
 }
 // v69：啟動時自愈一次——清掉已存的小窗尺寸（拖大過的 App 也回到 112×242）。
-GHCFResetStoredPeekSizesOnce();
+CFLYResetStoredPeekSizesOnce();
 // v41：自選 App 槽位從 prefs 讀進來（ARC 第一次打開就看得到）；
 // 已安裝 App 清單在後台列舉、寫緩存檔（不堵主線程），設定頁/ARC 只讀緩存。
-GHCFLoadCustomApps();
-GHCFRefreshInstalledAppListInBackground();
+CFLYLoadCustomApps();
+CFLYRefreshInstalledAppListInBackground();
 // 右边缘感应带：24pt 宽、全高、透明，层级在 SpringBoard 内容之上。
 // v23 的修法：窗显式挂 windowScene（没挂 scene 的窗可能不显示，
 // v22 的教训）；带子的视图给显式 frame（不用 plain init 的零 frame）。
 CGRect screenBounds = [UIScreen mainScreen].bounds;
 CGFloat stripWidth = 24.0;
 CGRect stripFrame = CGRectMake(screenBounds.size.width - stripWidth, 0, stripWidth, screenBounds.size.height);
-GHCFStripWindow = [[UIWindow alloc] initWithFrame:stripFrame];
+CFLYStripWindow = [[UIWindow alloc] initWithFrame:stripFrame];
 // v29：层级降到 Alert - 4——锁屏之下，但仍在状态栏（1000）与 App（0）之上，平时用不受影响。
-GHCFStripWindow.windowLevel = UIWindowLevelAlert - 4.0;
-GHCFStripWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *stripScene = GHCFActiveWindowScene();
+CFLYStripWindow.windowLevel = UIWindowLevelAlert - 4.0;
+CFLYStripWindow.backgroundColor = [UIColor clearColor];
+UIWindowScene *stripScene = CFLYActiveWindowScene();
 if (stripScene) {
-GHCFStripWindow.windowScene = stripScene;
-GHCFLogLine("v57 window scene found");
+CFLYStripWindow.windowScene = stripScene;
+CFLYLogLine("v57 window scene found");
 } else {
-GHCFLogLine("v57 window scene nil");
+CFLYLogLine("v57 window scene nil");
 }
 UIViewController *stripVC = [[UIViewController alloc] init];
-GHCFPlainStripView *stripView = [[GHCFPlainStripView alloc] initWithFrame:CGRectMake(0, 0, stripWidth, screenBounds.size.height)];
+CFLYPlainStripView *stripView = [[CFLYPlainStripView alloc] initWithFrame:CGRectMake(0, 0, stripWidth, screenBounds.size.height)];
 stripView.backgroundColor = [UIColor clearColor];
 stripVC.view = stripView;
-GHCFStripWindow.rootViewController = stripVC;
-GHCFStripWindow.hidden = NO;
-GHCFLogLine("v57 edge strip built");
+CFLYStripWindow.rootViewController = stripVC;
+CFLYStripWindow.hidden = NO;
+CFLYLogLine("v57 edge strip built");
 // 诊断日志：窗与带子到底是什么状态（真机一看就知道上没上屏）。
 char dbuf[256];
-CGRect wf = GHCFStripWindow.frame;
-snprintf(dbuf, sizeof(dbuf), "v57 window frame=%d,%d,%d,%d hidden=%d scene=%s", (int)wf.origin.x, (int)wf.origin.y, (int)wf.size.width, (int)wf.size.height, GHCFStripWindow.hidden ? 1 : 0, GHCFStripWindow.windowScene ? "ok" : "nil");
-GHCFLogLine(dbuf);
+CGRect wf = CFLYStripWindow.frame;
+snprintf(dbuf, sizeof(dbuf), "v57 window frame=%d,%d,%d,%d hidden=%d scene=%s", (int)wf.origin.x, (int)wf.origin.y, (int)wf.size.width, (int)wf.size.height, CFLYStripWindow.hidden ? 1 : 0, CFLYStripWindow.windowScene ? "ok" : "nil");
+CFLYLogLine(dbuf);
 CGRect sf = stripView.frame;
 snprintf(dbuf, sizeof(dbuf), "v57 strip frame=%d,%d,%d,%d", (int)sf.origin.x, (int)sf.origin.y, (int)sf.size.width, (int)sf.size.height);
-GHCFLogLine(dbuf);
+CFLYLogLine(dbuf);
 // 5.1 的处理器（唯一的自定义处理类）。
-GHCFLauncherShared = [[GHCFLauncher alloc] init];
+CFLYLauncherShared = [[CFLYLauncher alloc] init];
 // 右边缘滑动手势（挂在感应带上）。
-UIScreenEdgePanGestureRecognizer *edgePan = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleEdgeSwipe:)];
+UIScreenEdgePanGestureRecognizer *edgePan = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:CFLYLauncherShared action:@selector(handleEdgeSwipe:)];
 edgePan.edges = UIRectEdgeRight;
-edgePan.delegate = GHCFLauncherShared;
+edgePan.delegate = CFLYLauncherShared;
 [stripView addGestureRecognizer:edgePan];
-GHCFLauncherEdgePan = edgePan;
-GHCFLogLine("v57 edge gesture added");
+CFLYLauncherEdgePan = edgePan;
+CFLYLogLine("v57 edge gesture added");
 // v43.32：左边缘感应带（触发侧左／双侧时用）——跟右带同一层级／scene／
 // 透明底，自己的边缘滑动手势（edges=Left）接同一个 handleEdgeSwipe:。
 CGRect stripFrameL = CGRectMake(0, 0, stripWidth, screenBounds.size.height);
-GHCFStripWindowLeft = [[UIWindow alloc] initWithFrame:stripFrameL];
-GHCFStripWindowLeft.windowLevel = UIWindowLevelAlert - 4.0;
-GHCFStripWindowLeft.backgroundColor = [UIColor clearColor];
+CFLYStripWindowLeft = [[UIWindow alloc] initWithFrame:stripFrameL];
+CFLYStripWindowLeft.windowLevel = UIWindowLevelAlert - 4.0;
+CFLYStripWindowLeft.backgroundColor = [UIColor clearColor];
 if (stripScene) {
-GHCFStripWindowLeft.windowScene = stripScene;
+CFLYStripWindowLeft.windowScene = stripScene;
 }
 UIViewController *stripVCL = [[UIViewController alloc] init];
-GHCFPlainStripView *stripViewL = [[GHCFPlainStripView alloc] initWithFrame:CGRectMake(0, 0, stripWidth, screenBounds.size.height)];
+CFLYPlainStripView *stripViewL = [[CFLYPlainStripView alloc] initWithFrame:CGRectMake(0, 0, stripWidth, screenBounds.size.height)];
 stripViewL.backgroundColor = [UIColor clearColor];
 stripVCL.view = stripViewL;
-GHCFStripWindowLeft.rootViewController = stripVCL;
-GHCFStripWindowLeft.hidden = YES;
-UIScreenEdgePanGestureRecognizer *edgePanL = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleEdgeSwipe:)];
+CFLYStripWindowLeft.rootViewController = stripVCL;
+CFLYStripWindowLeft.hidden = YES;
+UIScreenEdgePanGestureRecognizer *edgePanL = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:CFLYLauncherShared action:@selector(handleEdgeSwipe:)];
 edgePanL.edges = UIRectEdgeLeft;
-edgePanL.delegate = GHCFLauncherShared;
+edgePanL.delegate = CFLYLauncherShared;
 [stripViewL addGestureRecognizer:edgePanL];
-GHCFLauncherEdgePanLeft = edgePanL;
-GHCFLogLine("v43.32 left edge strip built");
+CFLYLauncherEdgePanLeft = edgePanL;
+CFLYLogLine("v43.32 left edge strip built");
 // v43.32：调试画布窗（平时藏着，不接手势；调试模式开起来才画触发区）。
-GHCFDebugTriggerWindow = [[UIWindow alloc] initWithFrame:screenBounds];
-GHCFDebugTriggerWindow.windowLevel = UIWindowLevelAlert - 3.0;
-GHCFDebugTriggerWindow.backgroundColor = [UIColor clearColor];
-GHCFDebugTriggerWindow.userInteractionEnabled = NO;
+CFLYDebugTriggerWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+CFLYDebugTriggerWindow.windowLevel = UIWindowLevelAlert - 3.0;
+CFLYDebugTriggerWindow.backgroundColor = [UIColor clearColor];
+CFLYDebugTriggerWindow.userInteractionEnabled = NO;
 if (stripScene) {
-GHCFDebugTriggerWindow.windowScene = stripScene;
+CFLYDebugTriggerWindow.windowScene = stripScene;
 }
 UIViewController *dbgVC = [[UIViewController alloc] init];
-GHCFDebugTriggerView = [[UIView alloc] initWithFrame:screenBounds];
-GHCFDebugTriggerView.backgroundColor = [UIColor clearColor];
-GHCFDebugTriggerView.userInteractionEnabled = NO;
-dbgVC.view = GHCFDebugTriggerView;
-GHCFDebugTriggerWindow.rootViewController = dbgVC;
-GHCFDebugTriggerWindow.hidden = YES;
-GHCFLogLine("v43.32 debug trigger window built");
+CFLYDebugTriggerView = [[UIView alloc] initWithFrame:screenBounds];
+CFLYDebugTriggerView.backgroundColor = [UIColor clearColor];
+CFLYDebugTriggerView.userInteractionEnabled = NO;
+dbgVC.view = CFLYDebugTriggerView;
+CFLYDebugTriggerWindow.rootViewController = dbgVC;
+CFLYDebugTriggerWindow.hidden = YES;
+CFLYLogLine("v43.32 debug trigger window built");
 // v40：感应带跟小窗位置设定走（初始位置按设定放；设定改了，下次开
-// 启动器时 showLauncher 会再调 GHCFUpdateStripPosition 跟到对的边）。
-GHCFUpdateStripPosition();
-// ChinaFly（1.0.0）：觸發鈕——紙飛機圖由代碼畫（見 GHCFDrawFlyTriggerImage）。
-// 24pt 的感应带放不下 56pt 的圆钮（圆钮一半会伸出窗外、点不到），
-// 所以觸發鈕单独一个小窗（全屏任意位置，初始按設定落邊緣、豎直居中；
-// 沒設過左右邊就默認左側中部，跟舊哆啦A夢鈕的默認右側分開）。
-// v41：大小走設定（flyTriggerIconSize，44–72，預設 56）；左右邊走設定
-// （flyTriggerSide，沒設跟小窗位置）；位置從 prefs 恢復（上次拖到的
-// x、y，沒拖過就按左右邊設定落邊緣、高度居中）；層級 Alert - 1.25
-// （1998.75，貼邊 peek 之上、ARC 之下——圖 1 裡鈕疊在最下面那張
-// peek 卡上）。
-CGFloat flyTriggerSize = GHCFReadFlyTriggerIconSize();
-// v51：位置從 prefs 恢復（上次拖到的 x、y；沒拖過就落回邊緣邏輯：
-// 左右邊走設定、高度居中；x 夾在 [size/2, 屏寬 - size/2]、y 夾在
-// [100, 屏高-100]，鈕不掉出邊）。
-double savedFlyTriggerX = GHCFReadFlyTriggerButtonX();
-double savedFlyTriggerY = GHCFReadFlyTriggerButtonY();
-CGFloat flyTriggerCenterX = (savedFlyTriggerX >= 0) ? (CGFloat)savedFlyTriggerX : (GHCFIsFlyTriggerSideLeft() ? flyTriggerSize / 2.0 : (screenBounds.size.width - flyTriggerSize / 2.0));
-CGFloat flyTriggerCenterY = (savedFlyTriggerY >= 0) ? (CGFloat)savedFlyTriggerY : (screenBounds.size.height / 2.0);
-if (flyTriggerCenterX < flyTriggerSize / 2.0) flyTriggerCenterX = flyTriggerSize / 2.0;
-if (flyTriggerCenterX > screenBounds.size.width - flyTriggerSize / 2.0) flyTriggerCenterX = screenBounds.size.width - flyTriggerSize / 2.0;
-if (flyTriggerCenterY < 100.0) flyTriggerCenterY = 100.0;
-if (flyTriggerCenterY > screenBounds.size.height - 100.0) flyTriggerCenterY = screenBounds.size.height - 100.0;
-CGRect flyTriggerFrame = CGRectMake(flyTriggerCenterX - flyTriggerSize / 2.0, flyTriggerCenterY - flyTriggerSize / 2.0, flyTriggerSize, flyTriggerSize);
-GHCFFlyTriggerButtonWindow = [[UIWindow alloc] initWithFrame:flyTriggerFrame];
-GHCFFlyTriggerButtonWindow.windowLevel = UIWindowLevelAlert - 1.25;
-GHCFFlyTriggerButtonWindow.backgroundColor = [UIColor clearColor];
-UIWindowScene *flyTriggerScene = GHCFActiveWindowScene();
-if (flyTriggerScene) {
-GHCFFlyTriggerButtonWindow.windowScene = flyTriggerScene;
-} else {
-GHCFLogLine("v57 flyTrigger scene nil");
-}
-UIViewController *flyTriggerVC = [[UIViewController alloc] init];
-UIView *flyTriggerRoot = [[UIView alloc] initWithFrame:CGRectMake(0, 0, flyTriggerSize, flyTriggerSize)];
-flyTriggerRoot.backgroundColor = [UIColor clearColor];
-flyTriggerVC.view = flyTriggerRoot;
-GHCFFlyTriggerButtonWindow.rootViewController = flyTriggerVC;
-UIButton *flyTriggerButton = [UIButton buttonWithType:UIButtonTypeCustom];
-flyTriggerButton.frame = CGRectMake(0, 0, flyTriggerSize, flyTriggerSize);
-flyTriggerButton.layer.cornerRadius = flyTriggerSize / 2.0;
-flyTriggerButton.layer.masksToBounds = YES;
-// v53：鈕的圖走共用 helper（先試自訂圖，再走 bundle 預設圖；
-// 以前這裡內聯同一套查找，helper 唯一呼叫處是已刪的懸浮球）。
-UIImage *flyTriggerImage = GHCFLoadFlyTriggerImage();
-if (flyTriggerImage && flyTriggerImage.CGImage) {
-// imageWithContentsOfFile 读 @3x 文件时 scale 是 1.0（168pt，太大）；
-// 按屏幕 scale 重包一层（168px ÷ 3 = 56pt），正好填满圆钮。
-CGFloat screenScale = [UIScreen mainScreen].scale;
-if (screenScale > 0) {
-flyTriggerImage = [UIImage imageWithCGImage:flyTriggerImage.CGImage scale:screenScale orientation:flyTriggerImage.imageOrientation];
-}
-[flyTriggerButton setImage:flyTriggerImage forState:UIControlStateNormal];
-GHCFLogLine("v57 flyTrigger image loaded");
-} else {
-// 退回金色圆钮 + 「分」字（图读不到时不空白、不崩）。
-flyTriggerButton.backgroundColor = [UIColor colorWithRed:0.83 green:0.68 blue:0.21 alpha:1.0];
-flyTriggerButton.layer.borderWidth = 2.0;
-flyTriggerButton.layer.borderColor = [UIColor blackColor].CGColor;
-[flyTriggerButton setTitle:[NSString stringWithCString:"分" encoding:NSUTF8StringEncoding] forState:UIControlStateNormal];
-[flyTriggerButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-flyTriggerButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
-GHCFLogLine("v57 flyTrigger image missing, fallback to gold");
-}
-// v41：單擊開 ARC、雙擊輪切主窗（代替原來的 TouchUpInside：單擊手勢
-// 要等雙擊失敗才認，雙擊時不誤開 ARC；見 handleFlyTriggerButtonSingleTap /
-// handleFlyTriggerButtonDoubleTap）。點按跟拖動分開：pan 有內建位移門檻
-// （約 10pt），手指沒怎麼動、快速抬起時 pan 不認、單擊照舊開 ARC；
-// 拖動了 pan 認出來（cancelsTouchesInView 預設 YES，會取消鈕的點按
-// 追蹤），才算移動鈕的位置。
-UITapGestureRecognizer *flyTriggerSingleTap = [[UITapGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonSingleTap:)];
-flyTriggerSingleTap.numberOfTapsRequired = 1;
-flyTriggerSingleTap.delegate = GHCFLauncherShared;
-UITapGestureRecognizer *flyTriggerDoubleTap = [[UITapGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonDoubleTap:)];
-flyTriggerDoubleTap.numberOfTapsRequired = 2;
-flyTriggerDoubleTap.delegate = GHCFLauncherShared;
-[flyTriggerSingleTap requireGestureRecognizerToFail:flyTriggerDoubleTap];
-[flyTriggerButton addGestureRecognizer:flyTriggerSingleTap];
-[flyTriggerButton addGestureRecognizer:flyTriggerDoubleTap];
-UIPanGestureRecognizer *flyTriggerDrag = [[UIPanGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonDrag:)];
-flyTriggerDrag.minimumNumberOfTouches = 1;
-flyTriggerDrag.maximumNumberOfTouches = 1;
-flyTriggerDrag.delegate = GHCFLauncherShared;
-[flyTriggerButton addGestureRecognizer:flyTriggerDrag];
-// v40：一键关全部浮窗（皇上 11:55 糾正「全加」）——长按觸發鈕
-// 关掉全部已开的浮窗 + 已收起的 peek。长按与点按/拖动
-// 分开：长按要手指基本不动（UILongPressGestureRecognizer 内建
-// allowableMovement 约 10pt，拖动了它就不认）；短按（无拖动、无长按）
-// 仍是开启动器；长按松手不触发启动器（长按旗标 suppress
-// 单击，见 handleFlyTriggerButtonSingleTap）。
-// v41：長按時間走調度設定（longPressDuration，0.3–1.0 秒，預設 0.5）。
-UILongPressGestureRecognizer *flyTriggerLongPress = [[UILongPressGestureRecognizer alloc] initWithTarget:GHCFLauncherShared action:@selector(handleFlyTriggerButtonLongPress:)];
-flyTriggerLongPress.minimumPressDuration = GHCFReadLongPressDuration();
-flyTriggerLongPress.delegate = GHCFLauncherShared;
-[flyTriggerButton addGestureRecognizer:flyTriggerLongPress];
-[flyTriggerRoot addSubview:flyTriggerButton];
-GHCFFlyTriggerButton = flyTriggerButton;
-GHCFAppliedFlyTriggerSize = flyTriggerSize;
-GHCFAppliedFlyTriggerLeft = GHCFIsFlyTriggerSideLeft();
-// v43.43：顯示開關加回來（flyTriggerButtonEnabled，預設開；關著建完就
-// 藏起來，等開關開了 tick／prefschanged 再放回來）。
-GHCFFlyTriggerButtonWindow.hidden = GHCFReadFlyTriggerButtonEnabled() ? NO : YES;
-GHCFLogLine("v57 flyTrigger button added");
-CGRect bf = flyTriggerButton.frame;
-snprintf(dbuf, sizeof(dbuf), "v57 flyTrigger button frame=%d,%d,%d,%d", (int)bf.origin.x, (int)bf.origin.y, (int)bf.size.width, (int)bf.size.height);
-GHCFLogLine(dbuf);
+// 启动器时 showLauncher 会再调 CFLYUpdateStripPosition 跟到对的边）。
+CFLYUpdateStripPosition();
+// 1.0.4：懸浮觸發鈕已整段刪除（皇上 21:48：沒有哆啦A夢按鈕，也沒有飛機按鍵；
+// 只留邊緣滑動觸發）。CFLYFlyTriggerButtonWindow 保持 nil，相關顯示／隱藏
+// 與拖動程式碼遇 nil 即回傳，不再建窗。
 // v41：錄屏開始時藏 ARC（NSNotificationCenter，不是被禁的
 // CFNotificationCenterAddObserver；截圖藏不了——通知在截圖完成後才發，
 // 見 §113）。
-[[NSNotificationCenter defaultCenter] addObserver:GHCFLauncherShared selector:@selector(handleScreenCaptureChanged:) name:UIScreenCapturedDidChangeNotification object:nil];
-GHCFLogLine("v57 screen capture observer added");
+[[NSNotificationCenter defaultCenter] addObserver:CFLYLauncherShared selector:@selector(handleScreenCaptureChanged:) name:UIScreenCapturedDidChangeNotification object:nil];
+CFLYLogLine("v57 screen capture observer added");
 // v32：锁屏信号——libnotify 的 notify_register_dispatch（<notify.h>，
 // 纯 C API，传 C 字串）。这不是被禁的 CFNotificationCenterAddObserver，
 // 不碰 CFString，回调跑在主队列。v31 的做法（锁了且有 hosted scene
@@ -11486,7 +11749,7 @@ int lockNotifyResult = notify_register_dispatch("com.apple.springboard.lockstate
 uint64_t lockState = 0;
 notify_get_state(token, &lockState);
 if (lockState == 1) {
-GHCFScreenLocked = YES;
+CFLYScreenLocked = YES;
 // v40：锁屏管全部窗（v39 只管活动窗一个）——v66 起 scene 不再推回后台
 // （全程不黑屏，見下面）；看得见的窗都藏起来（记 HiddenByLock，解锁时再显示回来）；
 // 最小化着的窗本来就藏着，不碰它（解锁时它也不能自己弹出来，
@@ -11496,8 +11759,8 @@ GHCFScreenLocked = YES;
 // 貼邊正好可能蓋住密碼鍵盤邊列的數字；所以鎖屏連小卡也藏起來，解鎖時
 // HiddenByLock 路徑照舊顯示回來（見下面解鎖分支，不分大小窗）。
 BOOL anyScene = NO;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheScenes[i]) {
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheScenes[i]) {
 anyScene = YES;
 // v66：鎖屏不再把 scene 推回後台（皇上：要全程不黑屏）——鎖屏推後台
 // 是黑 peek 的主因（21.log／22.log 都是鎖後黑、解鎖推不回來）。窗還是
@@ -11507,121 +11770,121 @@ anyScene = YES;
 // 那時看門狗／恢復延後會把它推回來，關掉重開也行。解鎖分支的推前景
 // 保留（系統萬一還是把它推後台了，解鎖再推回來）。
 char kbuf[128];
-snprintf(kbuf, sizeof(kbuf), "v68 scene kept foreground on lock %s", GHCFCacheBundleIDs[i]);
-GHCFLogLine(kbuf);
+snprintf(kbuf, sizeof(kbuf), "v68 scene kept foreground on lock %s", CFLYCacheBundleIDs[i]);
+CFLYLogLine(kbuf);
 }
-if (GHCFCacheWindows[i] && !GHCFCacheWindows[i].hidden) {
-GHCFCacheWindows[i].hidden = YES;
-GHCFCacheHiddenByLock[i] = YES;
-if (i == GHCFActiveAppIndex) GHCFHostedHiddenByLock = YES;
+if (CFLYCacheWindows[i] && !CFLYCacheWindows[i].hidden) {
+CFLYCacheWindows[i].hidden = YES;
+CFLYCacheHiddenByLock[i] = YES;
+if (i == CFLYActiveAppIndex) CFLYHostedHiddenByLock = YES;
 char hbuf[128];
-if (GHCFCacheMinimized[i]) {
-snprintf(hbuf, sizeof(hbuf), "v68 peek hidden on lock %s", GHCFCacheBundleIDs[i]);
+if (CFLYCacheMinimized[i]) {
+snprintf(hbuf, sizeof(hbuf), "v68 peek hidden on lock %s", CFLYCacheBundleIDs[i]);
 } else {
-snprintf(hbuf, sizeof(hbuf), "v57 hosted window hidden on lock %s", GHCFCacheBundleIDs[i]);
+snprintf(hbuf, sizeof(hbuf), "v57 hosted window hidden on lock %s", CFLYCacheBundleIDs[i]);
 }
-GHCFLogLine(hbuf);
+CFLYLogLine(hbuf);
 }
 }
 if (!anyScene) {
-GHCFLogLine("v57 lock state locked, no hosted scene");
+CFLYLogLine("v57 lock state locked, no hosted scene");
 }
 // v43.7：锁屏也把恢复动画的临时窗藏起来——它在 Alert−1.75 层、全屏，
 // 动画播到一半锁屏会留在锁屏上盖住密码键盘（1.0.64 小卡盖密码键盘边列数字
 // 同类问题）。解锁不显示回来（动画 0.7 秒早播完了；completion 里本来就会
 // hidden=YES 并把指针清 nil）。
-if (GHCFSnapshotAnimWindow) GHCFSnapshotAnimWindow.hidden = YES;
-GHCFUpdateDimOverlay();
+if (CFLYSnapshotAnimWindow) CFLYSnapshotAnimWindow.hidden = YES;
+CFLYUpdateDimOverlay();
 } else {
-GHCFScreenLocked = NO;
+CFLYScreenLocked = NO;
 // v53：解鎖把藏起來的窗顯示回來（HiddenByLock 認），收著的窗不顯示出來
 //（還是一截 peek）。v43.7：推前景只給看得見的窗——收著的 peek 不在解鎖時推
 //（主线程一次推 25 个跨进程调用会卡住密码键盘，28.log 定案）；peek 交给
 // 2 秒一轮的看门狗（contentState=1 推前景、0 盖占位），解锁后 2 秒内接手。
 BOOL anyRestored = NO;
-for (int i = 0; i < GHCFAppCount; i++) {
-if (GHCFCacheHiddenByLock[i] && GHCFCacheWindows[i]) {
-GHCFCacheWindows[i].hidden = NO;
-GHCFCacheHiddenByLock[i] = NO;
-if (i == GHCFActiveAppIndex) GHCFHostedHiddenByLock = NO;
+for (int i = 0; i < CFLYAppCount; i++) {
+if (CFLYCacheHiddenByLock[i] && CFLYCacheWindows[i]) {
+CFLYCacheWindows[i].hidden = NO;
+CFLYCacheHiddenByLock[i] = NO;
+if (i == CFLYActiveAppIndex) CFLYHostedHiddenByLock = NO;
 anyRestored = YES;
 char hbuf[128];
-snprintf(hbuf, sizeof(hbuf), "v57 hosted window shown on unlock %s", GHCFCacheBundleIDs[i]);
-GHCFLogLine(hbuf);
+snprintf(hbuf, sizeof(hbuf), "v57 hosted window shown on unlock %s", CFLYCacheBundleIDs[i]);
+CFLYLogLine(hbuf);
 }
 // v43.7：只给看得见的窗推前景（见上面）。
-if (!GHCFCacheWindows[i] || GHCFCacheWindows[i].hidden) continue;
-if (GHCFCacheScenes[i]) {
+if (!CFLYCacheWindows[i] || CFLYCacheWindows[i].hidden) continue;
+if (CFLYCacheScenes[i]) {
 char fbuf[160];
-snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on unlock %s", GHCFCacheBundleIDs[i]);
-GHCFPushForegroundCachedSceneAtIndex(i, fbuf);
+snprintf(fbuf, sizeof(fbuf), "v57 foreground pushed on unlock %s", CFLYCacheBundleIDs[i]);
+CFLYPushForegroundCachedSceneAtIndex(i, fbuf);
 anyRestored = YES;
 // v72：解锁推完前景、scene 还没就绪——盖占位（不要有任何 App 解锁后是黑窗；
 // 看门狗会在就绪时拿掉占位）。
 @try {
-NSUInteger unlockCS = [GHCFCacheScenes[i] contentState];
-if (unlockCS != 2) GHCFShowPlaceholderForIndex(i);
+NSUInteger unlockCS = [CFLYCacheScenes[i] contentState];
+if (unlockCS != 2) CFLYShowPlaceholderForIndex(i);
 } @catch (NSException *e) {
 (void)e;
 }
 }
 }
 if (!anyRestored) {
-GHCFLogLine("v57 lock state unlocked");
+CFLYLogLine("v57 lock state unlocked");
 }
-GHCFUpdateDimOverlay();
+CFLYUpdateDimOverlay();
 }
 });
 if (lockNotifyResult == 0) {
-GHCFLogLine("v57 lockstate notify registered");
+CFLYLogLine("v57 lockstate notify registered");
 } else {
-GHCFLogLine("v57 lockstate notify register failed");
+CFLYLogLine("v57 lockstate notify register failed");
 }
 // v43.13：設定變更通知——設定頁帶 PostNotification 的行一改就發
-// com.guhailong.fly.prefschanged（Darwin 通知，跟鎖屏／鍵盤
+// com.chinafly.fly.prefschanged（Darwin 通知，跟鎖屏／鍵盤
 // 同一寫法；不要用 CFNotificationCenterAddObserver，會凍住 SpringBoard）。
-int prefsChangedResult = notify_register_dispatch("com.guhailong.fly.prefschanged", &prefsChangedToken, dispatch_get_main_queue(), ^(int token) {
+int prefsChangedResult = notify_register_dispatch("com.chinafly.fly.prefschanged", &prefsChangedToken, dispatch_get_main_queue(), ^(int token) {
 (void)token;
 // v43.14：改边立刻生效（其二）——edgeSwipeSide 一改就发 prefschanged，
 // 这里直接把感应带跟到新边（ recognizer 的 edges 一起改）；不用另加通知，
 // 复用 v43.13 已有的这一条注册。
-GHCFUpdateStripPosition();
+CFLYUpdateStripPosition();
 // v43.16 C：任務欄位置／透明度／大小一改就重刷（新三行都帶 PostNotification）；
 // v43.21：樣式也一樣（taskbarStyle 行帶 PostNotification，切換立刻生效）。
-GHCFUpdateTaskbar();
+CFLYUpdateTaskbar();
 // v43.43：觸發鈕開關一改立刻生效（不用等 2 秒 tick）。
-GHCFApplyFlyTriggerButtonEnabled();
+CFLYApplyFlyTriggerButtonEnabled();
 });
 if (prefsChangedResult == 0) {
-GHCFLogLine("v43.13 prefsChanged notify registered");
+CFLYLogLine("v43.13 prefsChanged notify registered");
 } else {
-GHCFLogLine("v43.13 prefsChanged notify register failed");
+CFLYLogLine("v43.13 prefsChanged notify register failed");
 }
 // v42：鍵盤監聽（NSNotificationCenter，不是被禁的
 // CFNotificationCenterAddObserver；探針：鍵盤通知由 App 行程發，
 // 可能到不了 SpringBoard——邏輯已寫好，收到了就上移、收起回原位）。
-[[NSNotificationCenter defaultCenter] addObserver:GHCFLauncherShared selector:@selector(handleKeyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
-[[NSNotificationCenter defaultCenter] addObserver:GHCFLauncherShared selector:@selector(handleKeyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
-GHCFLogLine("v57 keyboard observers added");
+[[NSNotificationCenter defaultCenter] addObserver:CFLYLauncherShared selector:@selector(handleKeyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+[[NSNotificationCenter defaultCenter] addObserver:CFLYLauncherShared selector:@selector(handleKeyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+CFLYLogLine("v57 keyboard observers added");
 // v42：電量監控開（低電量自動收窗讀 batteryLevel 用）。
 [[UIDevice currentDevice] setBatteryMonitoringEnabled:YES];
-GHCFLogLine("v57 battery monitoring enabled");
+CFLYLogLine("v57 battery monitoring enabled");
 // v42：底部任務欄——開關開著就建（2 秒 tick 也會補建，
 // 所以設定改了不用 respring；v53：懸浮球已整個拿掉）。
-if (GHCFReadTaskbarEnabled()) GHCFBuildTaskbarIfNeeded();
+if (CFLYReadTaskbarEnabled()) CFLYBuildTaskbarIfNeeded();
 // v42：重啟後自動恢復浮窗（開關預設開）——scene 撐不過重啟，
 // 恢復是重建 scene 重新開 App，不是接續舊 scene；
 // 讀 restoreWindows 清單（"bundleID|x,y,w,h"），隔 0.6 秒一個輪流開
 //（位置存在清單裡，開窗時 buildHostedWindow 會照恢復幾何放；
 // 現在只開浮窗，不恢復 peek——peek 是收起態，重開意義不大）。
 // v53：分屏關著時不恢復浮窗（開關關了重啟也不該把窗開回來）。
-if (GHCFReadEnabled() && GHCFReadRestoreWindowsAfterRespring()) {
-NSArray *restoreList = GHCFReadIDList("restoreWindows");
+if (CFLYReadEnabled() && CFLYReadRestoreWindowsAfterRespring()) {
+NSArray *restoreList = CFLYReadIDList("restoreWindows");
 NSInteger restoreCount = (NSInteger)[restoreList count];
 if (restoreCount > 0) {
 char rbuf[128];
 snprintf(rbuf, sizeof(rbuf), "v57 restore after respring %d windows", (int)restoreCount);
-GHCFLogLine(rbuf);
+CFLYLogLine(rbuf);
 for (NSInteger ri = 0; ri < restoreCount; ri++) {
 NSString *entry = [restoreList objectAtIndex:ri];
 NSString *sep = [NSString stringWithCString:"|" encoding:NSUTF8StringEncoding];
@@ -11631,11 +11894,11 @@ NSString *bid = [parts objectAtIndex:0];
 double delay = 0.6 * (double)(ri + 1);
 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 char nameBuf[128];
-GHCFAppNameForBundleID([bid UTF8String], nameBuf, sizeof(nameBuf));
+CFLYAppNameForBundleID([bid UTF8String], nameBuf, sizeof(nameBuf));
 char nbuf[192];
 snprintf(nbuf, sizeof(nbuf), "v57 restore launch %s", [bid UTF8String]);
-GHCFLogLine(nbuf);
-[GHCFLauncherShared launchHostedApp:[bid UTF8String] name:nameBuf];
+CFLYLogLine(nbuf);
+[CFLYLauncherShared launchHostedApp:[bid UTF8String] name:nameBuf];
 });
 }
 }
@@ -11643,10 +11906,10 @@ GHCFLogLine(nbuf);
 // v42：2 秒定時 tick（任務欄/電量/配對/啟用開關）——
 // 設定改了 2 秒內生效，不用 respring。
 // v53：啟用開關跟進一次（關著就藏鈕／收窗／藏感應帶；開著恢復正常）。
-GHCFApplyEnabledState();
-GHCFSchedulePeriodicTick();
-GHCFLogLine("v57 periodic tick scheduled");
+CFLYApplyEnabledState();
+CFLYSchedulePeriodicTick();
+CFLYLogLine("v57 periodic tick scheduled");
 // ChinaFly 1.0.0：激活码检查从这里启动（setup 跑起来之后、异步读名单；
 // 绝不在 %ctor 里跑——1.0.102 的教训）。
-GHCFActivationCheckStart();
+CFLYActivationCheckStart();
 }

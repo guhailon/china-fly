@@ -1,7 +1,7 @@
 # China Fly 分屏 — ChinaFly
 # 原创 Theos 插件工程。目标机型：iPhone 11 / iOS 16.5 / Dopamine (rootless)。
 # 构建：macOS + Xcode + Theos，或 GitHub Actions（macos runner，
-# 做法照抄 FrontBoardAppLauncher 的 build.yml）。
+# 做法照抄 參考實現 的 build.yml）。
 # 本地 Linux 构建见 BUILD_LOG.md（需 clang 交叉工具链 + iOS SDK + ldid）。
 ARCHS = arm64 arm64e
 TARGET := iphone:clang:16.5:15.0

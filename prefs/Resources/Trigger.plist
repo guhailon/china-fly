@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>defaults</key>
-	<string>com.guhailong.fly</string>
+	<string>com.chinafly.fly</string>
 	<key>items</key>
 	<array>
 		<dict>
@@ -16,13 +16,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerDebugMode</string>
 			<key>label</key>
@@ -38,13 +38,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<string>edge</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerMode</string>
 			<key>label</key>
@@ -65,24 +65,24 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>cflyTriggerSet</key>
+			<string>arc</string>
 			<key>footerText</key>
 			<string>角度从右侧基准逆时针算，90 就是正上方；扇形大小是整扇跨的角度。只在触发方式是 ARC 时控制转盘排布。</string>
-			<key>ghcfTriggerSet</key>
-			<string>arc</string>
 			<key>label</key>
 			<string>ARC 设置</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>arc</string>
 			<key>default</key>
 			<real>90.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>arc</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>arcStartAngle</string>
 			<key>label</key>
@@ -96,15 +96,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>arc</string>
 			<key>default</key>
 			<real>180.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>arc</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>arcFanAngle</string>
 			<key>label</key>
@@ -119,24 +119,24 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>footerText</key>
 			<string>每边一个矩形：宽是距边的宽度，高是矩形的高度，位置是矩形中心的 Y%（×屏高）；竖屏用竖屏那组、横屏用横屏那组；只认触发侧选中的边。</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
 			<key>label</key>
 			<string>边缘设置</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<string>both</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>edgeSwipeSide</string>
 			<key>label</key>
@@ -156,15 +156,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<integer>2</integer>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>edgeSwipeCount</string>
 			<key>label</key>
@@ -183,22 +183,22 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>ghcfTriggerSet</key>
+			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>label</key>
 			<string>左侧设置（竖屏）</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>20.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerLeftWidthPortrait</string>
 			<key>label</key>
@@ -212,15 +212,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>300.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerLeftHeightPortrait</string>
 			<key>label</key>
@@ -234,15 +234,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>0.77</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerLeftYPortrait</string>
 			<key>label</key>
@@ -257,22 +257,22 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>ghcfTriggerSet</key>
+			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>label</key>
 			<string>右侧设置（竖屏）</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>20.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerRightWidthPortrait</string>
 			<key>label</key>
@@ -286,15 +286,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>171.73</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerRightHeightPortrait</string>
 			<key>label</key>
@@ -308,15 +308,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>0.84</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerRightYPortrait</string>
 			<key>label</key>
@@ -331,24 +331,24 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>footerText</key>
-			<string>横屏那组默认值先跟竖屏同一组数（TrollOpen 照片上没拍到横屏那页），等皇上看过再定。</string>
-			<key>ghcfTriggerSet</key>
+			<key>cflyTriggerSet</key>
 			<string>edge</string>
+			<key>footerText</key>
+			<string>橫屏那組默認值先跟豎屏同一組數，等皇上看過再定。</string>
 			<key>label</key>
 			<string>左侧设置（横屏）</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>20.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerLeftWidthLandscape</string>
 			<key>label</key>
@@ -362,15 +362,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>300.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerLeftHeightLandscape</string>
 			<key>label</key>
@@ -384,15 +384,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>0.77</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerLeftYLandscape</string>
 			<key>label</key>
@@ -407,22 +407,22 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>ghcfTriggerSet</key>
+			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>label</key>
 			<string>右侧设置（横屏）</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>20.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerRightWidthLandscape</string>
 			<key>label</key>
@@ -436,15 +436,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>171.73</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerRightHeightLandscape</string>
 			<key>label</key>
@@ -458,15 +458,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>edge</string>
 			<key>default</key>
 			<real>0.84</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>edge</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>triggerRightYLandscape</string>
 			<key>label</key>
@@ -481,24 +481,24 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>cflyTriggerSet</key>
+			<string>bar</string>
 			<key>footerText</key>
 			<string>悬浮条触发还没接行为，这两行只存位置和大小（假设值：影片和照片里都没拍到悬浮条那页，等皇上看过再定）；调试模式会按这两行画出那条。</string>
-			<key>ghcfTriggerSet</key>
-			<string>bar</string>
 			<key>label</key>
 			<string>悬浮条设置</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>bar</string>
 			<key>default</key>
 			<real>0.5</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>bar</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>floatingBarY</string>
 			<key>label</key>
@@ -512,15 +512,15 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
+			<key>cflyTriggerSet</key>
+			<string>bar</string>
 			<key>default</key>
 			<real>60.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>ghcfTriggerSet</key>
-			<string>bar</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>floatingBarSize</string>
 			<key>label</key>
@@ -531,20 +531,6 @@
 			<real>20.0</real>
 			<key>showValue</key>
 			<true/>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>觸發鈕</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>FloatingIcon</string>
-			<key>label</key>
-			<string>觸發鈕設置</string>
 		</dict>
 	</array>
 	<key>title</key>

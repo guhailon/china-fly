@@ -1,12 +1,12 @@
 // China Fly 1.0.0 — 設置頁（PreferenceLoader）。
-// 從 v43.42（SeaDragon Split 1.0.115，頭 653fcaa）改過來的設置頁：
+// 從 v43.42（舊分屏 1.0.115，頭 653fcaa）改過來的設置頁：
 // 歌詞播放器、激活、檢查更新、狀態頁已拿掉；備份／恢復留下；
 // 選擇應用加搜索欄＋首次默認開影片裡的 8 個；菜單編輯是新的
-// GHCFMenuEditListController（UITableViewController，可拖動排序）；
+// CFLYMenuEditListController（UITableViewController，可拖動排序）；
 // 觸發鈕圖默認改成代碼畫的紙飛機。子頁是獨立 plist（Dial／
 // SplitSettings／MenuEdit／Trigger／ActionButtonTap／
 // ActionButtonLongPress／FloatingIcon），由 PreferenceLoader 的預設
-// 控制器載入；「選擇應用」是動態頁（GHCFAppPickerListController，
+// 控制器載入；「選擇應用」是動態頁（CFLYAppPickerListController，
 // 下面），按後台緩存的已安裝 App 清單即時建開關；日誌查看器、
 // 菜單編輯、觸發鈕圖也是動態頁（下面）。
 //
@@ -19,10 +19,11 @@
 // 備份改從 live 設定現取值建檔。
 // 下面 7 個控制器都是 prefs bundle 裡的自訂類（prefs bundle 不受
 // dylib「禁自訂 ObjC 類」那條限；主插件 Tweak.xm 裡還是只能用
-// Apple 類＋GHCFLauncher 一個自訂類）。
+// Apple 類＋CFLYLauncher 一個自訂類）。
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 #import <Preferences/PSTableCell.h>
+#import <Preferences/PSSwitchTableCell.h>
 #import <UIKit/UIKit.h>
 #import <PhotosUI/PhotosUI.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -31,32 +32,32 @@
 #import <notify.h>
 
 // 运行时现做一个 NSString（不用写死字串）。
-static NSString *GHCFRuntimeString(const char *cstr) {
+static NSString *CFLYRuntimeString(const char *cstr) {
     return [NSString stringWithCString:cstr encoding:NSUTF8StringEncoding];
 }
 
 // 运行时现做一个 CFStringRef（不用 CFSTR），用完要 CFRelease。
-static CFStringRef GHCFRuntimeCFString(const char *cstr) {
+static CFStringRef CFLYRuntimeCFString(const char *cstr) {
     return CFStringCreateWithCString(NULL, cstr, kCFStringEncodingUTF8);
 }
 
 // 設定檔目錄（設定 App 的 mobile 用戶可寫）。
-static NSString *GHCFPrefsDir(void) {
-    return GHCFRuntimeString("/var/mobile/Library/Preferences");
+static NSString *CFLYPrefsDir(void) {
+    return CFLYRuntimeString("/var/mobile/Library/Preferences");
 }
 
-static NSString *GHCFBackupFilePath(void) {
-    return [GHCFPrefsDir() stringByAppendingPathComponent:GHCFRuntimeString("ChinaFly-backup.plist")];
+static NSString *CFLYBackupFilePath(void) {
+    return [CFLYPrefsDir() stringByAppendingPathComponent:CFLYRuntimeString("ChinaFly-backup.plist")];
 }
 
-static NSString *GHCFAppCacheFilePath(void) {
-    return [GHCFPrefsDir() stringByAppendingPathComponent:GHCFRuntimeString("ChinaFly-apps.plist")];
+static NSString *CFLYAppCacheFilePath(void) {
+    return [CFLYPrefsDir() stringByAppendingPathComponent:CFLYRuntimeString("ChinaFly-apps.plist")];
 }
 
 // 讀一個 prefs BOOL（沒設就回預設值）。
-static BOOL GHCFPrefsBool(const char *key, BOOL defaultValue) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    CFStringRef keyRef = GHCFRuntimeCFString(key);
+static BOOL CFLYPrefsBool(const char *key, BOOL defaultValue) {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    CFStringRef keyRef = CFLYRuntimeCFString(key);
     BOOL out = defaultValue;
     if (domain && keyRef) {
         CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
@@ -71,11 +72,11 @@ static BOOL GHCFPrefsBool(const char *key, BOOL defaultValue) {
 }
 
 // ChinaFly 1.0.1: 讀舊分屏域的 enabled 鍵（休眠提示用；跟 dylib 的
-// GHCFReadOldSplitscreenEnabled 同一套做法）。1.0.3 起提示條件改成
-// 開關開著 AND 舊 dylib 文件還在（見 GHCFPrefsShouldDormantForOldSplitscreen）。
-static BOOL GHCFPrefsReadOldSplitscreenEnabled(void) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.splitscreen");
-    CFStringRef keyRef = GHCFRuntimeCFString("enabled");
+// CFLYReadOldSplitscreenEnabled 同一套做法）。1.0.3 起提示條件改成
+// 開關開著 AND 舊 dylib 文件還在（見 CFLYPrefsShouldDormantForOldSplitscreen）。
+static BOOL CFLYPrefsReadOldSplitscreenEnabled(void) {
+    CFStringRef domain = CFLYRuntimeCFString("com.guhailong.splitscreen");
+    CFStringRef keyRef = CFLYRuntimeCFString("enabled");
     BOOL out = NO;
     if (domain && keyRef) {
         CFPreferencesAppSynchronize(domain);
@@ -92,25 +93,25 @@ static BOOL GHCFPrefsReadOldSplitscreenEnabled(void) {
 
 // ChinaFly 1.0.3：舊分屏的 dylib 文件還在不在（跟 dylib 那邊同一套：
 // 先查 rootless 路徑 /var/jb/...，再查 /Library/...）。
-static BOOL GHCFPrefsOldSplitscreenDylibExists(void) {
+static BOOL CFLYPrefsOldSplitscreenDylibExists(void) {
     NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *jbPath = GHCFRuntimeString("/var/jb/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib");
-    NSString *libPath = GHCFRuntimeString("/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib");
+    NSString *jbPath = CFLYRuntimeString("/var/jb/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib");
+    NSString *libPath = CFLYRuntimeString("/Library/MobileSubstrate/DynamicLibraries/GuHaiLongSplitScreen.dylib");
     if (jbPath && [fm fileExistsAtPath:jbPath]) return YES;
     if (libPath && [fm fileExistsAtPath:libPath]) return YES;
     return NO;
 }
 // ChinaFly 1.0.3：休眠條件改成「舊開關開著 AND 舊 dylib 文件還在」
-//（跟 dylib 的 GHCFShouldDormantForOldSplitscreen 同一個條件，提示跟
+//（跟 dylib 的 CFLYShouldDormantForOldSplitscreen 同一個條件，提示跟
 // dylib 對不上會騙人）。舊包刪了、只剩殘留 prefs 時不再顯示休眠提示。
-static BOOL GHCFPrefsShouldDormantForOldSplitscreen(void) {
-    return GHCFPrefsReadOldSplitscreenEnabled() && GHCFPrefsOldSplitscreenDylibExists();
+static BOOL CFLYPrefsShouldDormantForOldSplitscreen(void) {
+    return CFLYPrefsReadOldSplitscreenEnabled() && CFLYPrefsOldSplitscreenDylibExists();
 }
 
 // 讀一個 prefs 字串（沒設就回 NULL，調用處要 free）。
-static char *GHCFPrefsCString(const char *key) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    CFStringRef keyRef = GHCFRuntimeCFString(key);
+static char *CFLYPrefsCString(const char *key) {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    CFStringRef keyRef = CFLYRuntimeCFString(key);
     char *out = NULL;
     if (domain && keyRef) {
         CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
@@ -133,9 +134,9 @@ static char *GHCFPrefsCString(const char *key) {
 }
 
 // 寫一個 prefs BOOL，立刻落盤。
-static void GHCFWritePrefsBool(const char *key, BOOL value) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    CFStringRef keyRef = GHCFRuntimeCFString(key);
+static void CFLYWritePrefsBool(const char *key, BOOL value) {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    CFStringRef keyRef = CFLYRuntimeCFString(key);
     if (domain && keyRef) {
         CFPreferencesSetAppValue(keyRef, value ? kCFBooleanTrue : kCFBooleanFalse, domain);
         CFPreferencesAppSynchronize(domain);
@@ -145,9 +146,9 @@ static void GHCFWritePrefsBool(const char *key, BOOL value) {
 }
 
 // 寫一個 prefs 字串（NULL = 清掉那個鍵），立刻落盤。
-static void GHCFWritePrefsCString(const char *key, const char *value) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    CFStringRef keyRef = GHCFRuntimeCFString(key);
+static void CFLYWritePrefsCString(const char *key, const char *value) {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    CFStringRef keyRef = CFLYRuntimeCFString(key);
     if (domain && keyRef) {
         if (value && value[0] != '\0') {
             CFStringRef v = CFStringCreateWithCString(NULL, value, kCFStringEncodingUTF8);
@@ -166,18 +167,18 @@ static void GHCFWritePrefsCString(const char *key, const char *value) {
 
 // ChinaFly 1.0.0：激活状态文字（读 dylib 写的 activationState 快取；
 // authorized 已激活、locked 未激活、checkFailed 名单读不到暂不锁，
-// 没值＝还没检查）。
-static NSString *GHCFPrefsActivationStatusText(void) {
-    char *state = GHCFPrefsCString("activationState");
+// 没值＝还没检查）。1.0.4（P1）：說法換得更直白。
+static NSString *CFLYPrefsActivationStatusText(void) {
+    char *state = CFLYPrefsCString("activationState");
     NSString *out;
     if (state && strcmp(state, "authorized") == 0) {
-        out = GHCFRuntimeString("您的设备已授权");
+        out = CFLYRuntimeString("已授權，China Fly 可以使用");
     } else if (state && strcmp(state, "locked") == 0) {
-        out = GHCFRuntimeString("未授权");
+        out = CFLYRuntimeString("未授權，請輸入激活碼");
     } else if (state && strcmp(state, "checkFailed") == 0) {
-        out = GHCFRuntimeString("名单读不到，暂不锁（检查网络／名单）");
+        out = CFLYRuntimeString("名單讀不到，暫不鎖定（檢查網絡）");
     } else {
-        out = GHCFRuntimeString("未检查（启动后异步检查）");
+        out = CFLYRuntimeString("尚未驗證（啟動後自動檢查）");
     }
     if (state) free(state);
     return out;
@@ -185,58 +186,58 @@ static NSString *GHCFPrefsActivationStatusText(void) {
 
 
 // 先聲明（下面定義；輪播 helper 要記日誌，先用）。
-static void GHCFPrefsLogLine(const char *line);
+static void CFLYPrefsLogLine(const char *line);
 // v53：觸發鈕自訂圖的固定檔名（跟卡片頭像／背景同一個設定目錄；
-// dylib 那邊 GHCFCustomFlyTriggerImagePath 寫死同一條路徑）。
-static NSString *GHCFFlyTriggerIconPath(void) {
-    return [GHCFPrefsDir() stringByAppendingPathComponent:GHCFRuntimeString("ChinaFly-flyTrigger.jpg")];
+// dylib 那邊 CFLYCustomFlyTriggerImagePath 寫死同一條路徑）。
+static NSString *CFLYFlyTriggerIconPath(void) {
+    return [CFLYPrefsDir() stringByAppendingPathComponent:CFLYRuntimeString("ChinaFly-flyTrigger.jpg")];
 }
 
-static NSString *GHCFLogFilePath(void) {
-    return GHCFRuntimeString("/var/mobile/Library/Logs/ChinaFly.log");
+static NSString *CFLYLogFilePath(void) {
+    return CFLYRuntimeString("/var/mobile/Library/Logs/ChinaFly.log");
 }
 
 
 // v42：日誌尾段（預設最後 200 行）、最新在最上面（跟浮窗卡片同一份寫法）。
 // v50：讀檔防呆——檔案不存在／讀不到回提示文字；超過 256KB 只取尾段
 // （切口可能斷掉一個多字節字，讀不出來就退回整檔讀）；讀到幾行記在
-// GHCFLogTailLinesRead，呼叫方寫日誌用。
-static int GHCFLogTailLinesRead = 0;
-static NSString *GHCFLogTailNewestFirst(void) {
-    NSData *data = [NSData dataWithContentsOfFile:GHCFLogFilePath()];
+// CFLYLogTailLinesRead，呼叫方寫日誌用。
+static int CFLYLogTailLinesRead = 0;
+static NSString *CFLYLogTailNewestFirst(void) {
+    NSData *data = [NSData dataWithContentsOfFile:CFLYLogFilePath()];
     if (!data || [data length] == 0) {
-        GHCFLogTailLinesRead = 0;
-        return GHCFRuntimeString("还没有日志（档案不存在或读不到）。");
+        CFLYLogTailLinesRead = 0;
+        return CFLYRuntimeString("还没有日志（档案不存在或读不到）。");
     }
     if ([data length] > 262144) {
         data = [data subdataWithRange:NSMakeRange([data length] - 262144, 262144)];
     }
     NSString *content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    if (!content) content = [NSString stringWithContentsOfFile:GHCFLogFilePath() encoding:NSUTF8StringEncoding error:nil];
+    if (!content) content = [NSString stringWithContentsOfFile:CFLYLogFilePath() encoding:NSUTF8StringEncoding error:nil];
     if (!content) {
-        GHCFLogTailLinesRead = 0;
-        return GHCFRuntimeString("还没有日志（档案不存在或读不到）。");
+        CFLYLogTailLinesRead = 0;
+        return CFLYRuntimeString("还没有日志（档案不存在或读不到）。");
     }
-    NSArray *lines = [content componentsSeparatedByString:GHCFRuntimeString("\n")];
+    NSArray *lines = [content componentsSeparatedByString:CFLYRuntimeString("\n")];
     NSMutableArray *last = [NSMutableArray array];
     NSInteger start = (NSInteger)[lines count] - 200;
     if (start < 0) start = 0;
     for (NSInteger i = (NSInteger)[lines count] - 1; i >= start; i--) {
         [last addObject:[lines objectAtIndex:i]];
     }
-    GHCFLogTailLinesRead = (int)[last count];
-    return [last componentsJoinedByString:GHCFRuntimeString("\n")];
+    CFLYLogTailLinesRead = (int)[last count];
+    return [last componentsJoinedByString:CFLYRuntimeString("\n")];
 }
 
 // v43：prefs 側寫檔日誌（搜索閃退診斷用，跟 dylib 寫同一份
 // 檔案；設定 App 也是 mobile 身份，寫得動；寫不動就靜靜算了，
 // 不彈框、不擋路）。
-static void GHCFPrefsLogLine(const char *line) {
+static void CFLYPrefsLogLine(const char *line) {
     if (!line) return;
-    NSString *path = GHCFLogFilePath();
+    NSString *path = CFLYLogFilePath();
     NSString *text = [NSString stringWithCString:line encoding:NSUTF8StringEncoding];
     if (!text) return;
-    NSString *entry = [text stringByAppendingString:GHCFRuntimeString("\n")];
+    NSString *entry = [text stringByAppendingString:CFLYRuntimeString("\n")];
     NSData *data = [entry dataUsingEncoding:NSUTF8StringEncoding];
     if (!data) return;
     NSFileHandle *fh = [NSFileHandle fileHandleForWritingAtPath:path];
@@ -256,7 +257,7 @@ static void GHCFPrefsLogLine(const char *line) {
 // 再調 tableView；(2) self.view 本身或子視圖裡找 UITableView；
 // (3) valueForKey _tableView。哪一路成功記一行日誌；都失敗回 nil，
 // 呼叫方自己決定降級（不掛頭、不進編輯模式），不閃退。
-static UITableView *GHCFSafeTableViewForController(PSListController *controller, const char *tag) {
+static UITableView *CFLYSafeTableViewForController(PSListController *controller, const char *tag) {
     if (!controller) return nil;
     const char *t = tag ? tag : "?";
     @try {
@@ -266,7 +267,7 @@ static UITableView *GHCFSafeTableViewForController(PSListController *controller,
             if ([tv isKindOfClass:[UITableView class]]) {
                 char buf[192];
                 snprintf(buf, sizeof(buf), "v57 prefs-table: %s via tableView", t);
-                GHCFPrefsLogLine(buf);
+                CFLYPrefsLogLine(buf);
                 return tv;
             }
         }
@@ -274,21 +275,21 @@ static UITableView *GHCFSafeTableViewForController(PSListController *controller,
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-table: %s tableView EXCEPTION %s", t, why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
     @try {
         UIView *view = controller.view;
         if ([view isKindOfClass:[UITableView class]]) {
             char buf[192];
             snprintf(buf, sizeof(buf), "v57 prefs-table: %s via self.view", t);
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
             return (UITableView *)view;
         }
         for (UIView *sub in view.subviews) {
             if ([sub isKindOfClass:[UITableView class]]) {
                 char buf[192];
                 snprintf(buf, sizeof(buf), "v57 prefs-table: %s via subview", t);
-                GHCFPrefsLogLine(buf);
+                CFLYPrefsLogLine(buf);
                 return (UITableView *)sub;
             }
         }
@@ -296,30 +297,30 @@ static UITableView *GHCFSafeTableViewForController(PSListController *controller,
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-table: %s view scan EXCEPTION %s", t, why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
     @try {
-        id iv = [controller valueForKey:GHCFRuntimeString("_tableView")];
+        id iv = [controller valueForKey:CFLYRuntimeString("_tableView")];
         if ([iv isKindOfClass:[UITableView class]]) {
             char buf[192];
             snprintf(buf, sizeof(buf), "v57 prefs-table: %s via _tableView", t);
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
             return (UITableView *)iv;
         }
     } @catch (NSException *e) {
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-table: %s _tableView EXCEPTION %s", t, why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
     char buf[192];
     snprintf(buf, sizeof(buf), "v57 prefs-table: %s none", t);
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
     return nil;
 }
 
 // v42：圖片居中裁方形（頭像用，512px）。
-static UIImage *GHCFPrefsSquareCropImage(UIImage *image, CGFloat size) {
+static UIImage *CFLYPrefsSquareCropImage(UIImage *image, CGFloat size) {
     if (!image || !image.CGImage) return nil;
     CGFloat w = image.size.width, h = image.size.height;
     CGFloat side = (w < h) ? w : h;
@@ -339,26 +340,26 @@ static UIImage *GHCFPrefsSquareCropImage(UIImage *image, CGFloat size) {
 // v42：bundleID 轉 App 名字（固定 5 個先查，找不到再查後台緩存檔；
 // 還是找不到就回 bundleID 本身，不空白）。
 // （固定表在下面定義，這裡先前向聲明，免得隱式聲明報錯。）
-static const char *GHCFFixedNames[5];
-static int GHCFFixedIndexForBundleID(const char *bid);
+static const char *CFLYFixedNames[5];
+static int CFLYFixedIndexForBundleID(const char *bid);
 
 
 // 原來的 5 個固定 App（跟主插件 Tweak.xm 裡的表同一份）。
-static const char *GHCFFixedBundleIDs[5] = {
+static const char *CFLYFixedBundleIDs[5] = {
     "com.apple.calculator",
     "com.apple.mobiletimer",
     "com.apple.mobilenotes",
     "com.apple.Preferences",
     "com.apple.mobileslideshow"
 };
-static const char *GHCFFixedNames[5] = {
+static const char *CFLYFixedNames[5] = {
     "计算器",
     "时钟",
     "备忘录",
     "设置",
     "照片"
 };
-static const char *GHCFFixedEnabledKeys[5] = {
+static const char *CFLYFixedEnabledKeys[5] = {
     "appCalculatorEnabled",
     "appClockEnabled",
     "appNotesEnabled",
@@ -366,42 +367,42 @@ static const char *GHCFFixedEnabledKeys[5] = {
     "appPhotosEnabled"
 };
 
-static int GHCFFixedIndexForBundleID(const char *bid) {
+static int CFLYFixedIndexForBundleID(const char *bid) {
     if (!bid) return -1;
     for (int i = 0; i < 5; i++) {
-        if (strcmp(GHCFFixedBundleIDs[i], bid) == 0) return i;
+        if (strcmp(CFLYFixedBundleIDs[i], bid) == 0) return i;
     }
     return -1;
 }
 
 // v43.24：第 6 件——自選 App 串列（customAppBundleIDs，逗號分隔 bundleID），
 // 開關是 sel-<bundleID>。
-static void GHCFSetCustomAppListBid(const char *bid, BOOL on) {
+static void CFLYSetCustomAppListBid(const char *bid, BOOL on) {
     if (!bid || bid[0] == '\0') return;
     NSMutableArray *ids = [NSMutableArray array];
-    char *raw = GHCFPrefsCString("customAppBundleIDs");
+    char *raw = CFLYPrefsCString("customAppBundleIDs");
     if (raw) {
         NSString *rawStr = [NSString stringWithCString:raw encoding:NSUTF8StringEncoding];
         free(raw);
         if (rawStr && [rawStr length] > 0) {
-            NSArray *parts = [rawStr componentsSeparatedByString:GHCFRuntimeString(",")];
+            NSArray *parts = [rawStr componentsSeparatedByString:CFLYRuntimeString(",")];
             for (NSString *p in parts) if ([p length] > 0 && ![ids containsObject:p]) [ids addObject:p];
         }
     }
     NSString *bidStr = [NSString stringWithCString:bid encoding:NSUTF8StringEncoding];
     [ids removeObject:bidStr];
     if (on) [ids addObject:bidStr];
-    NSString *joined = [ids componentsJoinedByString:GHCFRuntimeString(",")];
-    GHCFWritePrefsCString("customAppBundleIDs", [joined UTF8String]);
+    NSString *joined = [ids componentsJoinedByString:CFLYRuntimeString(",")];
+    CFLYWritePrefsCString("customAppBundleIDs", [joined UTF8String]);
 }
 
-// China Fly 1.0.0：首次使用默認開的 8 個 App（照 TrollOpen 影片裡
+// China Fly 1.0.0：首次使用默認開的 8 個 App（照 參考影片裡
 // 機主的選擇：抖音、汽水音樂 Plus、設置、DynamicCow、Facebook、
 // Messenger、QQ、Telegram）。設置是固定 App（下面固定表裡已有，
 // 預設開）；其餘 7 個是已裝 App，用 sel-<bid> 開關。
 // 判定規則：sel-<bid> 寫過就照寫過的值；沒寫過才回默認（8 個裡
 // 的回 YES，其餘回 NO）——用戶親手關掉的不會被默認蓋回來。
-static BOOL GHCFIsDefaultOnAppBid(const char *bid) {
+static BOOL CFLYIsDefaultOnAppBid(const char *bid) {
     if (!bid) return NO;
     static const char *defaults8[] = {
         "com.ss.iphone.ugc.Aweme",
@@ -422,15 +423,15 @@ static BOOL GHCFIsDefaultOnAppBid(const char *bid) {
 
 // 某個 bundleID 是不是在啟動器裡（固定 App 讀開關，預設開；
 // 自選 App：sel-<bid> 寫過就照它，沒寫過看是不是默認開的 8 個）。
-static BOOL GHCFSetAppInLauncherPrefs(const char *bid, BOOL on);
-static BOOL GHCFAppInLauncher(const char *bid) {
+static BOOL CFLYSetAppInLauncherPrefs(const char *bid, BOOL on);
+static BOOL CFLYAppInLauncher(const char *bid) {
     if (!bid || bid[0] == '\0') return NO;
-    int fixed = GHCFFixedIndexForBundleID(bid);
-    if (fixed >= 0) return GHCFPrefsBool(GHCFFixedEnabledKeys[fixed], YES);
+    int fixed = CFLYFixedIndexForBundleID(bid);
+    if (fixed >= 0) return CFLYPrefsBool(CFLYFixedEnabledKeys[fixed], YES);
     char selKey[160];
     snprintf(selKey, sizeof(selKey), "sel-%s", bid);
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    CFStringRef keyRef = GHCFRuntimeCFString(selKey);
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    CFStringRef keyRef = CFLYRuntimeCFString(selKey);
     BOOL hasValue = NO;
     BOOL stored = NO;
     if (domain && keyRef) {
@@ -444,14 +445,14 @@ static BOOL GHCFAppInLauncher(const char *bid) {
     if (domain) CFRelease(domain);
     if (keyRef) CFRelease(keyRef);
     if (hasValue) return stored;
-    return GHCFIsDefaultOnAppBid(bid);
+    return CFLYIsDefaultOnAppBid(bid);
 }
 
 // 首次打開挑選器時把默認開的 8 個真正寫進 prefs（串列＋開關＋
 // 已播種標記），dylib 那邊讀 customAppBundleIDs 才看得到它們；
 // 只播一次，之後用戶的開關不再被默認動到。
-static void GHCFSeedDefaultAppSelection(void) {
-    if (GHCFPrefsBool("appPickerDefaultsSeeded", NO)) return;
+static void CFLYSeedDefaultAppSelection(void) {
+    if (CFLYPrefsBool("appPickerDefaultsSeeded", NO)) return;
     static const char *seedBids[] = {
         "com.ss.iphone.ugc.Aweme",
         "com.soda.music",
@@ -463,34 +464,34 @@ static void GHCFSeedDefaultAppSelection(void) {
     };
     size_t n = sizeof(seedBids) / sizeof(seedBids[0]);
     for (size_t i = 0; i < n; i++) {
-        GHCFSetAppInLauncherPrefs(seedBids[i], YES);
+        CFLYSetAppInLauncherPrefs(seedBids[i], YES);
     }
-    GHCFWritePrefsBool("appSettingsEnabled", YES);
-    GHCFWritePrefsBool("appPickerDefaultsSeeded", YES);
-    GHCFPrefsLogLine("cf prefs-apppicker: seeded default 8 apps");
+    CFLYWritePrefsBool("appSettingsEnabled", YES);
+    CFLYWritePrefsBool("appPickerDefaultsSeeded", YES);
+    CFLYPrefsLogLine("cf prefs-apppicker: seeded default 8 apps");
 }
 
-// 把某個 App 放進／拿出啟動器（跟主插件的 GHCFSetAppInLauncher 同款
+// 把某個 App 放進／拿出啟動器（跟主插件的 CFLYSetAppInLauncher 同款
 // 邏輯，設定頁這邊重寫一份——設定 bundle 和主插件是兩個進程，
 // 調不到主插件的函數）。沒有數量上限，永遠回 YES。
-static BOOL GHCFSetAppInLauncherPrefs(const char *bid, BOOL on) {
+static BOOL CFLYSetAppInLauncherPrefs(const char *bid, BOOL on) {
     if (!bid || bid[0] == '\0') return NO;
-    int fixed = GHCFFixedIndexForBundleID(bid);
+    int fixed = CFLYFixedIndexForBundleID(bid);
     if (fixed >= 0) {
-        GHCFWritePrefsBool(GHCFFixedEnabledKeys[fixed], on);
+        CFLYWritePrefsBool(CFLYFixedEnabledKeys[fixed], on);
         return YES;
     }
-    GHCFSetCustomAppListBid(bid, on);
+    CFLYSetCustomAppListBid(bid, on);
     char selKey[160];
     snprintf(selKey, sizeof(selKey), "sel-%s", bid);
-    GHCFWritePrefsBool(selKey, on);
+    CFLYWritePrefsBool(selKey, on);
     return YES;
 }
 
 // 寫一個 prefs 陣列（menuAppOrder 用），立刻落盤。
-static void GHCFWritePrefsArray(const char *key, NSArray *value) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    CFStringRef keyRef = GHCFRuntimeCFString(key);
+static void CFLYWritePrefsArray(const char *key, NSArray *value) {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    CFStringRef keyRef = CFLYRuntimeCFString(key);
     if (domain && keyRef) {
         CFPreferencesSetAppValue(keyRef, (__bridge CFPropertyListRef)value, domain);
         CFPreferencesAppSynchronize(domain);
@@ -501,8 +502,8 @@ static void GHCFWritePrefsArray(const char *key, NSArray *value) {
 
 // 讀後台緩存的已安裝 App 清單（主插件列舉、寫檔；設定頁只讀。
 // 每項是 dict：bundleID／name）。讀不到回空陣列，不回 nil。
-static NSArray *GHCFReadCachedApps(void) {
-    NSArray *cached = [NSArray arrayWithContentsOfFile:GHCFAppCacheFilePath()];
+static NSArray *CFLYReadCachedApps(void) {
+    NSArray *cached = [NSArray arrayWithContentsOfFile:CFLYAppCacheFilePath()];
     if (!cached) return [NSArray array];
     return cached;
 }
@@ -510,22 +511,22 @@ static NSArray *GHCFReadCachedApps(void) {
 // 菜單項解析：entry 是 bundleID 就找對應 App 名；是顯示名就按名
 // 找 bundleID；都找不到就原樣當顯示名（bid 回 nil，運行時按名找）。
 // ChinaFly 1.0.3：前向聲明（定義在後面，選擇應用那頁用的同一套名字解析）。
-static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid);
+static NSString *CFLYPrefsDisplayNameForBundleID(NSString *bid);
 
-static void GHCFResolveMenuEntry(NSString *entry, NSString **outBid, NSString **outName) {
+static void CFLYResolveMenuEntry(NSString *entry, NSString **outBid, NSString **outName) {
     NSString *bid = nil;
     NSString *name = nil;
     if (entry && [entry length] > 0) {
-        int fixed = GHCFFixedIndexForBundleID([entry UTF8String]);
+        int fixed = CFLYFixedIndexForBundleID([entry UTF8String]);
         if (fixed >= 0) {
             bid = entry;
-            name = GHCFRuntimeString(GHCFFixedNames[fixed]);
+            name = CFLYRuntimeString(CFLYFixedNames[fixed]);
         } else {
-            NSArray *cached = GHCFReadCachedApps();
+            NSArray *cached = CFLYReadCachedApps();
             for (id item in cached) {
                 if (![item isKindOfClass:[NSDictionary class]]) continue;
-                NSString *cbid = [item objectForKey:GHCFRuntimeString("bundleID")];
-                NSString *cname = [item objectForKey:GHCFRuntimeString("name")];
+                NSString *cbid = [item objectForKey:CFLYRuntimeString("bundleID")];
+                NSString *cname = [item objectForKey:CFLYRuntimeString("name")];
                 if (cbid && [cbid isEqualToString:entry]) {
                     bid = cbid;
                     name = cname;
@@ -545,44 +546,42 @@ static void GHCFResolveMenuEntry(NSString *entry, NSString **outBid, NSString **
     // 才回退到 entry 本身（此時那個 App 根本沒裝上）。
     if (!name || [name length] == 0) {
         NSString *key = bid ? bid : entry;
-        NSString *resolved = key ? GHCFPrefsDisplayNameForBundleID(key) : nil;
+        NSString *resolved = key ? CFLYPrefsDisplayNameForBundleID(key) : nil;
         if (resolved && [resolved length] > 0) name = resolved;
-        else name = entry ? entry : GHCFRuntimeString("");
+        else name = entry ? entry : CFLYRuntimeString("");
     }
     if (outBid) *outBid = bid;
     if (outName) *outName = name;
 }
 
-// 菜單默認順序（照 TrollOpen 影片露出的前 17 個，原樣保留；
+// 菜單默認順序（照 參考影片露出的前 17 個，原樣保留；
 // 微信在影片裡出現多次，這裡照列出的順序留三個。知道 bundleID
 // 的存 bundleID，不知道的存顯示名，運行時按名找）。
-static NSArray *GHCFDefaultMenuOrder(void) {
+static NSArray *CFLYDefaultMenuOrder(void) {
     return [NSArray arrayWithObjects:
-        GHCFRuntimeString("com.apple.Preferences"),
-        GHCFRuntimeString("com.tencent.xin"),
-        GHCFRuntimeString("com.apple.calculator"),
-        GHCFRuntimeString("AppsDump3"),
-        GHCFRuntimeString("com.ss.iphone.ugc.Aweme"),
-        GHCFRuntimeString("巨魔注入器"),
-        GHCFRuntimeString("愛思全能版"),
-        GHCFRuntimeString("com.tencent.mqq"),
-        GHCFRuntimeString("com.tencent.xin"),
-        GHCFRuntimeString("酷我音樂"),
-        GHCFRuntimeString("虛擬定位"),
-        GHCFRuntimeString("com.matteozappa.DynamicCowTS"),
-        GHCFRuntimeString("com.facebook.Messenger"),
-        GHCFRuntimeString("ph.telegra.Telegram"),
-        GHCFRuntimeString("TrollStore"),
-        GHCFRuntimeString("com.facebook.Facebook"),
-        GHCFRuntimeString("com.tencent.xin"),
+        CFLYRuntimeString("com.apple.Preferences"),
+        CFLYRuntimeString("com.tencent.xin"),
+        CFLYRuntimeString("com.apple.calculator"),
+        CFLYRuntimeString("AppsDump3"),
+        CFLYRuntimeString("com.ss.iphone.ugc.Aweme"),
+        CFLYRuntimeString("愛思全能版"),
+        CFLYRuntimeString("com.tencent.mqq"),
+        CFLYRuntimeString("com.tencent.xin"),
+        CFLYRuntimeString("酷我音樂"),
+        CFLYRuntimeString("虛擬定位"),
+        CFLYRuntimeString("com.matteozappa.DynamicCowTS"),
+        CFLYRuntimeString("com.facebook.Messenger"),
+        CFLYRuntimeString("ph.telegra.Telegram"),
+        CFLYRuntimeString("com.facebook.Facebook"),
+        CFLYRuntimeString("com.tencent.xin"),
         nil];
 }
 
 // 讀 menuAppOrder（沒存過就寫一份默認順序再回它；
 // 存過但不是字串陣列就當沒存過，照默認來）。
-static NSMutableArray *GHCFReadMenuOrder(void) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    CFStringRef keyRef = GHCFRuntimeCFString("menuAppOrder");
+static NSMutableArray *CFLYReadMenuOrder(void) {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    CFStringRef keyRef = CFLYRuntimeCFString("menuAppOrder");
     NSArray *stored = nil;
     if (domain && keyRef) {
         CFPropertyListRef v = CFPreferencesCopyAppValue(keyRef, domain);
@@ -600,21 +599,21 @@ static NSMutableArray *GHCFReadMenuOrder(void) {
         }
     }
     if ([order count] == 0) {
-        order = [NSMutableArray arrayWithArray:GHCFDefaultMenuOrder()];
-        GHCFWritePrefsArray("menuAppOrder", order);
-        GHCFPrefsLogLine("cf prefs-menuedit: seeded default menu order");
+        order = [NSMutableArray arrayWithArray:CFLYDefaultMenuOrder()];
+        CFLYWritePrefsArray("menuAppOrder", order);
+        CFLYPrefsLogLine("cf prefs-menuedit: seeded default menu order");
     }
     return order;
 }
 
-static void GHCFWriteMenuOrder(NSArray *order) {
+static void CFLYWriteMenuOrder(NSArray *order) {
     if (!order) order = [NSArray array];
-    GHCFWritePrefsArray("menuAppOrder", order);
+    CFLYWritePrefsArray("menuAppOrder", order);
 }
 
 // 代碼畫的紙飛機（觸發鈕默認圖；不要引用已刪的哆啦A夢 png）。
 // 機頭朝右上，兩片折面一深一淺。
-static UIImage *GHCFPaperPlaneImage(CGFloat size) {
+static UIImage *CFLYPaperPlaneImage(CGFloat size) {
     if (size <= 0) size = 120.0;
     UIGraphicsBeginImageContextWithOptions(CGSizeMake(size, size), NO, 0.0);
     CGFloat s = size;
@@ -637,19 +636,24 @@ static UIImage *GHCFPaperPlaneImage(CGFloat size) {
     return out;
 }
 
-// v47：見下面 GHCFHandlePlistDetailTap 的定義——定義要用到白名單
-// GHCFPrefsIsKnownPlistName 與 PlistPage 的接口聲明，都在文件後面，
+// v47：見下面 CFLYHandlePlistDetailTap 的定義——定義要用到白名單
+// CFLYPrefsIsKnownPlistName 與 PlistPage 的接口聲明，都在文件後面，
 // 這裡先給原型（主頁控制器與 PlistPage 共用同一個 didSelectRow）。
-static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
+static BOOL CFLYHandlePlistDetailTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
 
-// v72：見下面 GHCFHandleLinkListTap 的定義——LinkList 點按攔截，
-// 推我們自己的 GHCFLinkListController（定義在文件後面，這裡先給原型）。
-static BOOL GHCFHandleLinkListTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
+// v72：見下面 CFLYHandleLinkListTap 的定義——LinkList 點按攔截，
+// 推我們自己的 CFLYLinkListController（定義在文件後面，這裡先給原型）。
+static BOOL CFLYHandleLinkListTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
 
-// China Fly 1.0.0：見下面 GHCFHandleMenuEditTap 的定義——detail 是
-// GHCFMenuEditListController 的連結行攔下來自己推（它是
+// China Fly 1.0.0：見下面 CFLYHandleMenuEditTap 的定義——detail 是
+// CFLYMenuEditListController 的連結行攔下來自己推（它是
 // UITableViewController 子類，框架預設的推頁路徑推不動）。
-static BOOL GHCFHandleMenuEditTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
+static BOOL CFLYHandleMenuEditTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
+
+// China Fly 1.0.4：見下面 CFLYHandleMenuAddTap 的定義——detail 是
+// CFLYMenuAddListController 的連結行攔下來自己推（它是
+// PSListController 子類，動態組行；框架預設的推頁路徑推不動）。
+static BOOL CFLYHandleMenuAddTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath);
 
 // v43：手動派發 PSButtonCell 點按——不再賭框架會不會從 action 字串派發。
 // 診斷：plist 的 action 字串、程式現拼的 action 字串、方法、target 全部合規，
@@ -658,18 +662,18 @@ static BOOL GHCFHandleMenuEditTap(PSListController *controller, UITableView *tab
 // 所以直接在 didSelectRow 裡讀 action 字串、轉 SEL、在 target（沒有就 self）上跑。
 // v54：N 定死——v52 加的 `SEL specAction = spec->action;` 整行刪掉：
 // arm64e 上編譯器給這行直接 ivar 讀取生成帶 PAC 認證的載入，plist 載入
-// 的按鈕那個值認證不過就 trap（.ips：GHCFDispatchButtonTap+552 `brk`，
+// 的按鈕那個值認證不過就 trap（.ips：CFLYDispatchButtonTap+552 `brk`，
 // 呼叫方是狀態頁；19.log:11626 遊戲布局點按後無動作行，死在同一行）。
 // action 只走 properties（v43/v44 就是這樣派發，遊戲布局走通過）。
 // 注意：@try/@catch 只防 ObjC 例外，PAC trap 是硬體 trap、防不住——
 // 真正的修法就是刪掉這行讀取，@try/@catch 只是第二道防線。
 // 回傳 YES 表示這一行已經處理了（呼叫方直接 return，不要再走 super，免得重複跑）。
-static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
+static BOOL CFLYDispatchButtonTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
     if (!controller || !indexPath) return NO;
     @try {
     PSSpecifier *spec = [controller specifierAtIndexPath:indexPath];
     if (!spec) {
-        GHCFPrefsLogLine("v57 prefs-config tap: no specifier for tap");
+        CFLYPrefsLogLine("v57 prefs-config tap: no specifier for tap");
         return NO;
     }
     // v52：入口先記一行（section／row／cellType），點了沒反應時日誌看得見
@@ -677,14 +681,14 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
     {
         char tapBuf[160];
         snprintf(tapBuf, sizeof(tapBuf), "v57 prefs-config tap: section %ld row %ld cellType %d", (long)indexPath.section, (long)indexPath.row, (int)spec.cellType);
-        GHCFPrefsLogLine(tapBuf);
+        CFLYPrefsLogLine(tapBuf);
     }
     if (spec.cellType != PSButtonCell) return NO;
     // v54：action 只走 properties，絕不再碰 spec->action ivar（見上面）。
-    NSString *actionName = [spec propertyForKey:GHCFRuntimeString("action")];
+    NSString *actionName = [spec propertyForKey:CFLYRuntimeString("action")];
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (!actionName || [actionName length] == 0) {
-        GHCFPrefsLogLine("v57 prefs-config tap: button without action");
+        CFLYPrefsLogLine("v57 prefs-config tap: button without action");
         return YES;
     }
     const char *actionC = [actionName UTF8String];
@@ -693,38 +697,38 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
     if (!target) target = controller;
     char buf[320];
     snprintf(buf, sizeof(buf), "v57 prefs-config tap: action %s target %s", actionC ? actionC : "?", [NSStringFromClass([target class]) UTF8String]);
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
     // v44：action 字串是裸名（沒有冒號），但方法都帶一個參數（PSSpecifier *），
-    // 真正的 selector 有冒號（例如 ghcfBackupConfig:）。裸名先試，不回應就補冒號再試。
+    // 真正的 selector 有冒號（例如 cflyBackupConfig:）。裸名先試，不回應就補冒號再試。
     // 這也是為什麼框架自己的派發在 v42 也不動——框架也是拿同一個裸名字串轉 SEL，
     // respondsToSelector 永遠回 NO，點按就這樣被靜靜吞掉了。
     if (![target respondsToSelector:action]) {
-        GHCFPrefsLogLine("v57 prefs-config tap: bare name does not respond, trying colon");
-        NSString *colonName = [actionName stringByAppendingString:GHCFRuntimeString(":")];
+        CFLYPrefsLogLine("v57 prefs-config tap: bare name does not respond, trying colon");
+        NSString *colonName = [actionName stringByAppendingString:CFLYRuntimeString(":")];
         SEL colonAction = NSSelectorFromString(colonName);
         if ([target respondsToSelector:colonAction]) {
             action = colonAction;
-            GHCFPrefsLogLine("v57 prefs-config tap: colon selector responds");
+            CFLYPrefsLogLine("v57 prefs-config tap: colon selector responds");
         }
     }
     if (![target respondsToSelector:action]) {
-        GHCFPrefsLogLine("v57 prefs-config tap: target does not respond to bare or colon, falling through to super");
+        CFLYPrefsLogLine("v57 prefs-config tap: target does not respond to bare or colon, falling through to super");
         return NO;
     }
     // v44：變數 SEL 不能用 performSelector（-Werror 下 -Warc-performSelector-leaks），
     // 用 v41 就在用的 objc_msgSend 寫法。
     ((void (*)(id, SEL, id))objc_msgSend)(target, action, spec);
     snprintf(buf, sizeof(buf), "v57 prefs-config tap: dispatched %s", [NSStringFromSelector(action) UTF8String]);
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
     return YES;
     } @catch (NSException *e) {
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[512];
         snprintf(buf, sizeof(buf), "v57 prefs-config tap EXCEPTION %s", why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
         @try {
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("点按失败") message:GHCFRuntimeString("这个按钮点下去出错了（已记进日志），先回上一页再试。") preferredStyle:UIAlertControllerStyleAlert];
-            [alert addAction:[UIAlertAction actionWithTitle:GHCFRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("点按失败") message:CFLYRuntimeString("这个按钮点下去出错了（已记进日志），先回上一页再试。") preferredStyle:UIAlertControllerStyleAlert];
+            [alert addAction:[UIAlertAction actionWithTitle:CFLYRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
             [controller presentViewController:alert animated:YES completion:nil];
         } @catch (NSException *e2) {
             (void)e2;
@@ -738,43 +742,44 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
 
 @implementation ChinaFlyRootListController
 
-// v43：記進了哪一頁（PlistPage 繼承這裡，類名是 GHCFPlistPageController，
+// v43：記進了哪一頁（PlistPage 繼承這裡，類名是 CFLYPlistPageController，
 // 具體哪份 plist 由 specifiers 裡的 plistpage entry 行給出）。
 // China Fly 1.0.0：歌詞播放器已拿掉，主頁不再嵌 WKWebView。
 - (void)viewDidLoad {
     [super viewDidLoad];
     char buf[160];
     snprintf(buf, sizeof(buf), "v57 prefs-page: %s", [NSStringFromClass([self class]) UTF8String]);
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
 }
 
 
-// v43：按鈕行自己派發（見上面 GHCFDispatchButtonTap）；其他行走框架。
+// v43：按鈕行自己派發（見上面 CFLYDispatchButtonTap）；其他行走框架。
 // v47：plist 名 detail 的連結行先攔下來自己推 PlistPage（見下面
-// GHCFHandlePlistDetailTap），不再走框架預設——框架推的原生頁是空的。
-// China Fly 1.0.0：菜單編輯行也先攔下來自己推（見 GHCFHandleMenuEditTap）。
+// CFLYHandlePlistDetailTap），不再走框架預設——框架推的原生頁是空的。
+// China Fly 1.0.0：菜單編輯行也先攔下來自己推（見 CFLYHandleMenuEditTap）。
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (GHCFHandleMenuEditTap(self, tableView, indexPath)) return;
-    if (GHCFHandleLinkListTap(self, tableView, indexPath)) return;
-    if (GHCFHandlePlistDetailTap(self, tableView, indexPath)) return;
-    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
+    if (CFLYHandleMenuAddTap(self, tableView, indexPath)) return;
+    if (CFLYHandleMenuEditTap(self, tableView, indexPath)) return;
+    if (CFLYHandleLinkListTap(self, tableView, indexPath)) return;
+    if (CFLYHandlePlistDetailTap(self, tableView, indexPath)) return;
+    if (CFLYDispatchButtonTap(self, tableView, indexPath)) return;
     [super tableView:tableView didSelectRowAtIndexPath:indexPath];
 }
 
 - (NSArray *)specifiers {
     if (!_specifiers) {
         @try {
-            NSMutableArray *loaded = [self loadSpecifiersFromPlistName:GHCFRuntimeString("Root") target:self];
+            NSMutableArray *loaded = [self loadSpecifiersFromPlistName:CFLYRuntimeString("Root") target:self];
             // v52：新手模式整個取消，不再過濾。
             _specifiers = loaded;
         } @catch (NSException *e) {
             const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
             char buf[512];
             snprintf(buf, sizeof(buf), "v57 prefs-root specifiers EXCEPTION %s", reason);
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
             NSMutableArray *safe = [NSMutableArray array];
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("主页组装出错（已记进日志），先回设定再试。") forKey:GHCFRuntimeString("footerText")];
+            [group setProperty:CFLYRuntimeString("主页组装出错（已记进日志），先回设定再试。") forKey:CFLYRuntimeString("footerText")];
             [safe addObject:group];
             _specifiers = safe;
         }
@@ -784,8 +789,8 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
 }
 
 - (id)readPreferenceValue:(PSSpecifier *)specifier {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    NSString *keyName = GHCFRuntimeString("key");
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    NSString *keyName = CFLYRuntimeString("key");
     NSString *key = specifier.properties[keyName];
     CFPropertyListRef v = NULL;
     if (key) {
@@ -799,15 +804,15 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
     }
     // v41：沒存過就回 plist 裡寫的 default（以前回 NO，滑桿的預設值
     // 在設定頁會顯示成 0）。
-    NSString *defaultName = GHCFRuntimeString("default");
+    NSString *defaultName = CFLYRuntimeString("default");
     id def = specifier.properties[defaultName];
     if (def) return def;
     return [NSNumber numberWithBool:NO];
 }
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
-    NSString *keyName = GHCFRuntimeString("key");
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    NSString *keyName = CFLYRuntimeString("key");
     NSString *key = specifier.properties[keyName];
     if (key) {
         CFStringRef cfKey = (__bridge CFStringRef)key;
@@ -816,21 +821,21 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
         // v43：記開關／滑桿／分段改了什麼值（只記用戶改動，不記讀取；
         // readPreferenceValue 每行渲染都跑，記了會刷爆日誌）。
         // ChinaFly 1.0.0：激活码绝不写日志——key 是 activationCode 时跳过这行。
-        if (![key isEqualToString:GHCFRuntimeString("activationCode")]) {
+        if (![key isEqualToString:CFLYRuntimeString("activationCode")]) {
             char buf[256];
             const char *keyC = [key UTF8String];
             const char *valC = [[value description] UTF8String];
             snprintf(buf, sizeof(buf), "v57 prefs-set: %s = %s", keyC ? keyC : "?", valC ? valC : "?");
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
         }
     }
     if (domain) CFRelease(domain);
 }
 
 // 彈一個提示框（設定頁裡的回饋）。
-- (void)ghcfShowAlertWithTitle:(NSString *)title message:(NSString *)message {
+- (void)cflyShowAlertWithTitle:(NSString *)title message:(NSString *)message {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
-    NSString *okTitle = GHCFRuntimeString("好");
+    NSString *okTitle = CFLYRuntimeString("好");
     UIAlertAction *ok = [UIAlertAction actionWithTitle:okTitle style:UIAlertActionStyleDefault handler:nil];
     [alert addAction:ok];
     // v43：提示框改走最上層 presenter、主隊列；彈不出來要寫日誌，不要靜默
@@ -858,21 +863,21 @@ static BOOL GHCFDispatchButtonTap(PSListController *controller, UITableView *tab
         }
         if (presenter) {
             [presenter presentViewController:alert animated:YES completion:nil];
-            GHCFPrefsLogLine("v57 prefs-config alert shown");
+            CFLYPrefsLogLine("v57 prefs-config alert shown");
         } else {
-            GHCFPrefsLogLine("v57 prefs-config alert FAILED: no presenter");
+            CFLYPrefsLogLine("v57 prefs-config alert FAILED: no presenter");
         }
     });
 }
 
 // v43.8：从 live 的 CFPreferences 现取值建档（备份／导出共用）——
-// 设定档 /var/mobile/Library/Preferences/com.guhailong.fly.plist
+// 设定档 /var/mobile/Library/Preferences/com.chinafly.fly.plist
 // 在设定进程里看不到（写入都走 CFPreferencesSetAppValue，档是 cfprefsd
 // 管的），旧写法复制档案永远报「没有配置文件可备份」。改成同步后用
 // CFPreferencesCopyKeyList 拿全部 key、逐 key 取值组 dict 再写档；
 // dict 是空的（0 个 key）才回 NO 且 count=0（没东西可备／可导）。
-static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsigned long long *outBytes) {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+static BOOL CFLYWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsigned long long *outBytes) {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
     if (!domain || !dst) return NO;
     CFPreferencesAppSynchronize(domain);
     CFArrayRef keys = CFPreferencesCopyKeyList(domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
@@ -907,10 +912,10 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
 // v43.10：備份／導出成功後直接把檔案遞給皇上——分享表帶檔案 URL，
 // 當場存到文件／傳出去／隔空投送，不用自己去文件找。分享表關掉後
 // 再彈提示寫清完整路徑（兩個 modal 不能疊著彈，分享表先開）。
-- (void)ghcfShareConfigFile:(NSString *)path title:(NSString *)title what:(NSString *)what restoreRow:(NSString *)restoreRow {
+- (void)cflyShareConfigFile:(NSString *)path title:(NSString *)title what:(NSString *)what restoreRow:(NSString *)restoreRow {
     NSURL *url = [NSURL fileURLWithPath:path];
     if (!url) {
-        [self ghcfShowAlertWithTitle:title message:GHCFRuntimeString("文件路径不对，分享打不开。")];
+        [self cflyShowAlertWithTitle:title message:CFLYRuntimeString("文件路径不对，分享打不开。")];
         return;
     }
     UIActivityViewController *share = [[UIActivityViewController alloc] initWithActivityItems:[NSArray arrayWithObject:url] applicationActivities:nil];
@@ -921,7 +926,7 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
         if (!strongSelf) return;
         char msgBuf[768];
         snprintf(msgBuf, sizeof(msgBuf), "%s在 %s。刚才的分享表可以直接把文件存到文件、发出去或隔空投送，不用自己去文件找。想换配置时，点「%s」挑这个文件就能用。", [what UTF8String], [path UTF8String], [restoreRow UTF8String]);
-        [strongSelf ghcfShowAlertWithTitle:title message:GHCFRuntimeString(msgBuf)];
+        [strongSelf cflyShowAlertWithTitle:title message:CFLYRuntimeString(msgBuf)];
     };
     @try {
         [self presentViewController:share animated:YES completion:nil];
@@ -929,43 +934,43 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
         const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v43.10 prefs-config share EXCEPTION %s", reason);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
         char msgBuf[768];
         snprintf(msgBuf, sizeof(msgBuf), "分享表打不开，文件在 %s，自己去文件找。", [path UTF8String]);
-        [self ghcfShowAlertWithTitle:title message:GHCFRuntimeString(msgBuf)];
+        [self cflyShowAlertWithTitle:title message:CFLYRuntimeString(msgBuf)];
     }
 }
 
 // 備份配置：live 設定現取值寫一份到備份檔（v43.8）。
-- (void)ghcfBackupConfig:(PSSpecifier *)specifier {
+- (void)cflyBackupConfig:(PSSpecifier *)specifier {
     (void)specifier;
-    GHCFPrefsLogLine("v57 prefs-config backup entry");
-    NSString *dst = GHCFBackupFilePath();
+    CFLYPrefsLogLine("v57 prefs-config backup entry");
+    NSString *dst = CFLYBackupFilePath();
     NSUInteger count = 0;
     unsigned long long bytes = 0;
-    BOOL ok = GHCFWriteLivePrefsToFile(dst, &count, &bytes);
+    BOOL ok = CFLYWriteLivePrefsToFile(dst, &count, &bytes);
     if (count == 0) {
-        GHCFPrefsLogLine("v57 prefs-config backup: no keys in live prefs");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("没有配置文件可备份") message:GHCFRuntimeString("先改一个设置，配置文件才会生成。")];
+        CFLYPrefsLogLine("v57 prefs-config backup: no keys in live prefs");
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("没有配置文件可备份") message:CFLYRuntimeString("先改一个设置，配置文件才会生成。")];
         return;
     }
     if (ok) {
         char buf[512];
         snprintf(buf, sizeof(buf), "v57 prefs-config backup: wrote %lu keys, %llu bytes to %s", (unsigned long)count, bytes, [dst UTF8String]);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
         // v43.10：成功後直接把檔案遞給皇上（分享表），不用自己去文件找。
-        [self ghcfShareConfigFile:dst title:GHCFRuntimeString("已备份配置") what:GHCFRuntimeString("备份") restoreRow:GHCFRuntimeString("从备份恢复")];
+        [self cflyShareConfigFile:dst title:CFLYRuntimeString("已备份配置") what:CFLYRuntimeString("备份") restoreRow:CFLYRuntimeString("从备份恢复")];
     } else {
-        GHCFPrefsLogLine("v57 prefs-config backup: write failed");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("备份失败") message:GHCFRuntimeString("复制配置文件时出错。")];
+        CFLYPrefsLogLine("v57 prefs-config backup: write failed");
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("备份失败") message:CFLYRuntimeString("复制配置文件时出错。")];
     }
 }
 // China Fly 1.0.0：導出／導入已拿掉（新 Root.plist 不再有這兩行）；
 // 只留備份／恢復，備份檔是 ChinaFly-backup.plist。
 // v43.10：恢復——把字典逐鍵寫進 live prefs（走 CFPreferences，
 // cfprefsd 快取才更新；直接換檔看著像沒反應，v43 教訓）。
-- (void)ghcfApplyConfigDict:(NSDictionary *)dict sourceDescription:(NSString *)src title:(NSString *)title {
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+- (void)cflyApplyConfigDict:(NSDictionary *)dict sourceDescription:(NSString *)src title:(NSString *)title {
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
     if (domain) {
         for (NSString *key in dict) {
             CFPreferencesSetAppValue((__bridge CFStringRef)key, (__bridge CFPropertyListRef)[dict objectForKey:key], domain);
@@ -976,8 +981,8 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
     [self reloadSpecifiers];
     char buf[512];
     snprintf(buf, sizeof(buf), "v43.10 prefs-config apply: applied %lu keys from %s", (unsigned long)[dict count], [src UTF8String]);
-    GHCFPrefsLogLine(buf);
-    [self ghcfShowAlertWithTitle:title message:GHCFRuntimeString("配置已恢复，请重新启动 SpringBoard 生效。")];
+    CFLYPrefsLogLine(buf);
+    [self cflyShowAlertWithTitle:title message:CFLYRuntimeString("配置已恢复，请重新启动 SpringBoard 生效。")];
 }
 
 // v43.10：文件挑選器——恢復讓皇上自己挑配置文件（想換成別的
@@ -985,10 +990,10 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
 // asCopy:YES（等於舊 Import 模式：系統把挑中的檔拷一份進容器再給我們讀，
 // 不用管 security-scoped resource；舊 initWithDocumentTypes:inMode: 在
 // iOS 14 起已棄用，-Werror 會直接報錯）。彈不出來就走固定路徑
-//（見下面 ghcfRestoreConfigFromFixedPath）。
-- (void)ghcfPresentRestoreDocPicker {
+//（見下面 cflyRestoreConfigFromFixedPath）。
+- (void)cflyPresentRestoreDocPicker {
     @try {
-        UTType *plistType = [UTType typeWithIdentifier:GHCFRuntimeString("com.apple.property-list")];
+        UTType *plistType = [UTType typeWithIdentifier:CFLYRuntimeString("com.apple.property-list")];
         NSArray *types = [NSArray arrayWithObjects:plistType, nil];
         UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:types asCopy:YES];
         picker.delegate = self;
@@ -997,8 +1002,8 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
         const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v43.10 prefs-config docpicker EXCEPTION %s, fixed-path fallback", reason);
-        GHCFPrefsLogLine(buf);
-        [self ghcfRestoreConfigFromFixedPath];
+        CFLYPrefsLogLine(buf);
+        [self cflyRestoreConfigFromFixedPath];
     }
 }
 
@@ -1006,7 +1011,7 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
     (void)controller;
     NSURL *url = ([urls count] > 0) ? [urls objectAtIndex:0] : nil;
     if (!url) {
-        GHCFPrefsLogLine("v43.10 prefs-config docpicker: no url");
+        CFLYPrefsLogLine("v43.10 prefs-config docpicker: no url");
         return;
     }
     NSString *path = [url path];
@@ -1014,44 +1019,44 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
     if (!dict) {
         char buf[512];
         snprintf(buf, sizeof(buf), "v43.10 prefs-config docpicker: unreadable %s", [path UTF8String]);
-        GHCFPrefsLogLine(buf);
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("恢复失败") message:GHCFRuntimeString("挑的配置文件读不出来（要 .plist 配置文件）。")];
+        CFLYPrefsLogLine(buf);
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("恢复失败") message:CFLYRuntimeString("挑的配置文件读不出来（要 .plist 配置文件）。")];
         return;
     }
-    [self ghcfApplyConfigDict:dict sourceDescription:path title:GHCFRuntimeString("已从备份恢复配置")];
+    [self cflyApplyConfigDict:dict sourceDescription:path title:CFLYRuntimeString("已从备份恢复配置")];
 }
 
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
     (void)controller;
-    GHCFPrefsLogLine("v43.10 prefs-config docpicker: cancelled");
+    CFLYPrefsLogLine("v43.10 prefs-config docpicker: cancelled");
 }
 
 // 從備份文件恢復配置：先彈文件挑選器，讓皇上自己挑配置文件。
 // v43：改走 CFPreferences 逐鍵寫入（見上）。
-- (void)ghcfRestoreConfig:(PSSpecifier *)specifier {
+- (void)cflyRestoreConfig:(PSSpecifier *)specifier {
     (void)specifier;
-    GHCFPrefsLogLine("v57 prefs-config restore entry");
-    [self ghcfPresentRestoreDocPicker];
+    CFLYPrefsLogLine("v57 prefs-config restore entry");
+    [self cflyPresentRestoreDocPicker];
 }
 
 // v43.10：挑選器彈不出來時的 fallback——讀固定備份檔 ChinaFly-backup.plist。
-- (void)ghcfRestoreConfigFromFixedPath {
+- (void)cflyRestoreConfigFromFixedPath {
     NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *src = GHCFBackupFilePath();
+    NSString *src = CFLYBackupFilePath();
     if (![fm fileExistsAtPath:src]) {
-        GHCFPrefsLogLine("v57 prefs-config restore: no backup file");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("没有找到备份文件") message:GHCFRuntimeString("先点「备份配置」，再恢复。")];
+        CFLYPrefsLogLine("v57 prefs-config restore: no backup file");
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("没有找到备份文件") message:CFLYRuntimeString("先点「备份配置」，再恢复。")];
         return;
     }
     NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:src];
     if (!dict) {
         char buf[512];
         snprintf(buf, sizeof(buf), "v57 prefs-config restore: backup file unreadable %s", [src UTF8String]);
-        GHCFPrefsLogLine(buf);
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("恢复失败") message:GHCFRuntimeString("备份文件读不出来。")];
+        CFLYPrefsLogLine(buf);
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("恢复失败") message:CFLYRuntimeString("备份文件读不出来。")];
         return;
     }
-    [self ghcfApplyConfigDict:dict sourceDescription:src title:GHCFRuntimeString("已从备份恢复配置")];
+    [self cflyApplyConfigDict:dict sourceDescription:src title:CFLYRuntimeString("已从备份恢复配置")];
 }
 
 @end
@@ -1062,14 +1067,14 @@ static BOOL GHCFWriteLivePrefsToFile(NSString *dst, NSUInteger *outCount, unsign
 // v55：選 App 頁每行掛 App 圖標（UIImage 取 App 圖標的私有方法，走運行時拿；
 // 拿不到就回 nil、行只顯示名字，不擋列表、不閃退）。圖標按 bundleID 快取，
 // 開頁只取一次（清單上百個也不卡）。
-@interface UIImage (GHCFAppIconLookup)
+@interface UIImage (CFLYAppIconLookup)
 + (UIImage *)_applicationIconImageForBundleIdentifier:(NSString *)bundleIdentifier format:(int)format scale:(CGFloat)scale;
 @end
-static NSMutableDictionary *GHCFAppIconCache = nil;
-static UIImage *GHCFAppIconForBundleID(NSString *bid) {
+static NSMutableDictionary *CFLYAppIconCache = nil;
+static UIImage *CFLYAppIconForBundleID(NSString *bid) {
     if (!bid || [bid length] == 0) return nil;
-    if (!GHCFAppIconCache) GHCFAppIconCache = [NSMutableDictionary dictionary];
-    UIImage *cached = GHCFAppIconCache[bid];
+    if (!CFLYAppIconCache) CFLYAppIconCache = [NSMutableDictionary dictionary];
+    UIImage *cached = CFLYAppIconCache[bid];
     if (cached) return cached;
     UIImage *icon = nil;
     @try {
@@ -1079,18 +1084,18 @@ static UIImage *GHCFAppIconForBundleID(NSString *bid) {
         icon = nil;
     }
     if (icon) {
-        if ([GHCFAppIconCache count] > 300) [GHCFAppIconCache removeAllObjects];
-        GHCFAppIconCache[bid] = icon;
+        if ([CFLYAppIconCache count] > 300) [CFLYAppIconCache removeAllObjects];
+        CFLYAppIconCache[bid] = icon;
     }
     return icon;
 }
 
 // ChinaFly 1.0.1: .app 資料夾名當顯示名（去 ".app" 後綴）。
-static NSString *GHCFPrefsAppFolderDisplayName(NSString *bundlePath) {
+static NSString *CFLYPrefsAppFolderDisplayName(NSString *bundlePath) {
     if (!bundlePath || [bundlePath length] == 0) return nil;
     NSString *last = [bundlePath lastPathComponent];
     if (!last || [last length] == 0) return nil;
-    NSString *suffix = GHCFRuntimeString(".app");
+    NSString *suffix = CFLYRuntimeString(".app");
     if ([last hasSuffix:suffix]) last = [last substringToIndex:([last length] - [suffix length])];
     if ([last length] == 0) return nil;
     return last;
@@ -1098,16 +1103,16 @@ static NSString *GHCFPrefsAppFolderDisplayName(NSString *bundlePath) {
 
 // ChinaFly 1.0.1: 從一個 App 的 bundle 路徑讀顯示名：Info.plist
 // CFBundleDisplayName → CFBundleName → .app 資料夾名。
-static NSString *GHCFPrefsDisplayNameFromAppBundlePath(NSString *bundlePath) {
+static NSString *CFLYPrefsDisplayNameFromAppBundlePath(NSString *bundlePath) {
     if (!bundlePath || [bundlePath length] == 0) return nil;
-    NSString *infoPath = [bundlePath stringByAppendingPathComponent:GHCFRuntimeString("Info.plist")];
+    NSString *infoPath = [bundlePath stringByAppendingPathComponent:CFLYRuntimeString("Info.plist")];
     NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
     NSString *name = nil;
     if (info) {
-        name = [info objectForKey:GHCFRuntimeString("CFBundleDisplayName")];
-        if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = [info objectForKey:GHCFRuntimeString("CFBundleName")];
+        name = [info objectForKey:CFLYRuntimeString("CFBundleDisplayName")];
+        if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = [info objectForKey:CFLYRuntimeString("CFBundleName")];
     }
-    if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = GHCFPrefsAppFolderDisplayName(bundlePath);
+    if (!name || ![name isKindOfClass:[NSString class]] || [name length] == 0) name = CFLYPrefsAppFolderDisplayName(bundlePath);
     return name;
 }
 
@@ -1116,7 +1121,7 @@ static NSString *GHCFPrefsDisplayNameFromAppBundlePath(NSString *bundlePath) {
 // Info.plist（bundleURL）CFBundleDisplayName → CFBundleName → .app
 // 資料夾名。proxy 完全拿不到才回 nil（workspace 本身叫不到，實際上
 // 不會發生；此時整頁的圖標機制也一樣拿不到東西）。
-static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
+static NSString *CFLYPrefsDisplayNameForBundleID(NSString *bid) {
     if (!bid || [bid length] == 0) return nil;
     NSString *name = nil;
     @try {
@@ -1139,7 +1144,7 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
                 NSURL *bundleURL = ((id (*)(id, SEL))objc_msgSend)(proxy, bundleURLSel);
                 if (bundleURL && [bundleURL isKindOfClass:[NSURL class]]) bundlePath = [bundleURL path];
             }
-            name = GHCFPrefsDisplayNameFromAppBundlePath(bundlePath);
+            name = CFLYPrefsDisplayNameFromAppBundlePath(bundlePath);
         }
     } @catch (NSException *e) {
         name = nil;
@@ -1149,13 +1154,55 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 }
 
 
-@interface GHCFAppPickerListController : PSListController <UISearchBarDelegate>
-@property (nonatomic, strong) UISearchBar *ghcfSearchBar;
-@property (nonatomic, strong) NSString *ghcfSearchText;
-@property (nonatomic, assign) BOOL ghcfSearchBarInstalled;
+@interface CFLYAppPickerListController : PSListController <UISearchBarDelegate>
+@property (nonatomic, strong) UISearchBar *cflySearchBar;
+@property (nonatomic, strong) NSString *cflySearchText;
+@property (nonatomic, assign) BOOL cflySearchBarInstalled;
 @end
 
-@implementation GHCFAppPickerListController
+// China Fly 1.0.4：選擇應用行格子——真圖標＋名字（粗）＋bundle ID 小字。
+// 沒圖標的行在組行時就跳過（不顯示白格子），所以這格子一定有圖。
+// 開關格子的真類名是 PSSwitchTableCell（PSSwitchCell 只是列舉值），
+// 繼承它，開關照樣由系統按 cellType 建出來。
+@interface CFLYAppPickerCell : PSSwitchTableCell
+@end
+
+@implementation CFLYAppPickerCell {
+    UILabel *_apSubtitleLabel;
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier specifier:(PSSpecifier *)specifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier specifier:specifier];
+    if (self) {
+        _apSubtitleLabel = [[UILabel alloc] init];
+        _apSubtitleLabel.font = [UIFont systemFontOfSize:12];
+        _apSubtitleLabel.textColor = [UIColor grayColor];
+        _apSubtitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        [self.contentView addSubview:_apSubtitleLabel];
+    }
+    return self;
+}
+
+- (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
+    [super refreshCellContentsWithSpecifier:specifier];
+    NSString *subtitle = specifier.properties[CFLYRuntimeString("subtitle")];
+    _apSubtitleLabel.text = subtitle;
+    _apSubtitleLabel.hidden = (!subtitle || [subtitle length] == 0);
+    [self setNeedsLayout];
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    // 44pt 行高內兩行：主標上收、副標放下面。
+    CGRect tf = self.textLabel.frame;
+    self.textLabel.frame = CGRectMake(tf.origin.x, 4.0, tf.size.width, 20.0);
+    CGFloat w = self.contentView.bounds.size.width;
+    _apSubtitleLabel.frame = CGRectMake(tf.origin.x, 24.0, w - tf.origin.x - 70.0, 16.0);
+}
+
+@end
+
+@implementation CFLYAppPickerListController
 
 
 // v43：記進了哪一頁。
@@ -1166,9 +1213,9 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-apppicker viewDidLoad EXCEPTION %s", reason);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
-    GHCFPrefsLogLine("v57 prefs-page: AppPicker");
+    CFLYPrefsLogLine("v57 prefs-page: AppPicker");
 }
 
 // China Fly 1.0.0：搜索欄掛在表頭（viewDidAppear 才碰 table，
@@ -1177,27 +1224,27 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     @try {
         [super viewDidAppear:animated];
     } @catch (NSException *e) {
-        GHCFPrefsLogLine("v57 prefs-apppicker: super viewDidAppear EXCEPTION");
+        CFLYPrefsLogLine("v57 prefs-apppicker: super viewDidAppear EXCEPTION");
     }
-    if (self.ghcfSearchBarInstalled) return;
-    UITableView *tv = GHCFSafeTableViewForController(self, "apppicker-search");
+    if (self.cflySearchBarInstalled) return;
+    UITableView *tv = CFLYSafeTableViewForController(self, "apppicker-search");
     if (!tv) {
-        GHCFPrefsLogLine("v57 prefs-apppicker: no table, search bar not mounted");
+        CFLYPrefsLogLine("v57 prefs-apppicker: no table, search bar not mounted");
         return;
     }
     @try {
         UISearchBar *bar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, tv.bounds.size.width, 44)];
         bar.delegate = self;
-        bar.placeholder = GHCFRuntimeString("搜尋 App");
+        bar.placeholder = CFLYRuntimeString("搜索");
         bar.showsCancelButton = YES;
         bar.autocapitalizationType = UITextAutocapitalizationTypeNone;
         bar.autocorrectionType = UITextAutocorrectionTypeNo;
-        self.ghcfSearchBar = bar;
+        self.cflySearchBar = bar;
         tv.tableHeaderView = bar;
-        self.ghcfSearchBarInstalled = YES;
-        GHCFPrefsLogLine("v57 prefs-apppicker: search bar mounted");
+        self.cflySearchBarInstalled = YES;
+        CFLYPrefsLogLine("v57 prefs-apppicker: search bar mounted");
     } @catch (NSException *e) {
-        GHCFPrefsLogLine("v57 prefs-apppicker: search bar mount EXCEPTION");
+        CFLYPrefsLogLine("v57 prefs-apppicker: search bar mount EXCEPTION");
     }
 }
 
@@ -1205,11 +1252,11 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 // 重組後把焦點還給搜索欄，鍵盤不掉。
 - (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
     (void)searchBar;
-    BOOL wasFirstResponder = [self.ghcfSearchBar isFirstResponder];
-    self.ghcfSearchText = searchText;
+    BOOL wasFirstResponder = [self.cflySearchBar isFirstResponder];
+    self.cflySearchText = searchText;
     _specifiers = nil;
     [self reloadSpecifiers];
-    if (wasFirstResponder) [self.ghcfSearchBar becomeFirstResponder];
+    if (wasFirstResponder) [self.cflySearchBar becomeFirstResponder];
 }
 
 - (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
@@ -1217,17 +1264,17 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 }
 
 - (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar {
-    searchBar.text = GHCFRuntimeString("");
-    self.ghcfSearchText = nil;
+    searchBar.text = CFLYRuntimeString("");
+    self.cflySearchText = nil;
     _specifiers = nil;
     [self reloadSpecifiers];
     [searchBar resignFirstResponder];
 }
 
-// v50：按鈕行自己派發（GHCFDispatchButtonTap；框架自己的派發對裸方法名
+// v50：按鈕行自己派發（CFLYDispatchButtonTap；框架自己的派發對裸方法名
 // 不補冒號，點了沒反應——見 v42.1/v42.2；「重新掃描」按鈕靠這個才動）。
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
+    if (CFLYDispatchButtonTap(self, tableView, indexPath)) return;
     [super tableView:tableView didSelectRowAtIndexPath:indexPath];
 }
 
@@ -1235,66 +1282,73 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     if (!_specifiers) {
         @try {
             // China Fly 1.0.0：首次開這頁先把默認開的 8 個播進 prefs。
-            GHCFSeedDefaultAppSelection();
+            CFLYSeedDefaultAppSelection();
             NSMutableArray *specs = [NSMutableArray array];
-            // 說明組。
+            // 說明組（1.0.4 換了寫法）。
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            NSString *footerKey = GHCFRuntimeString("footerText");
-            [group setProperty:GHCFRuntimeString("开的 App 出现在启动器里（数量不限）。清单在后台列举、缓存起来；刚装的 App 可能要等一会儿才出现，缺 App 时点下面「重新扫描」。") forKey:footerKey];
+            NSString *footerKey = CFLYRuntimeString("footerText");
+            [group setProperty:CFLYRuntimeString("打開的 App 會出現在啟動器裡，想開幾個就開幾個。清單是後台列出來的，剛裝好的 App 可能要等一會兒才看得到。") forKey:footerKey];
             [specs addObject:group];
-            // v50：重新掃描（清單是後台列舉的緩存，舊了會缺 App；點一下請
-            // dylib 2 秒內重建緩存，下次開這頁就看到新的）。
-            PSSpecifier *rescan = [PSSpecifier preferenceSpecifierNamed:GHCFRuntimeString("重新扫描") target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
-            [rescan setProperty:GHCFRuntimeString("ghcfRescanApps") forKey:GHCFRuntimeString("action")];
-            [specs addObject:rescan];
-            // 固定 5 個。
+            // 系統應用組頭（1.0.4：只有這一組，固定 5 個跟緩存的一起按名字排）。
+            PSSpecifier *section = [PSSpecifier emptyGroupSpecifier];
+            [section setProperty:CFLYRuntimeString("系統應用") forKey:CFLYRuntimeString("label")];
+            [specs addObject:section];
+            // 收集全部 App（固定 5 個＋緩存的），按名字排成一張表。
+            NSMutableArray *allApps = [NSMutableArray array];
             for (int i = 0; i < 5; i++) {
-                NSString *name = GHCFRuntimeString(GHCFFixedNames[i]);
-                PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:name target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:PSSwitchCell edit:nil];
-                [spec setProperty:GHCFRuntimeString(GHCFFixedEnabledKeys[i]) forKey:GHCFRuntimeString("key")];
-                [spec setProperty:GHCFRuntimeString("com.guhailong.fly") forKey:GHCFRuntimeString("defaults")];
-                [spec setProperty:[NSNumber numberWithBool:YES] forKey:GHCFRuntimeString("default")];
-                UIImage *fixedIcon = GHCFAppIconForBundleID(GHCFRuntimeString(GHCFFixedBundleIDs[i]));
-                if (fixedIcon) [spec setProperty:fixedIcon forKey:GHCFRuntimeString("iconImage")];
-                [specs addObject:spec];
+                NSString *name = CFLYRuntimeString(CFLYFixedNames[i]);
+                NSString *bid = CFLYRuntimeString(CFLYFixedBundleIDs[i]);
+                NSString *key = CFLYRuntimeString(CFLYFixedEnabledKeys[i]);
+                [allApps addObject:@{CFLYRuntimeString("name"): name, CFLYRuntimeString("bundleID"): bid, CFLYRuntimeString("key"): key, CFLYRuntimeString("default"): [NSNumber numberWithBool:YES]}];
             }
-            // 緩存的已安裝 App（跳過固定 5 個，按名字排過了）。
-            NSArray *cached = [NSArray arrayWithContentsOfFile:GHCFAppCacheFilePath()];
-            BOOL anyCached = NO;
+            NSArray *cached = [NSArray arrayWithContentsOfFile:CFLYAppCacheFilePath()];
             if (cached) {
                 for (id item in cached) {
                     if (![item isKindOfClass:[NSDictionary class]]) continue;
-                    NSString *bidStr = item[GHCFRuntimeString("bundleID")];
-                    NSString *nameStr = item[GHCFRuntimeString("name")];
+                    NSString *bidStr = item[CFLYRuntimeString("bundleID")];
+                    NSString *nameStr = item[CFLYRuntimeString("name")];
                     if (!bidStr || [bidStr length] == 0) continue;
                     const char *bid = [bidStr UTF8String];
-                    if (GHCFFixedIndexForBundleID(bid) >= 0) continue;
-                    anyCached = YES;
+                    if (CFLYFixedIndexForBundleID(bid) >= 0) continue;
                     // ChinaFly 1.0.1: 絕不顯示光禿禿的 bundleID——緩存名字空了就
                     // 顯示時現解（同一條退路鏈：本地化名 → Info.plist 顯示名 →
-                    // CFBundleName → 資料夾名）。下面那行 bundleID 只在
-                    // LSApplicationWorkspace 本身叫不到時才會走到（此時整頁
-                    // 的圖標機制也一樣拿不到東西，實際上不會發生）。
-                    NSString *label = (nameStr && [nameStr length] > 0) ? nameStr : GHCFPrefsDisplayNameForBundleID(bidStr);
+                    // CFBundleName → 資料夾名）。
+                    NSString *label = (nameStr && [nameStr length] > 0) ? nameStr : CFLYPrefsDisplayNameForBundleID(bidStr);
                     if (!label || [label length] == 0) label = bidStr;
-                    PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:label target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:PSSwitchCell edit:nil];
-                    NSString *selKey = [GHCFRuntimeString("sel-") stringByAppendingString:bidStr];
-                    [spec setProperty:selKey forKey:GHCFRuntimeString("key")];
-                    [spec setProperty:GHCFRuntimeString("com.guhailong.fly") forKey:GHCFRuntimeString("defaults")];
-                    [spec setProperty:[NSNumber numberWithBool:NO] forKey:GHCFRuntimeString("default")];
-                    UIImage *cachedIcon = GHCFAppIconForBundleID(bidStr);
-                    if (cachedIcon) [spec setProperty:cachedIcon forKey:GHCFRuntimeString("iconImage")];
-                    [specs addObject:spec];
+                    NSString *selKey = [CFLYRuntimeString("sel-") stringByAppendingString:bidStr];
+                    [allApps addObject:@{CFLYRuntimeString("name"): label, CFLYRuntimeString("bundleID"): bidStr, CFLYRuntimeString("key"): selKey, CFLYRuntimeString("default"): [NSNumber numberWithBool:NO]}];
                 }
             }
-            if (!anyCached) {
+            NSArray *sorted = [allApps sortedArrayUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
+                NSString *na = a[CFLYRuntimeString("name")];
+                NSString *nb = b[CFLYRuntimeString("name")];
+                return [na localizedCompare:nb];
+            }];
+            BOOL anyRow = NO;
+            for (NSDictionary *app in sorted) {
+                NSString *bidStr = app[CFLYRuntimeString("bundleID")];
+                NSString *label = app[CFLYRuntimeString("name")];
+                // 1.0.4：沒有真圖標的不顯示（不留白格子）。
+                UIImage *icon = CFLYAppIconForBundleID(bidStr);
+                if (!icon) continue;
+                anyRow = YES;
+                PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:label target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:PSSwitchCell edit:nil];
+                [spec setProperty:app[CFLYRuntimeString("key")] forKey:CFLYRuntimeString("key")];
+                [spec setProperty:CFLYRuntimeString("com.chinafly.fly") forKey:CFLYRuntimeString("defaults")];
+                [spec setProperty:app[CFLYRuntimeString("default")] forKey:CFLYRuntimeString("default")];
+                [spec setProperty:bidStr forKey:CFLYRuntimeString("subtitle")];
+                [spec setProperty:NSStringFromClass([CFLYAppPickerCell class]) forKey:CFLYRuntimeString("cellClass")];
+                [spec setProperty:icon forKey:CFLYRuntimeString("iconImage")];
+                [specs addObject:spec];
+            }
+            if (!anyRow) {
                 PSSpecifier *emptyGroup = [PSSpecifier emptyGroupSpecifier];
-                [emptyGroup setProperty:GHCFRuntimeString("还没有已安装 App 清单（后台列举中，稍后再开这个页）。") forKey:GHCFRuntimeString("footerText")];
+                [emptyGroup setProperty:CFLYRuntimeString("還沒有 App 清單，後台正在列出，晚點再開這頁看看。") forKey:CFLYRuntimeString("footerText")];
                 [specs addObject:emptyGroup];
             }
-            // China Fly 1.0.0：搜索過濾——有搜尋字時只留說明組、
-            // 「重新掃描」和名字裡有搜尋字的 App 開關行。
-            if (self.ghcfSearchText && [self.ghcfSearchText length] > 0) {
+            // China Fly 1.0.0：搜索過濾——有搜尋字時只留說明組
+            // 和名字裡有搜尋字的 App 開關行。
+            if (self.cflySearchText && [self.cflySearchText length] > 0) {
                 NSMutableArray *filtered = [NSMutableArray array];
                 for (PSSpecifier *sp in specs) {
                     if (sp.cellType != PSSwitchCell) {
@@ -1302,7 +1356,7 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
                         continue;
                     }
                     NSString *label = sp.name;
-                    if (label && [label rangeOfString:self.ghcfSearchText options:NSCaseInsensitiveSearch].location != NSNotFound) {
+                    if (label && [label rangeOfString:self.cflySearchText options:NSCaseInsensitiveSearch].location != NSNotFound) {
                         [filtered addObject:sp];
                     }
                 }
@@ -1315,10 +1369,10 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
             const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
             char buf[512];
             snprintf(buf, sizeof(buf), "v57 prefs-apppicker specifiers EXCEPTION %s", reason);
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
             NSMutableArray *safe = [NSMutableArray array];
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("选择器页组装出错（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
+            [group setProperty:CFLYRuntimeString("选择器页组装出错（已记进日志），先回上一页再试。") forKey:CFLYRuntimeString("footerText")];
             [safe addObject:group];
             _specifiers = safe;
         }
@@ -1327,25 +1381,17 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     return _specifiers;
 }
 
-- (void)ghcfRescanApps:(PSSpecifier *)specifier {
-    (void)specifier;
-    GHCFWritePrefsBool("rescanAppsRequested", YES);
-    GHCFPrefsLogLine("v57 prefs-apppicker rescan requested");
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("正在重新扫描") message:GHCFRuntimeString("已请后台重新列举已安装 App，稍后再开这一页就看到新的清单。") preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:GHCFRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
-    [self presentViewController:alert animated:YES completion:nil];
-}
 
 - (id)readPreferenceValue:(PSSpecifier *)specifier {
-    NSString *key = specifier.properties[GHCFRuntimeString("key")];
+    NSString *key = specifier.properties[CFLYRuntimeString("key")];
     if (!key) return [NSNumber numberWithBool:NO];
-    NSString *selPrefix = GHCFRuntimeString("sel-");
+    NSString *selPrefix = CFLYRuntimeString("sel-");
     if ([key hasPrefix:selPrefix]) {
         NSString *bidStr = [key substringFromIndex:[selPrefix length]];
-        return [NSNumber numberWithBool:GHCFAppInLauncher([bidStr UTF8String])];
+        return [NSNumber numberWithBool:CFLYAppInLauncher([bidStr UTF8String])];
     }
     // 固定 App：讀 prefs，沒設回 plist 的 default（開）。
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
     CFPropertyListRef v = NULL;
     if (domain) {
         CFStringRef cfKey = (__bridge CFStringRef)key;
@@ -1356,29 +1402,29 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         id value = (__bridge_transfer id)v;
         return value;
     }
-    NSString *defaultName = GHCFRuntimeString("default");
+    NSString *defaultName = CFLYRuntimeString("default");
     id def = specifier.properties[defaultName];
     if (def) return def;
     return [NSNumber numberWithBool:NO];
 }
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
-    NSString *key = specifier.properties[GHCFRuntimeString("key")];
+    NSString *key = specifier.properties[CFLYRuntimeString("key")];
     if (!key) return;
     BOOL on = [value boolValue];
-    NSString *selPrefix = GHCFRuntimeString("sel-");
+    NSString *selPrefix = CFLYRuntimeString("sel-");
     if ([key hasPrefix:selPrefix]) {
         NSString *bidStr = [key substringFromIndex:[selPrefix length]];
-        GHCFSetAppInLauncherPrefs([bidStr UTF8String], on);
+        CFLYSetAppInLauncherPrefs([bidStr UTF8String], on);
         // v43.24：第 6 件——自選 App 無上限，不再彈「已滿」提示。
         char buf[320];
         snprintf(buf, sizeof(buf), "v57 prefs-set: sel %s = %d", [bidStr UTF8String], on ? 1 : 0);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
         [self reloadSpecifiers];
         return;
     }
     // 固定 App：直接寫開關。
-    CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
     if (domain) {
         CFStringRef cfKey = (__bridge CFStringRef)key;
         CFPreferencesSetAppValue(cfKey, (__bridge CFPropertyListRef)value, domain);
@@ -1390,7 +1436,7 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     const char *keyC = [key UTF8String];
     const char *valC = [[value description] UTF8String];
     snprintf(buf, sizeof(buf), "v57 prefs-set: %s = %s", keyC ? keyC : "?", valC ? valC : "?");
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
 }
 
 @end
@@ -1399,27 +1445,27 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 // ── China Fly 1.0.0 動態頁 ──
 // 下面 6 個控制器都是 prefs bundle 裡的自訂類（prefs bundle 不受
 // dylib「禁自訂 ObjC 類」那條限；主插件 Tweak.xm 裡還是只能用
-// Apple 類＋GHCFLauncher 一個自訂類）。
+// Apple 類＋CFLYLauncher 一個自訂類）。
 
 // China Fly 1.0.0：菜單編輯頁——「當前列表」可拖動排序。
 // UITableViewController 子類（不用 PSListController：這頁是純列表＋
 // 拖動重排，編輯模式的 reorder control 就夠了）。讀／寫 prefs 鍵
 // menuAppOrder（有序字串陣列：知道 bundleID 的存 bundleID，
-// 不知道的存顯示名，運行時按名找——見 GHCFResolveMenuEntry）。
+// 不知道的存顯示名，運行時按名找——見 CFLYResolveMenuEntry）。
 // 右上角「編輯」按鈕進編輯模式，拖動右邊的手柄重排，鬆手即存。
-@interface GHCFMenuEditListController : UITableViewController
-@property (nonatomic, strong) NSMutableArray *ghcfMenuItems;
+@interface CFLYMenuEditListController : UITableViewController
+@property (nonatomic, strong) NSMutableArray *cflyMenuItems;
 @end
 
-@implementation GHCFMenuEditListController
+@implementation CFLYMenuEditListController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    GHCFPrefsLogLine("cf prefs-page: MenuEdit");
+    CFLYPrefsLogLine("cf prefs-page: MenuEdit");
     self.navigationItem.rightBarButtonItem = self.editButtonItem;
-    self.ghcfMenuItems = GHCFReadMenuOrder();
+    self.cflyMenuItems = CFLYReadMenuOrder();
     UILabel *footer = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, 44)];
-    footer.text = GHCFRuntimeString("按右上角「編輯」，拖動右邊的手柄排序，鬆手就存好了。");
+    footer.text = CFLYRuntimeString("点击更换图标，编辑拖动排序或左滑删除。");
     footer.font = [UIFont systemFontOfSize:13];
     footer.textColor = [UIColor grayColor];
     footer.textAlignment = NSTextAlignmentCenter;
@@ -1434,30 +1480,63 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
     (void)tableView;
-    return 1;
+    return 2;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     (void)tableView;
-    (void)section;
-    return (NSInteger)[self.ghcfMenuItems count];
+    if (section == 0) return (NSInteger)[self.cflyMenuItems count];
+    return 1;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    NSString *reuseId = GHCFRuntimeString("GHCFMenuEditCell");
+    if (indexPath.section == 1) {
+        NSString *addId = CFLYRuntimeString("CFLYMenuEditAddCell");
+        UITableViewCell *addCell = [tableView dequeueReusableCellWithIdentifier:addId];
+        if (!addCell) {
+            addCell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:addId];
+        }
+        addCell.textLabel.text = CFLYRuntimeString("添加 URL Scheme");
+        addCell.textLabel.textColor = [UIColor systemBlueColor];
+        addCell.imageView.image = [UIImage systemImageNamed:CFLYRuntimeString("plus.circle")];
+        addCell.imageView.tintColor = [UIColor systemBlueColor];
+        addCell.accessoryType = UITableViewCellAccessoryNone;
+        return addCell;
+    }
+    NSString *reuseId = CFLYRuntimeString("CFLYMenuEditCell");
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:reuseId];
     if (!cell) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:reuseId];
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:reuseId];
     }
     NSString *entry = nil;
-    if (indexPath.row >= 0 && indexPath.row < (NSInteger)[self.ghcfMenuItems count]) entry = [self.ghcfMenuItems objectAtIndex:(NSUInteger)indexPath.row];
+    if (indexPath.row >= 0 && indexPath.row < (NSInteger)[self.cflyMenuItems count]) entry = [self.cflyMenuItems objectAtIndex:(NSUInteger)indexPath.row];
     NSString *bid = nil;
     NSString *name = nil;
-    GHCFResolveMenuEntry(entry, &bid, &name);
+    CFLYResolveMenuEntry(entry, &bid, &name);
     cell.textLabel.text = name;
+    // 副標：bundle ID（沒有 bundle ID 的自訂項就顯示原來的 entry）。
+    cell.detailTextLabel.text = (bid && [bid length] > 0) ? bid : entry;
+    cell.detailTextLabel.textColor = [UIColor grayColor];
     cell.imageView.image = nil;
-    if (bid) {
-        UIImage *icon = GHCFAppIconForBundleID(bid);
+    // 自訂圖標（menuIcon_<entry> 存 SF Symbol 名）優先，沒有就用 App 真圖標。
+    UIImage *customIcon = nil;
+    if (entry && [entry length] > 0) {
+        NSString *iconKey = [CFLYRuntimeString("menuIcon_") stringByAppendingString:entry];
+        CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+        if (domain) {
+            CFPropertyListRef v = CFPreferencesCopyAppValue((__bridge CFStringRef)iconKey, domain);
+            if (v) {
+                NSString *symName = (__bridge_transfer NSString *)v;
+                if (symName && [symName length] > 0) customIcon = [UIImage systemImageNamed:symName];
+            }
+            CFRelease(domain);
+        }
+    }
+    if (customIcon) {
+        cell.imageView.image = customIcon;
+        cell.imageView.tintColor = [UIColor systemBlueColor];
+    } else if (bid) {
+        UIImage *icon = CFLYAppIconForBundleID(bid);
         if (icon) cell.imageView.image = icon;
     }
     return cell;
@@ -1469,10 +1548,24 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     return YES;
 }
 
+// 1.0.4：紅色減號刪除（左滑或編輯模式點減號都刪）。
 - (UITableViewCellEditingStyle)tableView:(UITableView *)tableView editingStyleForRowAtIndexPath:(NSIndexPath *)indexPath {
     (void)tableView;
-    (void)indexPath;
-    return UITableViewCellEditingStyleNone;
+    if (indexPath.section == 1) return UITableViewCellEditingStyleNone;
+    return UITableViewCellEditingStyleDelete;
+}
+
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (editingStyle != UITableViewCellEditingStyleDelete) return;
+    if (indexPath.section != 0) return;
+    if (indexPath.row < 0 || indexPath.row >= (NSInteger)[self.cflyMenuItems count]) return;
+    NSString *removed = [self.cflyMenuItems objectAtIndex:(NSUInteger)indexPath.row];
+    [self.cflyMenuItems removeObjectAtIndex:(NSUInteger)indexPath.row];
+    CFLYWriteMenuOrder(self.cflyMenuItems);
+    [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
+    char buf[256];
+    snprintf(buf, sizeof(buf), "cf prefs-menuedit: deleted row %ld (%s)", (long)indexPath.row, removed ? [removed UTF8String] : "?");
+    CFLYPrefsLogLine(buf);
 }
 
 - (BOOL)tableView:(UITableView *)tableView shouldIndentWhileEditingRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -1483,8 +1576,7 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 
 - (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath {
     (void)tableView;
-    (void)indexPath;
-    return YES;
+    return indexPath.section == 0;
 }
 
 - (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath {
@@ -1492,37 +1584,378 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     NSInteger from = fromIndexPath.row;
     NSInteger to = toIndexPath.row;
     if (from == to) return;
-    if (from < 0 || from >= (NSInteger)[self.ghcfMenuItems count]) return;
-    if (to < 0 || to >= (NSInteger)[self.ghcfMenuItems count]) return;
-    NSString *moved = [self.ghcfMenuItems objectAtIndex:(NSUInteger)from];
-    [self.ghcfMenuItems removeObjectAtIndex:(NSUInteger)from];
-    [self.ghcfMenuItems insertObject:moved atIndex:(NSUInteger)to];
-    GHCFWriteMenuOrder(self.ghcfMenuItems);
+    if (from < 0 || from >= (NSInteger)[self.cflyMenuItems count]) return;
+    if (to < 0 || to >= (NSInteger)[self.cflyMenuItems count]) return;
+    NSString *moved = [self.cflyMenuItems objectAtIndex:(NSUInteger)from];
+    [self.cflyMenuItems removeObjectAtIndex:(NSUInteger)from];
+    [self.cflyMenuItems insertObject:moved atIndex:(NSUInteger)to];
+    CFLYWriteMenuOrder(self.cflyMenuItems);
     char buf[256];
     snprintf(buf, sizeof(buf), "cf prefs-menuedit: moved row %ld to %ld", (long)from, (long)to);
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
+}
+
+// 點一行：添加 URL Scheme 那行就彈輸入框；App 行就彈更換圖標。
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (indexPath.section == 1) {
+        [self cflyMenuEditAddURLScheme];
+        return;
+    }
+    if (self.editing) return;
+    if (indexPath.row < 0 || indexPath.row >= (NSInteger)[self.cflyMenuItems count]) return;
+    NSString *entry = [self.cflyMenuItems objectAtIndex:(NSUInteger)indexPath.row];
+    [self cflyMenuEditChangeIconForEntry:entry];
+}
+
+// 添加 URL Scheme：輸一個 URL Scheme 或 Bundle ID，加進當前列表。
+- (void)cflyMenuEditAddURLScheme {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("添加 URL Scheme") message:CFLYRuntimeString("输入一个 URL Scheme 或 Bundle ID，例如 weixin:// 或 com.tencent.xin。") preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = CFLYRuntimeString("weixin:// 或 com.tencent.xin");
+        textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    }];
+    UIAlertAction *add = [UIAlertAction actionWithTitle:CFLYRuntimeString("添加") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        (void)action;
+        NSString *value = alert.textFields.firstObject.text;
+        value = [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (!value || [value length] == 0) return;
+        [self.cflyMenuItems addObject:value];
+        CFLYWriteMenuOrder(self.cflyMenuItems);
+        [self.tableView reloadData];
+        char buf[256];
+        snprintf(buf, sizeof(buf), "cf prefs-menuedit: added URL scheme %s", [value UTF8String]);
+        CFLYPrefsLogLine(buf);
+    }];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:CFLYRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    [alert addAction:add];
+    [alert addAction:cancel];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+// 更換圖標：輸一個 SF Symbol 名（例如 star.fill），存到 menuIcon_<entry>。
+- (void)cflyMenuEditChangeIconForEntry:(NSString *)entry {
+    if (!entry || [entry length] == 0) return;
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("更換圖標") message:CFLYRuntimeString("输入一个 SF Symbol 名，例如 star.fill。留空就恢复 App 原图标。") preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = CFLYRuntimeString("SF Symbol 名，例如 star.fill");
+        textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    }];
+    UIAlertAction *save = [UIAlertAction actionWithTitle:CFLYRuntimeString("保存") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        (void)action;
+        NSString *value = alert.textFields.firstObject.text;
+        value = [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        NSString *iconKey = [CFLYRuntimeString("menuIcon_") stringByAppendingString:entry];
+        CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+        if (domain) {
+            if (value && [value length] > 0) {
+                CFPreferencesSetAppValue((__bridge CFStringRef)iconKey, (__bridge CFPropertyListRef)value, domain);
+            } else {
+                CFPreferencesSetAppValue((__bridge CFStringRef)iconKey, NULL, domain);
+            }
+            CFPreferencesAppSynchronize(domain);
+            CFRelease(domain);
+        }
+        [self.tableView reloadData];
+        CFLYPrefsLogLine("cf prefs-menuedit: icon changed");
+    }];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:CFLYRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    [alert addAction:save];
+    [alert addAction:cancel];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 @end
+
+// ── China Fly 1.0.4：菜單編輯點加入列表（47 項）──
+// dylib 的 CFLYMenuItems 是另一支二進制，這裡要自己有一份同順序、
+// 同名字的表（中性 key、繁體中文名、英文顯示名、SF Symbol）。
+// 全屏翻譯（第 48 項）不列；4 個巨魔智能體已取消，不在表裡。
+typedef struct { const char *identifier; const char *label; const char *labelEn; const char *symbol; } CFLYMenuAddItemDef;
+static const CFLYMenuAddItemDef CFLYMenuAddItems[47] = {
+{"spotlight", "聚焦搜尋", "Spotlight Search", "magnifyingglass"},
+{"console", "查看日誌", "View Logs", "terminal"},
+{"screenRecord", "螢幕錄影", "Screen Recording", "record.circle"},
+{"screenRecordMic", "有聲錄影", "Recording with Mic", "mic.fill"},
+{"silent", "靜音切換", "Silent Toggle", "bell.slash"},
+{"respring", "重啟桌面", "Restart SpringBoard", "arrow.counterclockwise"},
+{"reboot", "重新開機", "Reboot Device", "power"},
+{"orientation", "鎖定方向", "Orientation Lock", "lock.rotation"},
+{"appearance", "日夜切換", "Light / Dark", "moon.circle"},
+{"announce", "Siri 語音播報", "Announce Notifications", "megaphone"},
+{"bluetooth", "藍牙開關", "Bluetooth", "bluetooth"},
+{"wifi", "Wi-Fi 開關", "Wi-Fi", "wifi"},
+{"vpn", "VPN 開關", "VPN", "lock.shield"},
+{"cellular", "行動數據開關", "Cellular Data", "antenna.radiowaves.left.and.right"},
+{"trueTone", "原彩開關", "True Tone", "sun.max"},
+{"airplane", "飛航開關", "Airplane Mode", "airplane"},
+{"hotspot", "個人熱點開關", "Personal Hotspot", "personalhotspot"},
+{"lowPower", "省電開關", "Low Power Mode", "battery.25"},
+{"flashlight", "手電筒開關", "Flashlight", "flashlight.on.fill"},
+{"nightShift", "夜覽開關", "Night Shift", "moon.fill"},
+{"smartInvert", "智慧反色開關", "Smart Invert", "circle.lefthalf.filled"},
+{"lock", "鎖定螢幕", "Lock Screen", "lock.fill"},
+{"siri", "開啟 Siri", "Open Siri", "mic.fill"},
+{"volumeDown", "調低音量", "Volume Down", "speaker.wave.1.fill"},
+{"volumeUp", "調高音量", "Volume Up", "speaker.wave.3.fill"},
+{"appLibrary", "打開 App 資源庫", "App Library", "square.grid.3x3.fill"},
+{"appSwitcher", "打開多工切換", "App Switcher", "square.stack.3d.up.fill"},
+{"voiceControl", "語音操控", "Voice Control", "waveform"},
+{"controlCenter", "打開控制中心", "Control Center", "switch.2"},
+{"liveSpeech", "即時語音", "Live Speech", "person.wave.2"},
+{"mute", "靜音開關", "Mute", "speaker.slash.fill"},
+{"nearbyDevices", "控制附近裝置", "Nearby Devices", "airplayaudio"},
+{"notificationCenter", "打開通知中心", "Notification Center", "bell.fill"},
+{"watchRemote", "Watch 遠端螢幕", "Watch Remote Screen", "applewatch"},
+{"quickNote", "快速備忘錄", "Quick Note", "note.text"},
+{"dock", "顯示 Dock", "Show Dock", "dock.rectangle"},
+{"location", "定位開關", "Location Services", "location.fill"},
+{"screenshot", "螢幕截圖", "Screenshot", "camera.viewfinder"},
+{"screenshotEdit", "截圖並編輯", "Screenshot & Edit", "square.and.pencil"},
+{"autoBrightness", "自動亮度開關", "Auto-Brightness", "sun.max.fill"},
+{"dnd", "勿擾開關", "Do Not Disturb", "moon.zzz.fill"},
+{"screenshotCopy", "截圖複製", "Copy Screenshot", "doc.on.clipboard"},
+{"screenshotRegion", "選取區域截圖", "Screenshot Region", "crop"},
+{"floatForeground", "把前景變浮窗", "Float Foreground App", "rectangle.on.rectangle"},
+{"singleWindow", "只留一個浮窗", "Single Window Mode", "rectangle"},
+{"minimizeAll", "收起全部浮窗", "Minimize All", "chevron.down"},
+{"closeAll", "關掉全部浮窗", "Close All Windows", "xmark.circle"},
+};
+
+// 藍底圓角方塊＋白 SF Symbol（影片裡菜單編輯頁那種圖標），28pt。
+// 符號拿不到（名字錯了）就回 nil，行裡不畫圖。
+static UIImage *CFLYMenuAddIconForSymbol(const char *symbol) {
+    if (!symbol || symbol[0] == '\0') return nil;
+    UIImage *sym = [UIImage systemImageNamed:[NSString stringWithCString:symbol encoding:NSUTF8StringEncoding]];
+    if (!sym || !sym.CGImage) return nil;
+    CGFloat s = 28.0;
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(s, s), NO, 0.0);
+    UIBezierPath *bg = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, s, s) cornerRadius:6.0];
+    [[UIColor systemBlueColor] setFill];
+    [bg fill];
+    CGFloat inset = 5.0;
+    CGRect r = CGRectMake(inset, inset, s - inset * 2, s - inset * 2);
+    CGContextRef ctx = UIGraphicsGetCurrentContext();
+    if (ctx) {
+        CGContextSaveGState(ctx);
+        CGContextTranslateCTM(ctx, 0, s);
+        CGContextScaleCTM(ctx, 1.0, -1.0);
+        CGRect fr = CGRectMake(r.origin.x, s - r.origin.y - r.size.height, r.size.width, r.size.height);
+        CGContextClipToMask(ctx, fr, sym.CGImage);
+        [[UIColor whiteColor] setFill];
+        CGContextFillRect(ctx, CGRectMake(0, 0, s, s));
+        CGContextRestoreGState(ctx);
+    }
+    UIImage *out = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return out;
+}
+
+// 菜單編輯點加入行的格子：藍方塊圖標＋中文名（粗）＋英文小字＋打勾（已加入）。
+@interface CFLYMenuAddCell : PSTableCell
+@end
+
+@implementation CFLYMenuAddCell {
+    UIImageView *_maIconView;
+    UILabel *_maTitleLabel;
+    UILabel *_maSubtitleLabel;
+}
+
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier specifier:(PSSpecifier *)specifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier specifier:specifier];
+    if (self) {
+        _maIconView = [[UIImageView alloc] init];
+        _maIconView.contentMode = UIViewContentModeScaleAspectFit;
+        [self.contentView addSubview:_maIconView];
+        _maTitleLabel = [[UILabel alloc] init];
+        _maTitleLabel.font = [UIFont boldSystemFontOfSize:16];
+        _maTitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        [self.contentView addSubview:_maTitleLabel];
+        _maSubtitleLabel = [[UILabel alloc] init];
+        _maSubtitleLabel.font = [UIFont systemFontOfSize:13];
+        _maSubtitleLabel.textColor = [UIColor grayColor];
+        _maSubtitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        [self.contentView addSubview:_maSubtitleLabel];
+    }
+    return self;
+}
+
+- (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
+    [super refreshCellContentsWithSpecifier:specifier];
+    self.textLabel.text = nil;
+    self.textLabel.hidden = YES;
+    self.detailTextLabel.text = nil;
+    self.detailTextLabel.hidden = YES;
+    NSString *title = specifier.properties[CFLYRuntimeString("label")];
+    _maTitleLabel.text = title;
+    NSString *subtitle = specifier.properties[CFLYRuntimeString("subtitle")];
+    _maSubtitleLabel.text = subtitle;
+    _maSubtitleLabel.hidden = (!subtitle || [subtitle length] == 0);
+    UIImage *icon = specifier.properties[CFLYRuntimeString("iconImage")];
+    _maIconView.image = icon;
+    _maIconView.hidden = (icon == nil);
+    NSNumber *checked = specifier.properties[CFLYRuntimeString("menuChecked")];
+    self.accessoryType = (checked && [checked boolValue]) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+    [self setNeedsLayout];
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGFloat w = self.contentView.bounds.size.width;
+    CGFloat h = self.contentView.bounds.size.height;
+    CGFloat x = 16.0;
+    if (_maIconView.image) {
+        _maIconView.frame = CGRectMake(x, (h - 28.0) / 2.0, 28.0, 28.0);
+        x += 28.0 + 12.0;
+    }
+    CGFloat textW = w - x - 16.0;
+    if (_maSubtitleLabel.hidden) {
+        _maTitleLabel.frame = CGRectMake(x, 0, textW, h);
+    } else {
+        _maTitleLabel.frame = CGRectMake(x, 6.0, textW, 22.0);
+        _maSubtitleLabel.frame = CGRectMake(x, 28.0, textW, 18.0);
+    }
+}
+
+@end
+
+// 菜單編輯點加入列表：47 項，點一下就加入／移出表盤菜單（打勾＝已加入）。
+// 右上角「編輯」推當前列表頁（拖動排序／刪除）。
+@interface CFLYMenuAddListController : PSListController
+@end
+
+@implementation CFLYMenuAddListController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    CFLYPrefsLogLine("cf prefs-page: MenuAdd");
+    UIBarButtonItem *editBtn = [[UIBarButtonItem alloc] initWithTitle:CFLYRuntimeString("編輯") style:UIBarButtonItemStylePlain target:self action:@selector(cflyMenuAddOpenCurrentList)];
+    self.navigationItem.rightBarButtonItem = editBtn;
+}
+
+- (void)cflyMenuAddOpenCurrentList {
+    CFLYMenuEditListController *page = [[CFLYMenuEditListController alloc] initWithStyle:UITableViewStyleGrouped];
+    page.title = CFLYRuntimeString("當前列表");
+    UINavigationController *nav = self.navigationController;
+    if (nav) {
+        [nav pushViewController:page animated:YES];
+        CFLYPrefsLogLine("cf prefs-menuadd push current list");
+    }
+}
+
+// 讀某一項在不在表盤菜單裡（menuToggle_<identifier>，預設開）。
+- (BOOL)cflyMenuAddIsEnabled:(const char *)identifier {
+    if (!identifier || identifier[0] == '\0') return NO;
+    char key[96];
+    snprintf(key, sizeof(key), "menuToggle_%s", identifier);
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    BOOL v = YES;
+    if (domain) {
+        CFPropertyListRef val = CFPreferencesCopyAppValue((__bridge CFStringRef)[NSString stringWithCString:key encoding:NSUTF8StringEncoding], domain);
+        if (val) {
+            if (CFGetTypeID(val) == CFBooleanGetTypeID()) v = CFBooleanGetValue((CFBooleanRef)val);
+            CFRelease(val);
+        }
+        CFRelease(domain);
+    }
+    return v;
+}
+
+- (NSArray *)specifiers {
+    if (!_specifiers) {
+        @try {
+            NSMutableArray *specs = [NSMutableArray array];
+            PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
+            [group setProperty:CFLYRuntimeString("點一下即可加入列表。") forKey:CFLYRuntimeString("footerText")];
+            [specs addObject:group];
+            PSSpecifier *section = [PSSpecifier emptyGroupSpecifier];
+            [section setProperty:CFLYRuntimeString("可添加工具") forKey:CFLYRuntimeString("label")];
+            [specs addObject:section];
+            for (int i = 0; i < 47; i++) {
+                const CFLYMenuAddItemDef *def = &CFLYMenuAddItems[i];
+                NSString *label = [NSString stringWithCString:def->label encoding:NSUTF8StringEncoding];
+                PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:label target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
+                [spec setProperty:CFLYRuntimeString(def->labelEn) forKey:CFLYRuntimeString("subtitle")];
+                [spec setProperty:[NSString stringWithCString:def->identifier encoding:NSUTF8StringEncoding] forKey:CFLYRuntimeString("menuIdentifier")];
+                [spec setProperty:CFLYRuntimeString("cflyMenuAddToggle:") forKey:CFLYRuntimeString("action")];
+                [spec setProperty:[NSNumber numberWithBool:[self cflyMenuAddIsEnabled:def->identifier]] forKey:CFLYRuntimeString("menuChecked")];
+                [spec setProperty:NSStringFromClass([CFLYMenuAddCell class]) forKey:CFLYRuntimeString("cellClass")];
+                UIImage *icon = CFLYMenuAddIconForSymbol(def->symbol);
+                if (icon) [spec setProperty:icon forKey:CFLYRuntimeString("iconImage")];
+                [specs addObject:spec];
+            }
+            _specifiers = specs;
+        } @catch (NSException *e) {
+            const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
+            char buf[512];
+            snprintf(buf, sizeof(buf), "v57 prefs-menuadd specifiers EXCEPTION %s", reason);
+            CFLYPrefsLogLine(buf);
+            NSMutableArray *safe = [NSMutableArray array];
+            PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
+            [group setProperty:CFLYRuntimeString("菜單編輯頁組裝出錯（已記進日志），先回上一頁再試。") forKey:CFLYRuntimeString("footerText")];
+            [safe addObject:group];
+            _specifiers = safe;
+        }
+        if (!_specifiers) _specifiers = [NSMutableArray array];
+    }
+    return _specifiers;
+}
+
+// 點一下：加入／移出表盤菜單（寫 menuToggle_<identifier>），打勾即時跟著變。
+- (void)cflyMenuAddToggle:(PSSpecifier *)specifier {
+    NSString *ident = specifier.properties[CFLYRuntimeString("menuIdentifier")];
+    if (!ident || [ident length] == 0) return;
+    const char *identC = [ident UTF8String];
+    BOOL cur = [self cflyMenuAddIsEnabled:identC];
+    BOOL next = !cur;
+    char key[96];
+    snprintf(key, sizeof(key), "menuToggle_%s", identC);
+    CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
+    if (domain) {
+        CFPreferencesSetAppValue((__bridge CFStringRef)[NSString stringWithCString:key encoding:NSUTF8StringEncoding], next ? kCFBooleanTrue : kCFBooleanFalse, domain);
+        CFPreferencesAppSynchronize(domain);
+        CFRelease(domain);
+    }
+    CFStringRef noteName = CFLYRuntimeCFString("com.chinafly.fly.prefschanged");
+    if (noteName) {
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), noteName, NULL, NULL, true);
+        CFRelease(noteName);
+    }
+    char buf[128];
+    snprintf(buf, sizeof(buf), "cf prefs-menuadd toggle %s %s", identC, next ? "on" : "off");
+    CFLYPrefsLogLine(buf);
+    _specifiers = nil;
+    [self reloadSpecifiers];
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (CFLYDispatchButtonTap(self, tableView, indexPath)) return;
+    [super tableView:tableView didSelectRowAtIndexPath:indexPath];
+}
+
+@end
+
 
 // v42：「查看日誌」——設定 App 裡直接看分屏日誌：最新在最上面
 //（讀尾段，預設最後 200 行）、能刷新、能清空（檔案截斷；寫不動就
 // 誠實報失敗，不假裝能清）、能分享（系統分享表單）。
-@interface GHCFLogViewerListController : PSListController
+@interface CFLYLogViewerListController : PSListController
 @property (nonatomic, strong) UITextView *logView;
 @property (nonatomic, assign) BOOL headerInstalled;
 @end
 
-@implementation GHCFLogViewerListController
+@implementation CFLYLogViewerListController
 
-// v43：按鈕行自己派發（GHCFDispatchButtonTap）；其他行走框架。
+// v43：按鈕行自己派發（CFLYDispatchButtonTap）；其他行走框架。
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
+    if (CFLYDispatchButtonTap(self, tableView, indexPath)) return;
     [super tableView:tableView didSelectRowAtIndexPath:indexPath];
 }
 
 // v50：重做——viewDidLoad 只建 UITextView（讀檔防呆在
-// GHCFLogTailNewestFirst 裡），不再碰 table；掛載移到 viewDidAppear
+// CFLYLogTailNewestFirst 裡），不再碰 table；掛載移到 viewDidAppear
 //（只掛一次，安全取表＋try/catch），掛不上就只記日誌、頁面照常可用
 //（三個按鈕＋分享都還在）。
 - (void)viewDidLoad {
@@ -1532,24 +1965,24 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-log: super viewDidLoad EXCEPTION %s", why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
-    GHCFPrefsLogLine("v57 prefs-page: LogViewer");
+    CFLYPrefsLogLine("v57 prefs-page: LogViewer");
     @try {
         UITextView *tv = [[UITextView alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, 420)];
         tv.font = [UIFont systemFontOfSize:11];
         tv.editable = NO;
         tv.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1.0];
-        tv.text = GHCFLogTailNewestFirst();
+        tv.text = CFLYLogTailNewestFirst();
         self.logView = tv;
         char buf[128];
-        snprintf(buf, sizeof(buf), "v57 prefs-log: read %d lines", GHCFLogTailLinesRead);
-        GHCFPrefsLogLine(buf);
+        snprintf(buf, sizeof(buf), "v57 prefs-log: read %d lines", CFLYLogTailLinesRead);
+        CFLYPrefsLogLine(buf);
     } @catch (NSException *e) {
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-log: build text view EXCEPTION %s", why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
         self.logView = nil;
     }
 }
@@ -1561,23 +1994,23 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-log: super viewDidAppear EXCEPTION %s", why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
     if (self.logView && !self.headerInstalled) {
-        UITableView *tv = GHCFSafeTableViewForController(self, "log");
+        UITableView *tv = CFLYSafeTableViewForController(self, "log");
         if (tv) {
             @try {
                 tv.tableHeaderView = self.logView;
                 self.headerInstalled = YES;
-                GHCFPrefsLogLine("v57 prefs-log: header mounted");
+                CFLYPrefsLogLine("v57 prefs-log: header mounted");
             } @catch (NSException *e) {
                 const char *why = [e reason] ? [[e reason] UTF8String] : "?";
                 char buf[256];
                 snprintf(buf, sizeof(buf), "v57 prefs-log: mount EXCEPTION %s", why);
-                GHCFPrefsLogLine(buf);
+                CFLYPrefsLogLine(buf);
             }
         } else {
-            GHCFPrefsLogLine("v57 prefs-log: no table, header not mounted");
+            CFLYPrefsLogLine("v57 prefs-log: no table, header not mounted");
         }
     }
 }
@@ -1587,13 +2020,13 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         @try {
             NSMutableArray *specs = [NSMutableArray array];
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("最新的在最上面（预设最后 200 行）；清空是把档案截断，新的日志会继续写进来。") forKey:GHCFRuntimeString("footerText")];
+            [group setProperty:CFLYRuntimeString("由新到舊排列，僅顯示最近 200 行。清空是把檔案截斷，新的日誌會繼續寫進來。") forKey:CFLYRuntimeString("footerText")];
             [specs addObject:group];
-            NSArray *buttons = [NSArray arrayWithObjects:GHCFRuntimeString("刷新"), GHCFRuntimeString("清空"), GHCFRuntimeString("分享"), nil];
-            NSArray *actions = [NSArray arrayWithObjects:GHCFRuntimeString("ghcfLogRefresh"), GHCFRuntimeString("ghcfLogClear"), GHCFRuntimeString("ghcfLogShare"), nil];
+            NSArray *buttons = [NSArray arrayWithObjects:CFLYRuntimeString("刷新"), CFLYRuntimeString("清空"), CFLYRuntimeString("分享"), nil];
+            NSArray *actions = [NSArray arrayWithObjects:CFLYRuntimeString("cflyLogRefresh"), CFLYRuntimeString("cflyLogClear"), CFLYRuntimeString("cflyLogShare"), nil];
             for (NSUInteger i = 0; i < [buttons count]; i++) {
                 PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:[buttons objectAtIndex:i] target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
-                [spec setProperty:[actions objectAtIndex:i] forKey:GHCFRuntimeString("action")];
+                [spec setProperty:[actions objectAtIndex:i] forKey:CFLYRuntimeString("action")];
                 [specs addObject:spec];
             }
             _specifiers = specs;
@@ -1601,10 +2034,10 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
             const char *why = [e reason] ? [[e reason] UTF8String] : "?";
             char buf[256];
             snprintf(buf, sizeof(buf), "v57 prefs-log: specifiers EXCEPTION %s", why);
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
             NSMutableArray *safe = [NSMutableArray array];
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("日志页组装出错（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
+            [group setProperty:CFLYRuntimeString("日志页组装出错（已记进日志），先回上一页再试。") forKey:CFLYRuntimeString("footerText")];
             [safe addObject:group];
             _specifiers = safe;
         }
@@ -1612,34 +2045,34 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     return _specifiers;
 }
 
-- (void)ghcfLogRefresh:(PSSpecifier *)specifier {
+- (void)cflyLogRefresh:(PSSpecifier *)specifier {
     (void)specifier;
     @try {
-        if (self.logView) self.logView.text = GHCFLogTailNewestFirst();
+        if (self.logView) self.logView.text = CFLYLogTailNewestFirst();
     } @catch (NSException *e) {
-        GHCFPrefsLogLine("v57 prefs-log: refresh EXCEPTION");
+        CFLYPrefsLogLine("v57 prefs-log: refresh EXCEPTION");
     }
 }
 
-- (void)ghcfLogClear:(PSSpecifier *)specifier {
+- (void)cflyLogClear:(PSSpecifier *)specifier {
     (void)specifier;
     NSError *err = nil;
-    BOOL ok = [[NSData data] writeToFile:GHCFLogFilePath() options:NSDataWritingAtomic error:&err];
+    BOOL ok = [[NSData data] writeToFile:CFLYLogFilePath() options:NSDataWritingAtomic error:&err];
     if (ok) {
-        if (self.logView) self.logView.text = GHCFLogTailNewestFirst();
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("日志已清空") message:GHCFRuntimeString("日志档案已截断，新的日志会继续写进来。") preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:GHCFRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
+        if (self.logView) self.logView.text = CFLYLogTailNewestFirst();
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("日志已清空") message:CFLYRuntimeString("日志档案已截断，新的日志会继续写进来。") preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:CFLYRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:alert animated:YES completion:nil];
     } else {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("清空失败") message:GHCFRuntimeString("日志档案写不动（权限问题），请用 Filza 手动清。") preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:GHCFRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("清空失败") message:CFLYRuntimeString("日志档案写不动（权限问题），请用 Filza 手动清。") preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:CFLYRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:alert animated:YES completion:nil];
     }
 }
 
-- (void)ghcfLogShare:(PSSpecifier *)specifier {
+- (void)cflyLogShare:(PSSpecifier *)specifier {
     (void)specifier;
-    NSURL *url = [NSURL fileURLWithPath:GHCFLogFilePath()];
+    NSURL *url = [NSURL fileURLWithPath:CFLYLogFilePath()];
     if (!url) return;
     UIActivityViewController *share = [[UIActivityViewController alloc] initWithActivityItems:[NSArray arrayWithObject:url] applicationActivities:nil];
     [self presentViewController:share animated:YES completion:nil];
@@ -1652,17 +2085,17 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 // v53：悬浮图标——相冊選圖（PHPicker）、居中裁方形 512、
 // 存設定目錄固定檔名、寫 flyTriggerIconCustom 鍵；恢復默認刪檔＋清鍵，
 // 觸發鈕 2 秒內回默認圖（dylib tick 重讀）。照卡片頭像控制器樣式。
-@interface GHCFFlyTriggerIconListController : PSListController <PHPickerViewControllerDelegate>
+@interface CFLYFlyTriggerIconListController : PSListController <PHPickerViewControllerDelegate>
 @property (nonatomic, strong) UIImageView *previewView;
 @property (nonatomic, strong) UIView *headerView;
 @property (nonatomic, assign) BOOL headerInstalled;
 @end
 
-@implementation GHCFFlyTriggerIconListController
+@implementation CFLYFlyTriggerIconListController
 
-// v43：按鈕行自己派發（GHCFDispatchButtonTap）；其他行走框架。
+// v43：按鈕行自己派發（CFLYDispatchButtonTap）；其他行走框架。
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
+    if (CFLYDispatchButtonTap(self, tableView, indexPath)) return;
     [super tableView:tableView didSelectRowAtIndexPath:indexPath];
 }
 
@@ -1675,9 +2108,9 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-flyTriggericon: super viewDidLoad EXCEPTION %s", why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
-    GHCFPrefsLogLine("v57 prefs-page: FlyTriggerIcon");
+    CFLYPrefsLogLine("v57 prefs-page: FlyTriggerIcon");
     @try {
         CGFloat w = [UIScreen mainScreen].bounds.size.width;
         UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, 160)];
@@ -1691,12 +2124,12 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         [container addSubview:iv];
         self.previewView = iv;
         self.headerView = container;
-        [self ghcfRefreshFlyTriggerPreview];
+        [self cflyRefreshFlyTriggerPreview];
     } @catch (NSException *e) {
         const char *why = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-flyTriggericon: viewDidLoad EXCEPTION %s", why);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
 }
 
@@ -1704,38 +2137,38 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     @try {
         [super viewDidAppear:animated];
     } @catch (NSException *e) {
-        GHCFPrefsLogLine("v57 prefs-flyTriggericon: super viewDidAppear EXCEPTION");
+        CFLYPrefsLogLine("v57 prefs-flyTriggericon: super viewDidAppear EXCEPTION");
     }
     if (self.headerView && !self.headerInstalled) {
-        UITableView *tv = GHCFSafeTableViewForController(self, "flyTriggericon");
+        UITableView *tv = CFLYSafeTableViewForController(self, "flyTriggericon");
         if (tv) {
             @try {
                 tv.tableHeaderView = self.headerView;
                 self.headerInstalled = YES;
-                GHCFPrefsLogLine("v57 prefs-flyTriggericon: header mounted");
+                CFLYPrefsLogLine("v57 prefs-flyTriggericon: header mounted");
             } @catch (NSException *e) {
                 const char *why = [e reason] ? [[e reason] UTF8String] : "?";
                 char buf[256];
                 snprintf(buf, sizeof(buf), "v57 prefs-flyTriggericon: mount EXCEPTION %s", why);
-                GHCFPrefsLogLine(buf);
+                CFLYPrefsLogLine(buf);
             }
         } else {
-            GHCFPrefsLogLine("v57 prefs-flyTriggericon: no table, header not mounted");
+            CFLYPrefsLogLine("v57 prefs-flyTriggericon: no table, header not mounted");
         }
     }
 }
 
-- (void)ghcfRefreshFlyTriggerPreview {
+- (void)cflyRefreshFlyTriggerPreview {
     @try {
-        UIImage *img = [UIImage imageWithContentsOfFile:GHCFFlyTriggerIconPath()];
+        UIImage *img = [UIImage imageWithContentsOfFile:CFLYFlyTriggerIconPath()];
         if (!img) {
             // China Fly 1.0.0：沒有自訂圖就顯示代碼畫的紙飛機
             //（不要引用已刪的哆啦A夢 png）。
-            img = GHCFPaperPlaneImage(120.0);
+            img = CFLYPaperPlaneImage(120.0);
         }
         self.previewView.image = img;
     } @catch (NSException *e) {
-        GHCFPrefsLogLine("v57 prefs-flyTriggericon: refresh EXCEPTION");
+        CFLYPrefsLogLine("v57 prefs-flyTriggericon: refresh EXCEPTION");
     }
 }
 
@@ -1743,20 +2176,20 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     if (!_specifiers) {
         NSMutableArray *specs = [NSMutableArray array];
         PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-        [group setProperty:GHCFRuntimeString("上面那张圆图是现在的触发钮图，默认是纸飞机；从相册选一张、居中裁成方形存起来，触发钮 2 秒内就换成它。") forKey:GHCFRuntimeString("footerText")];
+        [group setProperty:CFLYRuntimeString("上面那张圆图是现在的触发钮图，默认是纸飞机；从相册选一张、居中裁成方形存起来，触发钮 2 秒内就换成它。") forKey:CFLYRuntimeString("footerText")];
         [specs addObject:group];
-        PSSpecifier *pick = [PSSpecifier preferenceSpecifierNamed:GHCFRuntimeString("从相册选图（换钮图片）") target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
-        [pick setProperty:GHCFRuntimeString("ghcfPickFlyTriggerIcon") forKey:GHCFRuntimeString("action")];
+        PSSpecifier *pick = [PSSpecifier preferenceSpecifierNamed:CFLYRuntimeString("从相册选图（换钮图片）") target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
+        [pick setProperty:CFLYRuntimeString("cflyPickFlyTriggerIcon") forKey:CFLYRuntimeString("action")];
         [specs addObject:pick];
-        PSSpecifier *restore = [PSSpecifier preferenceSpecifierNamed:GHCFRuntimeString("恢复默认触发钮图") target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
-        [restore setProperty:GHCFRuntimeString("ghcfRestoreFlyTriggerIcon") forKey:GHCFRuntimeString("action")];
+        PSSpecifier *restore = [PSSpecifier preferenceSpecifierNamed:CFLYRuntimeString("恢复默认触发钮图") target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
+        [restore setProperty:CFLYRuntimeString("cflyRestoreFlyTriggerIcon") forKey:CFLYRuntimeString("action")];
         [specs addObject:restore];
         _specifiers = specs;
     }
     return _specifiers;
 }
 
-- (void)ghcfPickFlyTriggerIcon:(PSSpecifier *)specifier {
+- (void)cflyPickFlyTriggerIcon:(PSSpecifier *)specifier {
     (void)specifier;
     PHPickerConfiguration *config = [[PHPickerConfiguration alloc] init];
     config.filter = [PHPickerFilter imagesFilter];
@@ -1766,13 +2199,13 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
     [self presentViewController:picker animated:YES completion:nil];
 }
 
-- (void)ghcfRestoreFlyTriggerIcon:(PSSpecifier *)specifier {
+- (void)cflyRestoreFlyTriggerIcon:(PSSpecifier *)specifier {
     (void)specifier;
-    [[NSFileManager defaultManager] removeItemAtPath:GHCFFlyTriggerIconPath() error:nil];
-    GHCFWritePrefsBool("flyTriggerIconCustom", NO);
-    [self ghcfRefreshFlyTriggerPreview];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("已恢复默认触发钮图") message:GHCFRuntimeString("触发钮回到默认图。") preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:GHCFRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
+    [[NSFileManager defaultManager] removeItemAtPath:CFLYFlyTriggerIconPath() error:nil];
+    CFLYWritePrefsBool("flyTriggerIconCustom", NO);
+    [self cflyRefreshFlyTriggerPreview];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("已恢复默认触发钮图") message:CFLYRuntimeString("触发钮回到默认图。") preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:CFLYRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -1786,19 +2219,19 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
         if (![object isKindOfClass:[UIImage class]]) return;
         UIImage *picked = (UIImage *)object;
         dispatch_async(dispatch_get_main_queue(), ^{
-            UIImage *square = GHCFPrefsSquareCropImage(picked, 512.0);
+            UIImage *square = CFLYPrefsSquareCropImage(picked, 512.0);
             if (!square) return;
             NSData *data = UIImageJPEGRepresentation(square, 0.85);
-            BOOL ok = data && [data writeToFile:GHCFFlyTriggerIconPath() atomically:YES];
+            BOOL ok = data && [data writeToFile:CFLYFlyTriggerIconPath() atomically:YES];
             if (ok) {
-                GHCFWritePrefsBool("flyTriggerIconCustom", YES);
-                [self ghcfRefreshFlyTriggerPreview];
-                UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("钮图片已换好") message:GHCFRuntimeString("触发钮 2 秒内就换成这张。") preferredStyle:UIAlertControllerStyleAlert];
-                [alert addAction:[UIAlertAction actionWithTitle:GHCFRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
+                CFLYWritePrefsBool("flyTriggerIconCustom", YES);
+                [self cflyRefreshFlyTriggerPreview];
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("钮图片已换好") message:CFLYRuntimeString("触发钮 2 秒内就换成这张。") preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:CFLYRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
                 [self presentViewController:alert animated:YES completion:nil];
             } else {
-                UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("保存钮图片失败") message:GHCFRuntimeString("图片写不进设定目录。") preferredStyle:UIAlertControllerStyleAlert];
-                [alert addAction:[UIAlertAction actionWithTitle:GHCFRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("保存钮图片失败") message:CFLYRuntimeString("图片写不进设定目录。") preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:CFLYRuntimeString("好") style:UIAlertActionStyleDefault handler:nil]];
                 [self presentViewController:alert animated:YES completion:nil];
             }
         });
@@ -1808,19 +2241,19 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 @end
 
 
-// （GHCFPlistPageController 在文件後面定義，這裡先給完整接口聲明——
-// 光是 @class 前向聲明不夠，[GHCFPlistPageController class] 會報錯。）
-@interface GHCFPlistPageController : ChinaFlyRootListController
+// （CFLYPlistPageController 在文件後面定義，這裡先給完整接口聲明——
+// 光是 @class 前向聲明不夠，[CFLYPlistPageController class] 會報錯。）
+@interface CFLYPlistPageController : ChinaFlyRootListController
 @end
 
-// v72：LinkList 子清單控制器（見下面 GHCFHandleLinkListTap）——
+// v72：LinkList 子清單控制器（見下面 CFLYHandleLinkListTap）——
 // 框架原生的 PSListItemsController 在鍵盤頁上只顯示一個選項（子清單幾乎空白，
 // plist 本身是對的、父頁也載了 7 項，框架子清單的生成／快取／渲染在這裡
 // 黑盒修不了；同 v47 的做法：點按攔下來、推我們自己的控制器）。
 // 它從點按那行的 specifier 現場讀 values／titles 建單選行，不走框架快取；
 // 選項寫值走繼承的 setPreferenceValue（CFPreferences＋同步），並記
 // v72 prefs-linklist 日誌，下次日誌能證明寫入。
-@interface GHCFLinkListController : ChinaFlyRootListController
+@interface CFLYLinkListController : ChinaFlyRootListController
 @end
 
 // China Fly 1.0.0：子頁要跳的 plist 白名單（9 份真實檔案；不在裡面的
@@ -1829,9 +2262,9 @@ static NSString *GHCFPrefsDisplayNameForBundleID(NSString *bid) {
 // GestureCustom、Keyboard、Info、Status、Other）已刪，不在白名單裡，
 // 點了也不會載。Activation 是 1.0.0 新加的激活頁（照舊分屏 1.0.103
 // 那套，碼表是 China Fly 自己的 codes-fly.json（1.0.2 起不再跟舊分屏共用）。
-static BOOL GHCFPrefsIsKnownPlistName(const char *name) {
+static BOOL CFLYPrefsIsKnownPlistName(const char *name) {
     if (!name || name[0] == '\0') return NO;
-    static const char *known[] = {"ActionButtonLongPress", "ActionButtonTap", "Activation", "Dial", "FloatingIcon", "MenuEdit", "Root", "SplitSettings", "Trigger"};
+    static const char *known[] = {"ActionButtonLongPress", "ActionButtonTap", "Activation", "Dial", "Root", "SplitSettings", "Trigger"};
     size_t n = sizeof(known) / sizeof(known[0]);
     for (size_t i = 0; i < n; i++) {
         if (strcmp(name, known[i]) == 0) return YES;
@@ -1840,33 +2273,58 @@ static BOOL GHCFPrefsIsKnownPlistName(const char *name) {
 }
 
 
-// China Fly 1.0.0：攔截 detail=GHCFMenuEditListController 的連結行，
-// 自己推菜單編輯頁。GHCFMenuEditListController 是 UITableViewController
+// China Fly 1.0.0：攔截 detail=CFLYMenuEditListController 的連結行，
+// 自己推菜單編輯頁。CFLYMenuEditListController 是 UITableViewController
 // 子類（不是 PSListController），框架預設的推頁路徑是照 PSListController
 // 做的，直接交給框架會推不動；這裡用 navigationController 直推。
 // 回傳 YES 表示這一行已經處理了（呼叫方直接 return，不要再走 super）。
-static BOOL GHCFHandleMenuEditTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
+static BOOL CFLYHandleMenuEditTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
     if (!controller || !indexPath) return NO;
     PSSpecifier *spec = [controller specifierAtIndexPath:indexPath];
     if (!spec) return NO;
     if (spec.cellType != PSLinkCell) return NO;
-    NSString *detail = spec.properties[GHCFRuntimeString("detail")];
-    if (!detail || ![detail isEqualToString:GHCFRuntimeString("GHCFMenuEditListController")]) return NO;
+    NSString *detail = spec.properties[CFLYRuntimeString("detail")];
+    if (!detail || ![detail isEqualToString:CFLYRuntimeString("CFLYMenuEditListController")]) return NO;
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    GHCFMenuEditListController *page = [[GHCFMenuEditListController alloc] initWithStyle:UITableViewStyleGrouped];
+    CFLYMenuEditListController *page = [[CFLYMenuEditListController alloc] initWithStyle:UITableViewStyleGrouped];
     NSString *label = spec.name;
-    page.title = (label && [label length] > 0) ? label : GHCFRuntimeString("當前列表");
+    page.title = (label && [label length] > 0) ? label : CFLYRuntimeString("當前列表");
     UINavigationController *nav = controller.navigationController;
     if (nav) {
         [nav pushViewController:page animated:YES];
-        GHCFPrefsLogLine("cf prefs-menuedit push");
+        CFLYPrefsLogLine("cf prefs-menuedit push");
     } else {
-        GHCFPrefsLogLine("cf prefs-menuedit push FAILED: no navigationController");
+        CFLYPrefsLogLine("cf prefs-menuedit push FAILED: no navigationController");
     }
     return YES;
 }
 
-// v72：攔截 PSLinkListCell 的點按，自己推 GHCFLinkListController。
+// China Fly 1.0.4：攔截 detail=CFLYMenuAddListController 的連結行，
+// 自己推菜單編輯點加入頁。CFLYMenuAddListController 是 PSListController
+// 子類（動態組行），框架預設的推頁路徑推不動；這裡用 navigationController 直推。
+// 回傳 YES 表示這一行已經處理了（呼叫方直接 return，不要再走 super）。
+static BOOL CFLYHandleMenuAddTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
+    if (!controller || !indexPath) return NO;
+    PSSpecifier *spec = [controller specifierAtIndexPath:indexPath];
+    if (!spec) return NO;
+    if (spec.cellType != PSLinkCell) return NO;
+    NSString *detail = spec.properties[CFLYRuntimeString("detail")];
+    if (!detail || ![detail isEqualToString:CFLYRuntimeString("CFLYMenuAddListController")]) return NO;
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    CFLYMenuAddListController *page = [[CFLYMenuAddListController alloc] init];
+    NSString *label = spec.name;
+    page.title = (label && [label length] > 0) ? label : CFLYRuntimeString("編輯菜單");
+    UINavigationController *nav = controller.navigationController;
+    if (nav) {
+        [nav pushViewController:page animated:YES];
+        CFLYPrefsLogLine("cf prefs-menuadd push");
+    } else {
+        CFLYPrefsLogLine("cf prefs-menuadd push FAILED: no navigationController");
+    }
+    return YES;
+}
+
+// v72：攔截 PSLinkListCell 的點按，自己推 CFLYLinkListController。
 // 根因（皇上 2026-11-17 14:11 報：鍵盤子清單只顯示內弹出，頁面幾乎空白）：
 // plist 本身是對的（Keyboard[4] validTitles 浮窗内弹出／外弹出、
 // validValues inner／outer，出貨包裡也在），父頁也載了 7 項（24.log 證明，
@@ -1878,36 +2336,36 @@ static BOOL GHCFHandleMenuEditTap(PSListController *controller, UITableView *tab
 // 選項寫值走繼承的 setPreferenceValue，並記 v72 prefs-linklist 日誌。
 // 沒有 values（或空）就回 NO 交回框架，不推空白頁。
 // 回傳 YES 表示這一行已經處理了（呼叫方直接 return，不要再走 super）。
-static BOOL GHCFHandleLinkListTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
+static BOOL CFLYHandleLinkListTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
     if (!controller || !indexPath) return NO;
     PSSpecifier *spec = [controller specifierAtIndexPath:indexPath];
     if (!spec) return NO;
     if (spec.cellType != PSLinkListCell) return NO;
-    NSArray *values = spec.properties[GHCFRuntimeString("values")];
-    NSArray *titles = spec.properties[GHCFRuntimeString("titles")];
+    NSArray *values = spec.properties[CFLYRuntimeString("values")];
+    NSArray *titles = spec.properties[CFLYRuntimeString("titles")];
     // v43.11：plist 載入的 LinkList 行用 validValues／validTitles，沒有 values 屬性
     //（鍵盤彈出方式那些行就是這麼漏網的——30.log 6 次 no values）。
     //讀不到才改讀 validValues／validTitles，讀到就推我們自己的頁。
     if (!values || [values count] == 0) {
-        values = spec.properties[GHCFRuntimeString("validValues")];
-        titles = spec.properties[GHCFRuntimeString("validTitles")];
+        values = spec.properties[CFLYRuntimeString("validValues")];
+        titles = spec.properties[CFLYRuntimeString("validTitles")];
     }
     if (!values || [values count] == 0) {
-        GHCFPrefsLogLine("v72 prefs-linklist no values, framework fallback");
+        CFLYPrefsLogLine("v72 prefs-linklist no values, framework fallback");
         return NO;
     }
     (void)titles;
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    GHCFLinkListController *page = [[GHCFLinkListController alloc] init];
+    CFLYLinkListController *page = [[CFLYLinkListController alloc] init];
     page.specifier = spec;
     page.parentController = controller;
     page.rootController = controller.rootController;
     [controller pushController:page];
-    NSString *key = spec.properties[GHCFRuntimeString("key")];
+    NSString *key = spec.properties[CFLYRuntimeString("key")];
     const char *keyC = key ? [key UTF8String] : "?";
     char buf[256];
     snprintf(buf, sizeof(buf), "v72 prefs-linklist push %s options %lu", keyC, (unsigned long)[values count]);
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
     return YES;
 }
 
@@ -1925,8 +2383,8 @@ static BOOL GHCFHandleLinkListTap(PSListController *controller, UITableView *tab
 // 主頁（我們自己的控制器自己載 Root.plist）也正常。PreferenceLoader
 // 登記檔裡根控制器就是用類名登記的（isController），也是同一道理。
 // 修法：連結行點按時先在這裡攔下來——detail 是白名單裡的 plist 名，就
-// 手動推一個 GHCFPlistPageController：把 plist 名寫進 specifier 的非保留字鍵
-// ghcfTargetPlist，再 push。PlistPage 的 specifiers 是在我們自己的
+// 手動推一個 CFLYPlistPageController：把 plist 名寫進 specifier 的非保留字鍵
+// cflyTargetPlist，再 push。PlistPage 的 specifiers 是在我們自己的
 // 子類身上載 plist（bundle 對得上），內容就出來了。detail 是類名、
 // 或不在白名單裡的，一律回 NO 交回框架／super，不動它。
 // PlistPage 繼承主頁控制器（同一個 didSelectRow），所以子頁裡的嵌套
@@ -1935,32 +2393,32 @@ static BOOL GHCFHandleLinkListTap(PSListController *controller, UITableView *tab
 // 一個攔截，一次全修；類名 detail 的嵌套行（排序頁、加入 App、
 // 日誌／頭像／背景）繼續走框架，本來就正常。
 // 回傳 YES 表示這一行已經處理了（呼叫方直接 return，不要再走 super）。
-static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
+static BOOL CFLYHandlePlistDetailTap(PSListController *controller, UITableView *tableView, NSIndexPath *indexPath) {
     if (!controller || !indexPath) return NO;
     PSSpecifier *spec = [controller specifierAtIndexPath:indexPath];
     if (!spec) return NO;
     if (spec.cellType != PSLinkCell) return NO;
-    NSString *detail = spec.properties[GHCFRuntimeString("detail")];
+    NSString *detail = spec.properties[CFLYRuntimeString("detail")];
     if (!detail || [detail length] == 0) return NO;
     const char *detailC = [detail UTF8String];
     // 類名 detail——框架直接 alloc 那個類，本來就正常，不攔。
     if (NSClassFromString(detail) != Nil) return NO;
-    if (!GHCFPrefsIsKnownPlistName(detailC)) {
+    if (!CFLYPrefsIsKnownPlistName(detailC)) {
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-nav REJECTED unknown plist detail %s", detailC ? detailC : "?");
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
         return NO;
     }
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    [spec setProperty:detail forKey:GHCFRuntimeString("ghcfTargetPlist")];
-    GHCFPlistPageController *page = [[GHCFPlistPageController alloc] init];
+    [spec setProperty:detail forKey:CFLYRuntimeString("cflyTargetPlist")];
+    CFLYPlistPageController *page = [[CFLYPlistPageController alloc] init];
     page.specifier = spec;
     page.parentController = controller;
     page.rootController = controller.rootController;
     [controller pushController:page];
     char buf[256];
     snprintf(buf, sizeof(buf), "v57 prefs-nav push plist %s", detailC ? detailC : "?");
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
     return YES;
 }
 
@@ -1968,41 +2426,41 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 // plistName 載入那份 plist。繼承主頁控制器，所以備份／導出／
 // 導入／恢復／布局預設那些按鈕動作在這裡也一樣能用。
 // （接口聲明在文件前面搜索控制器之前，這裡只寫實作。）
-// v43：改讀 ghcfTargetPlist（非保留字 key），先對白名單才載，
+// v43：改讀 cflyTargetPlist（非保留字 key），先對白名單才載，
 // 載入失敗只顯示空白頁、不閃退；進出寫檔日誌。
-@implementation GHCFPlistPageController
+@implementation CFLYPlistPageController
 
 - (NSArray *)specifiers {
     if (!_specifiers) {
-        NSString *targetPlist = self.specifier.properties[GHCFRuntimeString("ghcfTargetPlist")];
+        NSString *targetPlist = self.specifier.properties[CFLYRuntimeString("cflyTargetPlist")];
         if (!targetPlist || [targetPlist length] == 0) {
-            // v43.19：重進設定恢復出來的頁，specifier 是新的，ghcfTargetPlist
+            // v43.19：重進設定恢復出來的頁，specifier 是新的，cflyTargetPlist
             // 那個運行期寫進去的鍵沒了；退回讀 detail（行裡本來就寫著 plist 名）。
-            targetPlist = self.specifier.properties[GHCFRuntimeString("detail")];
+            targetPlist = self.specifier.properties[CFLYRuntimeString("detail")];
         }
         const char *cname = targetPlist ? [targetPlist UTF8String] : NULL;
         char buf[256];
         snprintf(buf, sizeof(buf), "v57 prefs-search plistpage entry plist %s", cname ? cname : "(nil)");
-        GHCFPrefsLogLine(buf);
-        if (targetPlist && [targetPlist length] > 0 && GHCFPrefsIsKnownPlistName(cname)) {
+        CFLYPrefsLogLine(buf);
+        if (targetPlist && [targetPlist length] > 0 && CFLYPrefsIsKnownPlistName(cname)) {
             @try {
                 _specifiers = [self loadSpecifiersFromPlistName:targetPlist target:self];
             } @catch (NSException *e) {
                 char ebuf[512];
                 snprintf(ebuf, sizeof(ebuf), "v57 prefs-search plistpage EXCEPTION %s %s", [[e name] UTF8String], [[e reason] UTF8String]);
-                GHCFPrefsLogLine(ebuf);
+                CFLYPrefsLogLine(ebuf);
                 NSMutableArray *safe = [NSMutableArray array];
                 PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-                [group setProperty:GHCFRuntimeString("这一页打不开（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
+                [group setProperty:CFLYRuntimeString("这一页打不开（已记进日志），先回上一页再试。") forKey:CFLYRuntimeString("footerText")];
                 [safe addObject:group];
                 _specifiers = safe;
             }
             if (!_specifiers) _specifiers = [NSMutableArray array];
         } else {
-            GHCFPrefsLogLine("v57 prefs-search plistpage REJECTED unknown plist");
+            CFLYPrefsLogLine("v57 prefs-search plistpage REJECTED unknown plist");
             NSMutableArray *safe = [NSMutableArray array];
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("这一页打不开（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
+            [group setProperty:CFLYRuntimeString("这一页打不开（已记进日志），先回上一页再试。") forKey:CFLYRuntimeString("footerText")];
             [safe addObject:group];
             _specifiers = safe;
         }
@@ -2011,11 +2469,11 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
         //（arcStartAngle／arcFanAngle），邊緣只留邊緣那套（觸發側／
         // 滑幾次／左／右×豎／橫屏各三根滑桿），懸浮條只留懸浮條兩行
         //（floatingBarY／floatingBarSize）；調試開關和觸發方式行本身
-        // 三套通用，一直留著。行和組頭都帶 ghcfTriggerSet 標記
+        // 三套通用，一直留著。行和組頭都帶 cflyTriggerSet 標記
         //（arc／edge／bar），沒標記的都留。模式變了回這一頁時
         // viewWillAppear 已清快取重組（v71），讀到的就是新值。
-        if (targetPlist && [targetPlist isEqualToString:GHCFRuntimeString("Trigger")]) {
-            char *tmode = GHCFPrefsCString("triggerMode");
+        if (targetPlist && [targetPlist isEqualToString:CFLYRuntimeString("Trigger")]) {
+            char *tmode = CFLYPrefsCString("triggerMode");
             const char *want = "edge";
             if (tmode) {
                 if (strcmp(tmode, "arc") == 0) want = "arc";
@@ -2024,7 +2482,7 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
             }
             NSMutableArray *kept = [NSMutableArray array];
             for (PSSpecifier *sp in _specifiers) {
-                NSString *setTag = sp.properties[GHCFRuntimeString("ghcfTriggerSet")];
+                NSString *setTag = sp.properties[CFLYRuntimeString("cflyTriggerSet")];
                 if (setTag && strcmp([setTag UTF8String], want) != 0) continue;
                 [kept addObject:sp];
             }
@@ -2032,13 +2490,13 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
         }
         char buf2[128];
         snprintf(buf2, sizeof(buf2), "v57 prefs-search plistpage exit count %lu", (unsigned long)[_specifiers count]);
-        GHCFPrefsLogLine(buf2);
+        CFLYPrefsLogLine(buf2);
         // v71：頁面載入時記一行 plist 名＋item 數量——下次日誌直接證明
         // 載的是新版還是舊版（1.0.70 兩行看不到，靠這行定位）。
         {
             char pbuf[256];
             snprintf(pbuf, sizeof(pbuf), "v71 prefs-page %s items %lu", cname ? cname : "(nil)", (unsigned long)[_specifiers count]);
-            GHCFPrefsLogLine(pbuf);
+            CFLYPrefsLogLine(pbuf);
         }
     }
     return _specifiers;
@@ -2056,13 +2514,13 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
         const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v71 prefs-plistpage viewWillAppear EXCEPTION %s", reason);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
 }
 
 @end
 
-@implementation GHCFLinkListController
+@implementation CFLYLinkListController
 
 // v72：LinkList 子清單——從點按那行（self.specifier）的 values／titles 現場建單選行。
 // 每個選項一行 PSListItemCell（單選圓點行），values 只有那一個值；
@@ -2070,17 +2528,17 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 - (NSArray *)specifiers {
     if (!_specifiers) {
         PSSpecifier *parent = self.specifier;
-        NSArray *values = parent ? parent.properties[GHCFRuntimeString("values")] : nil;
-        NSArray *titles = parent ? parent.properties[GHCFRuntimeString("titles")] : nil;
+        NSArray *values = parent ? parent.properties[CFLYRuntimeString("values")] : nil;
+        NSArray *titles = parent ? parent.properties[CFLYRuntimeString("titles")] : nil;
         // v43.11：跟攔截一樣，values／titles 讀不到改讀 validValues／validTitles
         //（plist 行就是這個名字；建出來的選項行照舊只寫 values，寫值路只讀 values）。
         if (!values || [values count] == 0) {
-            values = parent ? parent.properties[GHCFRuntimeString("validValues")] : nil;
-            titles = parent ? parent.properties[GHCFRuntimeString("validTitles")] : nil;
+            values = parent ? parent.properties[CFLYRuntimeString("validValues")] : nil;
+            titles = parent ? parent.properties[CFLYRuntimeString("validTitles")] : nil;
         }
-        NSString *key = parent ? parent.properties[GHCFRuntimeString("key")] : nil;
-        NSString *defaults = parent ? parent.properties[GHCFRuntimeString("defaults")] : nil;
-        id def = parent ? parent.properties[GHCFRuntimeString("default")] : nil;
+        NSString *key = parent ? parent.properties[CFLYRuntimeString("key")] : nil;
+        NSString *defaults = parent ? parent.properties[CFLYRuntimeString("defaults")] : nil;
+        id def = parent ? parent.properties[CFLYRuntimeString("default")] : nil;
         NSMutableArray *specs = [NSMutableArray array];
         if (values && [values count] > 0 && key) {
             for (NSUInteger i = 0; i < [values count]; i++) {
@@ -2089,22 +2547,22 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
                 if (titles && i < [titles count]) title = [titles objectAtIndex:i];
                 if (!title) title = [value description];
                 PSSpecifier *spec = [PSSpecifier preferenceSpecifierNamed:title target:self set:@selector(setPreferenceValue:specifier:) get:@selector(readPreferenceValue:) detail:nil cell:PSListItemCell edit:nil];
-                [spec setProperty:[NSArray arrayWithObject:value] forKey:GHCFRuntimeString("values")];
-                [spec setProperty:key forKey:GHCFRuntimeString("key")];
-                if (defaults) [spec setProperty:defaults forKey:GHCFRuntimeString("defaults")];
-                if (def) [spec setProperty:def forKey:GHCFRuntimeString("default")];
+                [spec setProperty:[NSArray arrayWithObject:value] forKey:CFLYRuntimeString("values")];
+                [spec setProperty:key forKey:CFLYRuntimeString("key")];
+                if (defaults) [spec setProperty:defaults forKey:CFLYRuntimeString("defaults")];
+                if (def) [spec setProperty:def forKey:CFLYRuntimeString("default")];
                 [specs addObject:spec];
             }
             const char *keyC = [key UTF8String];
             char buf[256];
             snprintf(buf, sizeof(buf), "v72 prefs-linklist %s options %lu", keyC ? keyC : "?", (unsigned long)[values count]);
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
         } else {
             // values 讀不到——不推空白頁，顯示一行說明（下次日誌能看到）。
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("选项读不到，先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
+            [group setProperty:CFLYRuntimeString("选项读不到，先回上一页再试。") forKey:CFLYRuntimeString("footerText")];
             [specs addObject:group];
-            GHCFPrefsLogLine("v72 prefs-linklist no values at build");
+            CFLYPrefsLogLine("v72 prefs-linklist no values at build");
         }
         _specifiers = specs;
     }
@@ -2122,7 +2580,7 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
         const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "v72 prefs-linklist viewWillAppear EXCEPTION %s", reason);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
 }
 
@@ -2132,12 +2590,12 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 // 這裡先記 v72 prefs-linklist，再調繼承的 setPreferenceValue 真正寫入
 //（CFPreferencesSetAppValue＋AppSynchronize，跟開關／滑桿同一條路）。
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
-    NSString *key = specifier.properties[GHCFRuntimeString("key")];
+    NSString *key = specifier.properties[CFLYRuntimeString("key")];
     const char *keyC = key ? [key UTF8String] : "?";
     const char *valC = value ? [[value description] UTF8String] : "?";
     char buf[256];
     snprintf(buf, sizeof(buf), "v72 prefs-linklist %s = %s", keyC, valC);
-    GHCFPrefsLogLine(buf);
+    CFLYPrefsLogLine(buf);
     [super setPreferenceValue:value specifier:specifier];
 }
 
@@ -2151,7 +2609,7 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     PSSpecifier *spec = [self specifierAtIndexPath:indexPath];
     if (spec && spec.cellType == PSListItemCell) {
-        NSArray *values = spec.properties[GHCFRuntimeString("values")];
+        NSArray *values = spec.properties[CFLYRuntimeString("values")];
         if (values && [values count] > 0) {
             [tableView deselectRowAtIndexPath:indexPath animated:YES];
             [self setPreferenceValue:[values objectAtIndex:0] specifier:spec];
@@ -2164,16 +2622,16 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 
 @end
 
-// China Fly 1.0.0：狀態頁（GHCFStatusListController）與鍵盤助手標記
-//（GHCFKbHelperMarkersText）已整段拿掉。激活頁（下面兩類）是 1.0.0
+// China Fly 1.0.0：狀態頁（CFLYStatusListController）與鍵盤助手標記
+//（CFLYKbHelperMarkersText）已整段拿掉。激活頁（下面兩類）是 1.0.0
 // 新加的（皇上 21:34 定，照舊分屏 1.0.103 那套；碼表是 China Fly 自己的
 // codes-fly.json（1.0.2 起不再跟舊分屏共用），實現、鍵、通知名全用 China Fly 自己的）。
 // 除了碼表是自己的，China Fly 別的什麼都不碰舊分屏（皇上 21:36 定）。
 
-@interface GHCFActivationRowCell : PSTableCell
+@interface CFLYActivationRowCell : PSTableCell
 @end
 
-@implementation GHCFActivationRowCell {
+@implementation CFLYActivationRowCell {
     UIImageView *_actIconView;
     UILabel *_actTitleLabel;
     UILabel *_actSubtitleLabel;
@@ -2218,22 +2676,22 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
     self.textLabel.hidden = YES;
     self.detailTextLabel.text = nil;
     self.detailTextLabel.hidden = YES;
-    NSString *title = specifier.properties[GHCFRuntimeString("label")];
+    NSString *title = specifier.properties[CFLYRuntimeString("label")];
     _actTitleLabel.text = title;
-    NSString *subtitle = specifier.properties[GHCFRuntimeString("subtitle")];
+    NSString *subtitle = specifier.properties[CFLYRuntimeString("subtitle")];
     _actSubtitleLabel.text = subtitle;
     _actSubtitleLabel.hidden = (!subtitle || [subtitle length] == 0);
-    NSString *iconName = specifier.properties[GHCFRuntimeString("iconName")];
+    NSString *iconName = specifier.properties[CFLYRuntimeString("iconName")];
     UIImage *icon = nil;
     if (iconName && [iconName length] > 0) icon = [UIImage systemImageNamed:iconName];
     _actIconView.image = icon;
     _actIconView.hidden = (icon == nil);
-    NSString *value = specifier.properties[GHCFRuntimeString("valueText")];
+    NSString *value = specifier.properties[CFLYRuntimeString("valueText")];
     _actValueLabel.text = value;
     _actValueLabel.hidden = (!value || [value length] == 0);
-    BOOL hasAction = (specifier.properties[GHCFRuntimeString("action")] != nil);
+    BOOL hasAction = (specifier.properties[CFLYRuntimeString("action")] != nil);
     if (hasAction) {
-        _actChevronView.image = [UIImage systemImageNamed:GHCFRuntimeString("chevron.right")];
+        _actChevronView.image = [UIImage systemImageNamed:CFLYRuntimeString("chevron.right")];
         _actChevronView.hidden = NO;
     } else {
         _actChevronView.image = nil;
@@ -2267,11 +2725,11 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 
 // ChinaFly 1.0.0：激活页（两张卡：上卡激活／赞助／管理三行，下卡状态行＋
 // 加入群组＋底部「关于 China Fly」）。状态文字走同一套
-// GHCFPrefsActivationStatusText。值行在 -specifiers 里现填，viewWillAppear 重载。
-@interface GHCFActivationListController : ChinaFlyRootListController
+// CFLYPrefsActivationStatusText。值行在 -specifiers 里现填，viewWillAppear 重载。
+@interface CFLYActivationListController : ChinaFlyRootListController
 @end
 
-@implementation GHCFActivationListController
+@implementation CFLYActivationListController
 
 - (void)viewDidLoad {
     @try {
@@ -2280,9 +2738,9 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
         const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
         char buf[256];
         snprintf(buf, sizeof(buf), "ChinaFly prefs-activation viewDidLoad EXCEPTION %s", reason);
-        GHCFPrefsLogLine(buf);
+        CFLYPrefsLogLine(buf);
     }
-    GHCFPrefsLogLine("ChinaFly prefs-page: Activation");
+    CFLYPrefsLogLine("ChinaFly prefs-page: Activation");
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -2293,9 +2751,9 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     char buf[160];
     snprintf(buf, sizeof(buf), "ChinaFly prefs-activation tap: section %ld row %ld", (long)indexPath.section, (long)indexPath.row);
-    GHCFPrefsLogLine(buf);
-    if (GHCFHandlePlistDetailTap(self, tableView, indexPath)) return;
-    if (GHCFDispatchButtonTap(self, tableView, indexPath)) return;
+    CFLYPrefsLogLine(buf);
+    if (CFLYHandlePlistDetailTap(self, tableView, indexPath)) return;
+    if (CFLYDispatchButtonTap(self, tableView, indexPath)) return;
     [super tableView:tableView didSelectRowAtIndexPath:indexPath];
 }
 
@@ -2308,28 +2766,28 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 - (NSArray *)specifiers {
     if (!_specifiers) {
         @try {
-            NSMutableArray *loaded = [self loadSpecifiersFromPlistName:GHCFRuntimeString("Activation") target:self];
+            NSMutableArray *loaded = [self loadSpecifiersFromPlistName:CFLYRuntimeString("Activation") target:self];
             for (PSSpecifier *spec in loaded) {
-                NSString *vk = spec.properties[GHCFRuntimeString("valueKey")];
+                NSString *vk = spec.properties[CFLYRuntimeString("valueKey")];
                 if (![vk isKindOfClass:[NSString class]]) continue;
-                if ([vk isEqualToString:GHCFRuntimeString("activationState")]) {
-                    [spec setProperty:GHCFPrefsActivationStatusText() forKey:GHCFRuntimeString("valueText")];
-                } else if ([vk isEqualToString:GHCFRuntimeString("systemVersion")]) {
+                if ([vk isEqualToString:CFLYRuntimeString("activationState")]) {
+                    [spec setProperty:CFLYPrefsActivationStatusText() forKey:CFLYRuntimeString("valueText")];
+                } else if ([vk isEqualToString:CFLYRuntimeString("systemVersion")]) {
                     NSString *ver = [[UIDevice currentDevice] systemVersion];
-                    NSString *txt = [GHCFRuntimeString("iOS ") stringByAppendingString:(ver ? ver : GHCFRuntimeString("?"))];
-                    [spec setProperty:txt forKey:GHCFRuntimeString("valueText")];
-                } else if ([vk isEqualToString:GHCFRuntimeString("pluginVersion")]) {
-                    [spec setProperty:GHCFRuntimeString("1.0.3") forKey:GHCFRuntimeString("valueText")];
+                    NSString *txt = [CFLYRuntimeString("iOS ") stringByAppendingString:(ver ? ver : CFLYRuntimeString("?"))];
+                    [spec setProperty:txt forKey:CFLYRuntimeString("valueText")];
+                } else if ([vk isEqualToString:CFLYRuntimeString("pluginVersion")]) {
+                    [spec setProperty:CFLYRuntimeString("1.0.4") forKey:CFLYRuntimeString("valueText")];
                 }
             }
             // ChinaFly 1.0.1: 舊分屏開著時，第一組（激活授权）下方顯示休眠提示；
             // 1.0.3 改成開關開著 AND 舊 dylib 文件還在才提示（跟 dylib 同條件）。
             // specifiers 每次進頁都重建（viewWillAppear 會 reloadSpecifiers），
             // 所以重進頁面就重新判斷。舊包刪了、只剩殘留 prefs 時提示不再出現。
-            if (GHCFPrefsShouldDormantForOldSplitscreen()) {
+            if (CFLYPrefsShouldDormantForOldSplitscreen()) {
                 for (PSSpecifier *spec in loaded) {
                     if (spec.cellType == PSGroupCell) {
-                        [spec setProperty:GHCFRuntimeString("舊分屏開著，China Fly 休眠中") forKey:GHCFRuntimeString("footerText")];
+                        [spec setProperty:CFLYRuntimeString("舊分屏開著，China Fly 休眠中") forKey:CFLYRuntimeString("footerText")];
                         break;
                     }
                 }
@@ -2339,10 +2797,10 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
             const char *reason = [e reason] ? [[e reason] UTF8String] : "?";
             char buf[512];
             snprintf(buf, sizeof(buf), "ChinaFly prefs-activation specifiers EXCEPTION %s", reason);
-            GHCFPrefsLogLine(buf);
+            CFLYPrefsLogLine(buf);
             NSMutableArray *safe = [NSMutableArray array];
             PSSpecifier *group = [PSSpecifier emptyGroupSpecifier];
-            [group setProperty:GHCFRuntimeString("激活页打不开（已记进日志），先回上一页再试。") forKey:GHCFRuntimeString("footerText")];
+            [group setProperty:CFLYRuntimeString("激活页打不开（已记进日志），先回上一页再试。") forKey:CFLYRuntimeString("footerText")];
             [safe addObject:group];
             _specifiers = safe;
         }
@@ -2351,9 +2809,9 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
     return _specifiers;
 }
 
-// 提示框改走最上层 presenter、主队列（同 ghcfShowAlertWithTitle
+// 提示框改走最上层 presenter、主队列（同 cflyShowAlertWithTitle
 // 的做法；本页的输入框／操作表不能走那个只带「好」的 helper）。
-- (void)ghcfActivationPresent:(UIAlertController *)alert {
+- (void)cflyActivationPresent:(UIAlertController *)alert {
     dispatch_async(dispatch_get_main_queue(), ^{
         UIViewController *presenter = self;
         while (presenter.presentedViewController) presenter = presenter.presentedViewController;
@@ -2380,16 +2838,16 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
         if (presenter) {
             [presenter presentViewController:alert animated:YES completion:nil];
         } else {
-            GHCFPrefsLogLine("ChinaFly prefs-activation present FAILED: no presenter");
+            CFLYPrefsLogLine("ChinaFly prefs-activation present FAILED: no presenter");
         }
     });
 }
 
 // 发 Darwin 通知给 dylib 重抓名单对码，4 秒后重载本页（状态行自己翻成
 // 「您的设备已授权」／「未授权」，不用退出重进）。
-- (void)ghcfActivationPostRecheck {
-    notify_post("com.guhailong.fly.activationRecheck");
-    GHCFPrefsLogLine("ChinaFly prefs-activation recheck posted");
+- (void)cflyActivationPostRecheck {
+    notify_post("com.chinafly.fly.activationRecheck");
+    CFLYPrefsLogLine("ChinaFly prefs-activation recheck posted");
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         typeof(self) strongSelf = weakSelf;
@@ -2399,28 +2857,28 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
 }
 
 // 上卡第 1 行：弹输入框输激活码，确认就写 prefs＋发检查（码不记日志）。
-- (void)ghcfActivationEnterCode:(PSSpecifier *)specifier {
+- (void)cflyActivationEnterCode:(PSSpecifier *)specifier {
     (void)specifier;
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("激活正版授权") message:GHCFRuntimeString("输入激活码来绑定当前的设备。") preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("激活正版授权") message:CFLYRuntimeString("输入激活码来绑定当前的设备。") preferredStyle:UIAlertControllerStyleAlert];
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        textField.placeholder = GHCFRuntimeString("激活码，如 SD-XXXX-XXXX-XXXX");
+        textField.placeholder = CFLYRuntimeString("激活码，如 SD-XXXX-XXXX-XXXX");
         textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
         textField.autocorrectionType = UITextAutocorrectionTypeNo;
     }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:CFLYRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
     __weak UIAlertController *weakAlert = alert;
-    UIAlertAction *ok = [UIAlertAction actionWithTitle:GHCFRuntimeString("确认") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    UIAlertAction *ok = [UIAlertAction actionWithTitle:CFLYRuntimeString("确认") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         (void)action;
         UIAlertController *strongAlert = weakAlert;
         NSString *raw = strongAlert ? strongAlert.textFields.firstObject.text : nil;
         NSString *code = [[raw stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] uppercaseString];
         if (!code || [code length] == 0) {
-            [self ghcfShowAlertWithTitle:GHCFRuntimeString("请输入激活码") message:GHCFRuntimeString("激活码是空的，先输入再确认。")];
+            [self cflyShowAlertWithTitle:CFLYRuntimeString("请输入激活码") message:CFLYRuntimeString("激活码是空的，先输入再确认。")];
             return;
         }
-        CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+        CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
         if (domain) {
-            CFStringRef cfKey = GHCFRuntimeCFString("activationCode");
+            CFStringRef cfKey = CFLYRuntimeCFString("activationCode");
             if (cfKey) {
                 CFPreferencesSetAppValue(cfKey, (__bridge CFPropertyListRef)code, domain);
                 CFRelease(cfKey);
@@ -2428,54 +2886,54 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
             CFPreferencesAppSynchronize(domain);
             CFRelease(domain);
         }
-        [self ghcfActivationPostRecheck];
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已发送检查") message:GHCFRuntimeString("已发送检查，稍等几秒再看「当前授权状态」，通过了会显示「您的设备已授权」。")];
+        [self cflyActivationPostRecheck];
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("已发送检查") message:CFLYRuntimeString("已发送检查，稍等几秒再看「当前授权状态」，通过了会显示「您的设备已授权」。")];
     }];
     [alert addAction:cancel];
     [alert addAction:ok];
-    [self ghcfActivationPresent:alert];
+    [self cflyActivationPresent:alert];
 }
 
 // 上卡第 2 行：没有在线购买页，去 Telegram 频道找 Lee 要码。
-- (void)ghcfActivationSponsor:(PSSpecifier *)specifier {
+- (void)cflyActivationSponsor:(PSSpecifier *)specifier {
     (void)specifier;
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("赞助购买授权") message:GHCFRuntimeString("没有在线购买页，去 Telegram 频道找 Lee 要激活码。") preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
-    UIAlertAction *open = [UIAlertAction actionWithTitle:GHCFRuntimeString("打开频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("赞助购买授权") message:CFLYRuntimeString("没有在线购买页，去 Telegram 频道找 Lee 要激活码。") preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:CFLYRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    UIAlertAction *open = [UIAlertAction actionWithTitle:CFLYRuntimeString("打开频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         (void)action;
-        [self ghcfActivationOpenTelegramChannel];
+        [self cflyActivationOpenTelegramChannel];
     }];
     [alert addAction:cancel];
     [alert addAction:open];
-    [self ghcfActivationPresent:alert];
+    [self cflyActivationPresent:alert];
 }
 
 // 设置页进程里 openURL 不可靠，先顺手试 tg:// 深链，
 // 不管成不成都复制 https 邀请链接＋弹「已复制」，保证链接一定到手。
-- (void)ghcfActivationOpenTelegramChannel {
-    NSURL *tgURL = [NSURL URLWithString:GHCFRuntimeString("tg://join?invite=UaeIYedetWtiZGQ1")];
+- (void)cflyActivationOpenTelegramChannel {
+    NSURL *tgURL = [NSURL URLWithString:CFLYRuntimeString("tg://join?invite=UaeIYedetWtiZGQ1")];
     if (tgURL) {
         [[UIApplication sharedApplication] openURL:tgURL options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
             (void)success;
             dispatch_async(dispatch_get_main_queue(), ^{
-                GHCFPrefsLogLine("ChinaFly prefs-activation telegram tg attempted");
+                CFLYPrefsLogLine("ChinaFly prefs-activation telegram tg attempted");
             });
         }];
     }
-    [UIPasteboard generalPasteboard].string = GHCFRuntimeString("https://t.me/+UaeIYedetWtiZGQ1");
-    GHCFPrefsLogLine("ChinaFly prefs-activation telegram copied");
-    [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("Telegram 频道链接已复制到剪贴板，去 Telegram 贴上进群找 Lee 要码。")];
+    [UIPasteboard generalPasteboard].string = CFLYRuntimeString("https://t.me/+UaeIYedetWtiZGQ1");
+    CFLYPrefsLogLine("ChinaFly prefs-activation telegram copied");
+    [self cflyShowAlertWithTitle:CFLYRuntimeString("已复制") message:CFLYRuntimeString("Telegram 频道链接已复制到剪贴板，去 Telegram 贴上进群找 Lee 要码。")];
 }
 
 // 上卡第 3 行：清除已保存的激活码、重新检查。
-- (void)ghcfActivationManage:(PSSpecifier *)specifier {
+- (void)cflyActivationManage:(PSSpecifier *)specifier {
     (void)specifier;
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("管理配置授权") message:GHCFRuntimeString("重置配置，授权找回等操作。") preferredStyle:UIAlertControllerStyleActionSheet];
-    UIAlertAction *clear = [UIAlertAction actionWithTitle:GHCFRuntimeString("清除已保存的激活码") style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("管理配置授权") message:CFLYRuntimeString("重置配置，授权找回等操作。") preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertAction *clear = [UIAlertAction actionWithTitle:CFLYRuntimeString("清除已保存的激活码") style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
         (void)action;
-        CFStringRef domain = GHCFRuntimeCFString("com.guhailong.fly");
+        CFStringRef domain = CFLYRuntimeCFString("com.chinafly.fly");
         if (domain) {
-            CFStringRef cfKey = GHCFRuntimeCFString("activationCode");
+            CFStringRef cfKey = CFLYRuntimeCFString("activationCode");
             if (cfKey) {
                 CFPreferencesSetAppValue(cfKey, NULL, domain);
                 CFRelease(cfKey);
@@ -2483,40 +2941,34 @@ static BOOL GHCFHandlePlistDetailTap(PSListController *controller, UITableView *
             CFPreferencesAppSynchronize(domain);
             CFRelease(domain);
         }
-        [self ghcfActivationPostRecheck];
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已清除") message:GHCFRuntimeString("已保存的激活码已清除，状态回到未授权。")];
+        [self cflyActivationPostRecheck];
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("已清除") message:CFLYRuntimeString("已保存的激活码已清除，状态回到未授权。")];
     }];
-    UIAlertAction *recheck = [UIAlertAction actionWithTitle:GHCFRuntimeString("重新检查激活码") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    UIAlertAction *recheck = [UIAlertAction actionWithTitle:CFLYRuntimeString("重新检查激活码") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         (void)action;
-        [self ghcfActivationPostRecheck];
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已发送检查") message:GHCFRuntimeString("已发送检查，稍等几秒再看「当前授权状态」。")];
+        [self cflyActivationPostRecheck];
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("已发送检查") message:CFLYRuntimeString("已发送检查，稍等几秒再看「当前授权状态」。")];
     }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:CFLYRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
     [sheet addAction:clear];
     [sheet addAction:recheck];
     [sheet addAction:cancel];
-    [self ghcfActivationPresent:sheet];
+    [self cflyActivationPresent:sheet];
 }
 
-// 下卡：加入官方群组——QQ 群号复制、Telegram 频道。
-- (void)ghcfActivationJoinGroup:(PSSpecifier *)specifier {
+// 下卡：加入官方群组——Telegram 频道。（1.0.4：舊 QQ 群已删，
+// 那是顧海龍抖音的群，跟 China Fly 無關。）
+- (void)cflyActivationJoinGroup:(PSSpecifier *)specifier {
     (void)specifier;
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:GHCFRuntimeString("加入官方群组") message:GHCFRuntimeString("选择加入官方交流群") preferredStyle:UIAlertControllerStyleActionSheet];
-    UIAlertAction *qq = [UIAlertAction actionWithTitle:GHCFRuntimeString("QQ 群 1130823454") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:CFLYRuntimeString("加入官方群组") message:CFLYRuntimeString("选择加入官方交流群") preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertAction *tg = [UIAlertAction actionWithTitle:CFLYRuntimeString("Telegram 频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         (void)action;
-        [UIPasteboard generalPasteboard].string = GHCFRuntimeString("1130823454");
-        GHCFPrefsLogLine("ChinaFly prefs-activation QQ group copied");
-        [self ghcfShowAlertWithTitle:GHCFRuntimeString("已复制") message:GHCFRuntimeString("QQ交流群 1130823454 已复制到剪贴板，去 QQ 搜索群号加入。")];
+        [self cflyActivationOpenTelegramChannel];
     }];
-    UIAlertAction *tg = [UIAlertAction actionWithTitle:GHCFRuntimeString("Telegram 频道") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        (void)action;
-        [self ghcfActivationOpenTelegramChannel];
-    }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:GHCFRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
-    [sheet addAction:qq];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:CFLYRuntimeString("取消") style:UIAlertActionStyleCancel handler:nil];
     [sheet addAction:tg];
     [sheet addAction:cancel];
-    [self ghcfActivationPresent:sheet];
+    [self cflyActivationPresent:sheet];
 }
 
 @end

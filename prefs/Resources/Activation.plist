@@ -12,11 +12,11 @@
 		</dict>
 		<dict>
 			<key>action</key>
-			<string>ghcfActivationEnterCode</string>
+			<string>cflyActivationEnterCode</string>
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>cellClass</key>
-			<string>GHCFActivationRowCell</string>
+			<string>CFLYActivationRowCell</string>
 			<key>iconName</key>
 			<string>checkmark.shield.fill</string>
 			<key>label</key>
@@ -26,11 +26,11 @@
 		</dict>
 		<dict>
 			<key>action</key>
-			<string>ghcfActivationSponsor</string>
+			<string>cflyActivationSponsor</string>
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>cellClass</key>
-			<string>GHCFActivationRowCell</string>
+			<string>CFLYActivationRowCell</string>
 			<key>iconName</key>
 			<string>gift.fill</string>
 			<key>label</key>
@@ -40,11 +40,11 @@
 		</dict>
 		<dict>
 			<key>action</key>
-			<string>ghcfActivationManage</string>
+			<string>cflyActivationManage</string>
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>cellClass</key>
-			<string>GHCFActivationRowCell</string>
+			<string>CFLYActivationRowCell</string>
 			<key>iconName</key>
 			<string>gearshape.fill</string>
 			<key>label</key>
@@ -55,6 +55,8 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>授權狀態由後台檢查：輸入激活碼後會自動驗證，驗證通過就能用。</string>
 			<key>label</key>
 			<string>状态</string>
 		</dict>
@@ -62,7 +64,7 @@
 			<key>cell</key>
 			<string>PSTitleValueCell</string>
 			<key>cellClass</key>
-			<string>GHCFActivationRowCell</string>
+			<string>CFLYActivationRowCell</string>
 			<key>iconName</key>
 			<string>checkmark.circle.fill</string>
 			<key>label</key>
@@ -74,7 +76,7 @@
 			<key>cell</key>
 			<string>PSTitleValueCell</string>
 			<key>cellClass</key>
-			<string>GHCFActivationRowCell</string>
+			<string>CFLYActivationRowCell</string>
 			<key>iconName</key>
 			<string>iphone</string>
 			<key>label</key>
@@ -86,7 +88,7 @@
 			<key>cell</key>
 			<string>PSTitleValueCell</string>
 			<key>cellClass</key>
-			<string>GHCFActivationRowCell</string>
+			<string>CFLYActivationRowCell</string>
 			<key>iconName</key>
 			<string>app.badge</string>
 			<key>label</key>
@@ -96,11 +98,11 @@
 		</dict>
 		<dict>
 			<key>action</key>
-			<string>ghcfActivationJoinGroup</string>
+			<string>cflyActivationJoinGroup</string>
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>cellClass</key>
-			<string>GHCFActivationRowCell</string>
+			<string>CFLYActivationRowCell</string>
 			<key>iconName</key>
 			<string>person.2.fill</string>
 			<key>label</key>

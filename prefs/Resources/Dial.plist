@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>defaults</key>
-	<string>com.guhailong.fly</string>
+	<string>com.chinafly.fly</string>
 	<key>items</key>
 	<array>
 		<dict>
@@ -14,13 +14,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialMode</string>
 			<key>label</key>
@@ -28,13 +28,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialCentered</string>
 			<key>label</key>
@@ -42,13 +42,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialHidePointer</string>
 			<key>label</key>
@@ -56,13 +56,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>2.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialPointerAccel</string>
 			<key>label</key>
@@ -74,13 +74,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>4.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialFirstRowApps</string>
 			<key>label</key>
@@ -98,41 +98,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialGradientBg</string>
-			<key>label</key>
-			<string>渐变背景</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialCircleBg</string>
-			<key>label</key>
-			<string>圆形背景</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialCropCircle</string>
 			<key>label</key>
@@ -140,31 +112,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSSliderCell</string>
-			<key>default</key>
-			<real>0.4</real>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialCircleBgOpacity</string>
-			<key>label</key>
-			<string>圆形背景透明度</string>
-			<key>max</key>
-			<real>1.0</real>
-			<key>min</key>
-			<real>0.05</real>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>0.04</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialCircleCenterCrop</string>
 			<key>label</key>
@@ -176,13 +130,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
-			<real>36.0</real>
+			<real>26.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialIconSize</string>
 			<key>label</key>
@@ -194,13 +148,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>8.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialElementSpacing</string>
 			<key>label</key>
@@ -218,13 +172,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialHapticEnabled</string>
 			<key>label</key>
@@ -232,13 +186,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<string>medium</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialHapticStrength</string>
 			<key>label</key>
@@ -258,13 +212,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialSoundEnabled</string>
 			<key>label</key>
@@ -272,13 +226,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<string>drop</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>dialSoundChoice</string>
 			<key>label</key>
@@ -317,132 +271,8 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>背景顏色</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string>#000000</string>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialGradientStartColor</string>
-			<key>label</key>
-			<string>漸變起始顏色</string>
-			<key>placeholder</key>
-			<string>#000000</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string>#000000</string>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialGradientEndColor</string>
-			<key>label</key>
-			<string>漸變結束顏色</string>
-			<key>placeholder</key>
-			<string>#000000</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string>#FFFFFF</string>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialCircleBgColor</string>
-			<key>label</key>
-			<string>圓形背景顏色</string>
-			<key>placeholder</key>
-			<string>#FFFFFF</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string>#3D8DFF</string>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialIconSelectedColor</string>
-			<key>label</key>
-			<string>圖標選中顏色</string>
-			<key>placeholder</key>
-			<string>#3D8DFF</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>工具顏色</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string>#FFFFFF</string>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialIconNoneColor</string>
-			<key>label</key>
-			<string>無狀態顏色</string>
-			<key>placeholder</key>
-			<string>#FFFFFF</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string>#007AFF</string>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialIconEnabledColor</string>
-			<key>label</key>
-			<string>啟用狀態顏色</string>
-			<key>placeholder</key>
-			<string>#007AFF</string>
-		</dict>
-		<dict>
-			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>default</key>
-			<string>#8E8E93</string>
-			<key>defaults</key>
-			<string>com.guhailong.fly</string>
-			<key>key</key>
-			<string>dialIconDisabledColor</string>
-			<key>label</key>
-			<string>關閉狀態顏色</string>
-			<key>placeholder</key>
-			<string>#8E8E93</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>表盘启动器照 TrollOpen 的排布做：图标沿圆弧排开、中心钮在弧顶、扇形向下展开；整个圆弧以触发钮位置往上 60pt 为弧顶，最下面的图标不贴屏幕底。指针加速、圆形中心裁剪、首行应用这版只存设定，含义待真机对照再定。震动／音效四行与启动器设置页是同一设定。</string>
+			<string>表盘启动器：图标沿同心圆排成 4 圈（42／80／110／140），手指拨动可以转着选；中央没有按钮，点外面收起。指针加速、圆形中心裁剪、首行应用这版只存设定，含义待真机对照再定。震动／音效四行与启动器设置页是同一设定。</string>
 			<key>label</key>
 			<string>表盘启动器</string>
 		</dict>

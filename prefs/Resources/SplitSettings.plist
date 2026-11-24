@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>defaults</key>
-	<string>com.guhailong.fly</string>
+	<string>com.chinafly.fly</string>
 	<key>items</key>
 	<array>
 		<dict>
@@ -14,13 +14,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>singleWindowMode</string>
 			<key>label</key>
@@ -28,13 +28,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>persistentMemory</string>
 			<key>label</key>
@@ -42,13 +42,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>reverseLongPress</string>
 			<key>label</key>
@@ -56,13 +56,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>longPressReleaseTrigger</string>
 			<key>label</key>
@@ -70,13 +70,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>0.5</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>longPressDuration</string>
 			<key>label</key>
@@ -90,13 +90,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>5.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>onlineWindows</string>
 			<key>label</key>
@@ -110,13 +110,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>30.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>topMarginSmallWindow</string>
 			<key>label</key>
@@ -138,13 +138,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<string>closeKeyboard</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>kbBackgroundTap</string>
 			<key>label</key>
@@ -162,13 +162,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>floatingAvoidance</string>
 			<key>label</key>
@@ -182,13 +182,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>showGestureArea</string>
 			<key>label</key>
@@ -196,13 +196,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>haloFrame</string>
 			<key>label</key>
@@ -210,13 +210,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>windowGlow</string>
 			<key>label</key>
@@ -224,13 +224,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>edgeIcons</string>
 			<key>label</key>
@@ -238,13 +238,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>60.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>cornerRadius4</string>
 			<key>label</key>
@@ -258,13 +258,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>30.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>windowHalo</string>
 			<key>label</key>
@@ -278,13 +278,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>0.2</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>smallWindowScale</string>
 			<key>label</key>
@@ -298,13 +298,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSliderCell</string>
 			<key>default</key>
 			<real>2.0</real>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>gestureAreaSize</string>
 			<key>label</key>
@@ -326,13 +326,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>jumpSplit</string>
 			<key>label</key>
@@ -340,13 +340,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>jumpSpotlight</string>
 			<key>label</key>
@@ -354,13 +354,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>jumpSpringBoard</string>
 			<key>label</key>
@@ -368,13 +368,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>callbackClose</string>
 			<key>label</key>
@@ -388,13 +388,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>bannerTap</string>
 			<key>label</key>
@@ -402,13 +402,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>bannerLongPressSwipe</string>
 			<key>label</key>
@@ -416,13 +416,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>notificationCenterSplit</string>
 			<key>label</key>
@@ -436,13 +436,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>addToAppSwitcher</string>
 			<key>label</key>
@@ -450,13 +450,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>swipeCardSplit</string>
 			<key>label</key>
@@ -470,13 +470,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<string>down</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>desktopSwipeSplit</string>
 			<key>label</key>
@@ -496,13 +496,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>desktopLongPressSplitButton</string>
 			<key>label</key>

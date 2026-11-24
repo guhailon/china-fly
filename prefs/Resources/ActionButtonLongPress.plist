@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>defaults</key>
-	<string>com.guhailong.fly</string>
+	<string>com.chinafly.fly</string>
 	<key>items</key>
 	<array>
 		<dict>
@@ -22,13 +22,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<string>none</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>actionButtonLongPressAction</string>
 			<key>label</key>

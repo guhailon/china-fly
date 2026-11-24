@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>defaults</key>
-	<string>com.guhailong.fly</string>
+	<string>com.chinafly.fly</string>
 	<key>items</key>
 	<array>
 		<dict>
@@ -16,7 +16,7 @@
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>GHCFActivationListController</string>
+			<string>CFLYActivationListController</string>
 			<key>label</key>
 			<string>激活授权</string>
 		</dict>
@@ -30,13 +30,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>enabled</string>
 			<key>label</key>
@@ -60,7 +60,7 @@
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>GHCFAppPickerListController</string>
+			<string>CFLYAppPickerListController</string>
 			<key>label</key>
 			<string>選擇應用</string>
 		</dict>
@@ -68,7 +68,7 @@
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>GHCFMenuEditListController</string>
+			<string>CFLYMenuAddListController</string>
 			<key>label</key>
 			<string>編輯菜單</string>
 		</dict>
@@ -94,13 +94,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>hideScreenshotRecording</string>
 			<key>label</key>
@@ -108,13 +108,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>delayedScreenshot</string>
 			<key>label</key>
@@ -122,13 +122,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>doubleTapLock</string>
 			<key>label</key>
@@ -136,13 +136,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>hideDockBackground</string>
 			<key>label</key>
@@ -150,13 +150,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>ipadAppSwitcherAnim</string>
 			<key>label</key>
@@ -194,13 +194,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSTextFieldCell</string>
 			<key>default</key>
 			<string></string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>translateAppID</string>
 			<key>label</key>
@@ -210,13 +210,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSTextFieldCell</string>
 			<key>default</key>
 			<string></string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>translateSecretKey</string>
 			<key>label</key>
@@ -226,13 +226,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<string>auto-zh</string>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>translateDirection</string>
 			<key>label</key>
@@ -248,13 +248,13 @@
 		</dict>
 		<dict>
 			<key>PostNotification</key>
-			<string>com.guhailong.fly.prefschanged</string>
+			<string>com.chinafly.fly.prefschanged</string>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.guhailong.fly</string>
+			<string>com.chinafly.fly</string>
 			<key>key</key>
 			<string>splitTranslation</string>
 			<key>label</key>
@@ -268,7 +268,7 @@
 		</dict>
 		<dict>
 			<key>action</key>
-			<string>ghcfBackupConfig</string>
+			<string>cflyBackupConfig</string>
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>label</key>
@@ -276,7 +276,7 @@
 		</dict>
 		<dict>
 			<key>action</key>
-			<string>ghcfRestoreConfig</string>
+			<string>cflyRestoreConfig</string>
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>label</key>
@@ -285,14 +285,16 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>China Fly——轉盤啟動的分屏浮窗，點一下圖標就能開 App。</string>
 			<key>label</key>
-			<string>關於</string>
+			<string>關於 China Fly</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>detail</key>
-			<string>GHCFLogViewerListController</string>
+			<string>CFLYLogViewerListController</string>
 			<key>label</key>
 			<string>查看日誌</string>
 		</dict>
@@ -300,7 +302,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>China Fly 1.0.0 | Copyright © 2026 顧海龍</string>
+			<string>China Fly 1.0.4</string>
 		</dict>
 	</array>
 	<key>title</key>
