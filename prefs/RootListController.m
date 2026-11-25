@@ -168,6 +168,9 @@ static void CFLYWritePrefsCString(const char *key, const char *value) {
 // ChinaFly 1.0.0：激活状态文字（读 dylib 写的 activationState 快取；
 // authorized 已激活、locked 未激活、checkFailed 名单读不到暂不锁，
 // 没值＝还没检查）。1.0.4（P1）：說法換得更直白。
+// ChinaFly 1.0.5：授權取消——dylib 不再對碼、永遠寫 authorized；
+// 還沒值（剛裝、dylib 還沒跑）也顯示已授權，不再顯示「尚未驗證」。
+// locked 那行留著當兜底（舊版寫下的 locked 值、或以後恢復授權時用）。
 static NSString *CFLYPrefsActivationStatusText(void) {
     char *state = CFLYPrefsCString("activationState");
     NSString *out;
@@ -178,7 +181,7 @@ static NSString *CFLYPrefsActivationStatusText(void) {
     } else if (state && strcmp(state, "checkFailed") == 0) {
         out = CFLYRuntimeString("名單讀不到，暫不鎖定（檢查網絡）");
     } else {
-        out = CFLYRuntimeString("尚未驗證（啟動後自動檢查）");
+        out = CFLYRuntimeString("已授權（1.0.5 起無需激活碼）");
     }
     if (state) free(state);
     return out;
@@ -525,8 +528,12 @@ static void CFLYResolveMenuEntry(NSString *entry, NSString **outBid, NSString **
             NSArray *cached = CFLYReadCachedApps();
             for (id item in cached) {
                 if (![item isKindOfClass:[NSDictionary class]]) continue;
-                NSString *cbid = [item objectForKey:CFLYRuntimeString("bundleID")];
-                NSString *cname = [item objectForKey:CFLYRuntimeString("name")];
+                // ChinaFly 1.0.5：緩存 dict 的值必須是字串才比——非字串值
+                // 直接調 isEqualToString: 會 unrecognized selector 閃退。
+                id rawBid = [item objectForKey:CFLYRuntimeString("bundleID")];
+                id rawName = [item objectForKey:CFLYRuntimeString("name")];
+                NSString *cbid = [rawBid isKindOfClass:[NSString class]] ? rawBid : nil;
+                NSString *cname = [rawName isKindOfClass:[NSString class]] ? rawName : nil;
                 if (cbid && [cbid isEqualToString:entry]) {
                     bid = cbid;
                     name = cname;
@@ -1526,8 +1533,15 @@ static NSString *CFLYPrefsDisplayNameForBundleID(NSString *bid) {
         if (domain) {
             CFPropertyListRef v = CFPreferencesCopyAppValue((__bridge CFStringRef)iconKey, domain);
             if (v) {
-                NSString *symName = (__bridge_transfer NSString *)v;
-                if (symName && [symName length] > 0) customIcon = [UIImage systemImageNamed:symName];
+                // ChinaFly 1.0.5：menuIcon_<entry> 必須是字串才轉——值若不是
+                // NSString（plist 被手改／舊寫入殘留），直接轉型後調 length
+                // 會 unrecognized selector 閃退；非字串就放掉、不當圖標用。
+                if ([(__bridge id)v isKindOfClass:[NSString class]]) {
+                    NSString *symName = (__bridge_transfer NSString *)v;
+                    if ([symName length] > 0) customIcon = [UIImage systemImageNamed:symName];
+                } else {
+                    CFRelease(v);
+                }
             }
             CFRelease(domain);
         }
@@ -1579,8 +1593,29 @@ static NSString *CFLYPrefsDisplayNameForBundleID(NSString *bid) {
     return indexPath.section == 0;
 }
 
+// ChinaFly 1.0.5：閃退主因——本頁有 2 個 section（0＝菜單項、1＝「添加
+// URL Scheme」單行），但之前沒有 targetIndexPathForMove。拖一行從
+// section 0 往 section 1 拖時，UITableView 以為它跨了 section，
+// 卻調 moveRowAtIndexPath:toIndexPath:——那裡只在扁平陣列裡挪，
+// 各 section 的行數不變，UITableView 數出來的行數對不上，就拋
+// NSInternalInconsistencyException、設定直接閃退（編輯模式拖排序
+// 往下拖到底就會中；日誌只記「進頁」，不記崩潰，所以 7b1267da.log
+// 裡 12 次進頁都沒看到崩潰行）。修：拖放目標一律夾回 section 0，
+// 跨 section 的目標直接拒收；moveRow 那邊再加一道 section 守門。
+- (NSIndexPath *)tableView:(UITableView *)tableView targetIndexPathForMoveFromRowAtIndexPath:(NSIndexPath *)sourceIndexPath toProposedIndexPath:(NSIndexPath *)proposedIndexPath {
+    (void)tableView;
+    (void)sourceIndexPath;
+    if (proposedIndexPath.section != 0) {
+        NSInteger last = (NSInteger)[self.cflyMenuItems count] - 1;
+        if (last < 0) last = 0;
+        return [NSIndexPath indexPathForRow:last inSection:0];
+    }
+    return proposedIndexPath;
+}
+
 - (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath {
     (void)tableView;
+    if (fromIndexPath.section != 0 || toIndexPath.section != 0) return;
     NSInteger from = fromIndexPath.row;
     NSInteger to = toIndexPath.row;
     if (from == to) return;
@@ -2777,7 +2812,7 @@ static BOOL CFLYHandlePlistDetailTap(PSListController *controller, UITableView *
                     NSString *txt = [CFLYRuntimeString("iOS ") stringByAppendingString:(ver ? ver : CFLYRuntimeString("?"))];
                     [spec setProperty:txt forKey:CFLYRuntimeString("valueText")];
                 } else if ([vk isEqualToString:CFLYRuntimeString("pluginVersion")]) {
-                    [spec setProperty:CFLYRuntimeString("1.0.4") forKey:CFLYRuntimeString("valueText")];
+                    [spec setProperty:CFLYRuntimeString("1.0.5") forKey:CFLYRuntimeString("valueText")];
                 }
             }
             // ChinaFly 1.0.1: 舊分屏開著時，第一組（激活授权）下方顯示休眠提示；
@@ -2942,7 +2977,7 @@ static BOOL CFLYHandlePlistDetailTap(PSListController *controller, UITableView *
             CFRelease(domain);
         }
         [self cflyActivationPostRecheck];
-        [self cflyShowAlertWithTitle:CFLYRuntimeString("已清除") message:CFLYRuntimeString("已保存的激活码已清除，状态回到未授权。")];
+        [self cflyShowAlertWithTitle:CFLYRuntimeString("已清除") message:CFLYRuntimeString("已保存的激活码已清除（1.0.5 起无需激活码，仍可正常使用）。")];
     }];
     UIAlertAction *recheck = [UIAlertAction actionWithTitle:CFLYRuntimeString("重新检查激活码") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         (void)action;

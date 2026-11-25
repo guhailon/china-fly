@@ -162,7 +162,7 @@
 			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>default</key>
-			<integer>2</integer>
+			<integer>1</integer>
 			<key>defaults</key>
 			<string>com.chinafly.fly</string>
 			<key>key</key>
@@ -292,7 +292,7 @@
 			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>default</key>
-			<real>171.73</real>
+			<real>800.0</real>
 			<key>defaults</key>
 			<string>com.chinafly.fly</string>
 			<key>key</key>
@@ -314,7 +314,7 @@
 			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>default</key>
-			<real>0.84</real>
+			<real>0.5</real>
 			<key>defaults</key>
 			<string>com.chinafly.fly</string>
 			<key>key</key>
@@ -442,7 +442,7 @@
 			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>default</key>
-			<real>171.73</real>
+			<real>800.0</real>
 			<key>defaults</key>
 			<string>com.chinafly.fly</string>
 			<key>key</key>
@@ -464,7 +464,7 @@
 			<key>cflyTriggerSet</key>
 			<string>edge</string>
 			<key>default</key>
-			<real>0.84</real>
+			<real>0.5</real>
 			<key>defaults</key>
 			<string>com.chinafly.fly</string>
 			<key>key</key>

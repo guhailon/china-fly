@@ -2336,11 +2336,14 @@ static BOOL CFLYReadBannerOpensFloatingWindow(void) {
 if (CFLYPrefsHasKey("bannerTap")) return CFLYReadPrefsBool("bannerTap", NO);
 return CFLYReadPrefsBool("bannerOpensFloatingWindow", NO);
 }
-// 調度窗口設置：邊緣滑幾次開 ARC（1 或 2，預設 2）、滑哪邊（沒設就跟
+// 調度窗口設置：邊緣滑幾次開 ARC（1 或 2，預設 1——ChinaFly 1.0.5：
+// 參考影片（3c0e，22:33）裡右邊緣滑一次就直接開轉盤；1.0.4 的預設 2
+// 讓第一次滑動只「預備＋震一下」，皇上說跟影片不一樣。設回 1，滑一次
+// 就開；覺得誤觸多可以在觸發設置裡改回 2）、滑哪邊（沒設就跟
 // 小窗顯示位置走）、浮窗拖動手勢開關（預設開）、觸發鈕雙擊輪切開關
 // （預設開）、長按多久關全部（0.3–1.0 秒，預設 0.5）。
 static int CFLYReadEdgeSwipeCount(void) {
-double v = CFLYReadPrefsDouble("edgeSwipeCount", 2.0);
+double v = CFLYReadPrefsDouble("edgeSwipeCount", 1.0);
 return (v <= 1.0) ? 1 : 2;
 }
 // v43.32：觸發方式三選（Trigger.plist，triggerMode：arc／edge／bar，
@@ -2407,8 +2410,14 @@ return v;
 }
 // v43.32：邊緣觸發區矩形（Trigger.plist 邊緣那套，每邊一個矩形）：
 // 寬＝距邊寬度（5–100，預設 20），高＝矩形高度（50–800；左預設 300、
-// 右預設 171.73），位置＝矩形中心的 Y%（0.05–0.95；左預設 0.77、
-// 右預設 0.84）。橫屏那組預設先跟豎屏同一組數（照片上沒拍到橫屏那頁）。
+// 右預設 800——ChinaFly 1.0.5：參考影片（3c0e，22:33）裡右邊緣約 75%
+// 高度滑一次就開轉盤，1.0.4 的右區只有 171.73 高、中心 0.84，
+// 影片那個高度剛好壓在區邊緣，起手稍高一點就被判「區外」拒收；
+// 右區放寬到整邊高、中心回中線，右邊緣任何高度滑進來都開），
+// 位置＝矩形中心的 Y%（0.05–0.95；左預設 0.77、右預設 0.5）。
+// 左區不動（300／0.77）：左邊緣是 iOS 往右滑開「今天」視圖的手勢，
+// 全高會把那個手勢整個吃掉；右邊緣沒有對應的系統手勢。橫屏那組預設
+// 先跟豎屏同一組數（照片上沒拍到橫屏那頁）。
 // 取代舊的上／下觸發高度（topTriggerHeight／bottomTriggerHeight 已刪）。
 static CGRect CFLYReadTriggerZoneRect(BOOL left, BOOL landscape) {
 char key[64];
@@ -2419,11 +2428,11 @@ double w = CFLYReadPrefsDouble(key, 20.0);
 if (w < 5) w = 5;
 if (w > 100) w = 100;
 snprintf(key, sizeof(key), "trigger%sHeight%s", side, orient);
-double h = CFLYReadPrefsDouble(key, left ? 300.0 : 171.73);
+double h = CFLYReadPrefsDouble(key, left ? 300.0 : 800.0);
 if (h < 50) h = 50;
 if (h > 800) h = 800;
 snprintf(key, sizeof(key), "trigger%sY%s", side, orient);
-double y = CFLYReadPrefsDouble(key, left ? 0.77 : 0.84);
+double y = CFLYReadPrefsDouble(key, left ? 0.77 : 0.5);
 if (y < 0.05) y = 0.05;
 if (y > 0.95) y = 0.95;
 CGRect sb = [UIScreen mainScreen].bounds;
@@ -10693,7 +10702,10 @@ if (!state) return;
 CFLYWritePrefsCString("activationState", state);
 }
 
-static void CFLYActivationApplyLock(void) {
+// ChinaFly 1.0.5：授權取消後暫時沒人調上鎖（CheckStart 直接解鎖）；
+// 函數留著以後恢復授權用，加 __attribute__((unused))，不然本工程
+// -Werror 會把「沒用到的 static 函數」警告當錯誤。
+__attribute__((unused)) static void CFLYActivationApplyLock(void) {
 if (!CFLYActivationLocked) {
 CFLYActivationLocked = YES;
 CFLYActivationSetState("locked");
@@ -10714,7 +10726,9 @@ CFLYApplyEnabledState();
 // ChinaFly 1.0.0：异步抓名单对码。结果：1 码在名单、0 码不在名单／没输码、
 // -1 抓不到／解不开（网络、超时、JSON 坏掉——这种不锁死，维持原状）。
 // 回调一定在主队列跑。码只放内存比对，绝不写日志。
-static void CFLYActivationFetchAndCheck(void (^completion)(int result)) {
+// ChinaFly 1.0.5：授權取消後暫時沒人調（見 CheckStart）；函數留著以後
+// 恢復授權用，加 __attribute__((unused))，不然 -Werror 會報錯。
+__attribute__((unused)) static void CFLYActivationFetchAndCheck(void (^completion)(int result)) {
 char *code = CFLYReadPrefsCString("activationCode");
 if (!code) {
 if (completion) completion(0);
@@ -10796,18 +10810,14 @@ if (recheckResult != 0) {
 CFLYLogLine("ChinaFly activation recheck notify register failed");
 }
 }
-CFLYActivationCheckInFlight = YES;
-CFLYActivationFetchAndCheck(^(int result) {
-CFLYActivationCheckInFlight = NO;
-if (result == 1) {
+// ChinaFly 1.0.5：授權先取消（皇上 2026-11-25 10:42 點頭）——裝上就能用，
+// 不用輸碼。改動最小、可逆：這裡直接解鎖、不再抓 codes-fly.json 對碼；
+// 名單文件留著（license/codes-fly.json 不刪），抓名單／上鎖／解鎖那套
+// 函數也留著（CFLYActivationFetchAndCheck／ApplyLock／ApplyUnlock／
+// SetState），以後要恢復授權只要把下面這三行拿掉、把抓名單那段接回來。
+// 後果：源上裝 1.0.5 的人都不用碼就能用。
 CFLYActivationApplyUnlock();
-} else if (result == 0) {
-CFLYActivationApplyLock();
-} else {
-CFLYActivationSetState("checkFailed");
-CFLYLogLine("ChinaFly activation check failed, lock unchanged");
-}
-});
+CFLYLogLine("ChinaFly activation cancelled in 1.0.5, always authorized");
 }
 
 // ── ChinaFly（1.0.0）分屏設置／主設置「行為未接」記錄 ──
